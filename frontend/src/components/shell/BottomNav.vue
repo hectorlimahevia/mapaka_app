@@ -2,17 +2,17 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NavIcon from './NavIcon.vue'
+import BadgeCounter from '@/components/base/BadgeCounter.vue'
 
-const items = [
-  { name: 'child-inici', label: 'Inici', icon: 'home' as const },
-  { name: 'child-tasques', label: 'Tasques', icon: 'tasks' as const },
-  { name: 'child-objectius', label: 'Objectius', icon: 'target' as const },
-  { name: 'child-pantalla', label: 'Pantalla', icon: 'device' as const },
-]
+type IconName = 'home' | 'tasks' | 'target' | 'device' | 'family' | 'check' | 'child' | 'settings'
+
+const props = defineProps<{
+  items: { name: string; label: string; icon: IconName; badge?: number }[]
+}>()
 
 const route = useRoute()
 const activeIndex = computed(() => {
-  const index = items.findIndex((item) => item.name === route.name)
+  const index = props.items.findIndex((item) => item.name === route.name)
   return index === -1 ? 0 : index
 })
 </script>
@@ -27,7 +27,10 @@ const activeIndex = computed(() => {
       class="bottom-nav__item"
       :class="{ 'bottom-nav__item--active': route.name === item.name }"
     >
-      <NavIcon :name="item.icon" />
+      <span class="bottom-nav__icon">
+        <NavIcon :name="item.icon" />
+        <BadgeCounter v-if="item.badge" :count="item.badge" class="bottom-nav__badge" />
+      </span>
       <span>{{ item.label }}</span>
     </RouterLink>
   </nav>
@@ -41,42 +44,51 @@ const activeIndex = computed(() => {
   right: 0;
   display: grid;
   grid-template-columns: repeat(var(--count), 1fr);
-  background: color-mix(in srgb, var(--bg) 85%, white);
-  backdrop-filter: blur(12px);
+  background: white;
   border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
-  padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+  padding: 0.6rem 0.4rem calc(0.6rem + env(safe-area-inset-bottom));
   z-index: 20;
 }
 
 .bottom-nav__indicator {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: calc(100% / var(--count));
-  height: 3px;
-  border-radius: 0 0 999px 999px;
-  background: var(--primary);
+  top: 0.35rem;
+  left: 0.25rem;
+  height: calc(100% - 0.7rem);
+  width: calc(100% / var(--count) - 0.5rem);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
   transform: translateX(calc(var(--active) * 100%));
-  transition: transform 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+  transition: transform 0.32s cubic-bezier(0.3, 0.8, 0.3, 1);
 }
 
 .bottom-nav__item {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.25rem 0;
+  padding: 0.35rem 0;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.7rem;
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
   font-weight: 700;
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
+  transition: color 0.2s ease;
 }
 
 .bottom-nav__item--active {
   color: var(--primary);
-  transform: translateY(-2px);
+}
+
+.bottom-nav__icon {
+  position: relative;
+}
+
+.bottom-nav__badge {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.5rem;
 }
 </style>

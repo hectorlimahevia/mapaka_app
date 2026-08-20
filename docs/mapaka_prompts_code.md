@@ -53,7 +53,7 @@ Fes servir aquest SVG tal qual (sense redibuixar-lo) per a: favicon i icones de 
 
 Regla no negociable: qualsevol xifra monetària o de minuts ha de portar `font-variant-numeric: tabular-nums`, i el pes tipogràfic dels imports destacats ha de ser 800/900 (Nunito Sans compensa amb pes el que li falta de "seriositat" respecte a una font més neutra).
 
-**Navegació:** barra inferior de 4 ítems (Inici, Tasques, Objectius, Pantalla) al rol CHILD en mòbil; panell lateral (Resum familiar, Aprovacions, Fills, Configuració) al rol PARENT en escriptori/tablet. Patró adaptatiu: bottom-nav per sota de `768px`, sidebar per sobre.
+**Navegació:** patró adaptatiu pel mateix component d'AppShell, no dos components separats. Per sota de `768px`, qualsevol rol veu una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb badge de pendents), Fills, Configuració. Per sobre de `768px`, el rol PARENT canvia a panell lateral fix (Resum familiar, Aprovacions, Fills, Configuració); CHILD no té vista d'escriptori pròpia perquè no és el seu cas d'ús principal. Referència visual exacta: els tres frames de l'artefacte mapaka-maqueta-animada / `mapaka_mockup.html` — "Vista CHILD — mòbil", "Vista PARENT — mòbil" i "Vista PARENT — escriptori".
 
 **Idioma de la interfície:** català, en tots els textos visibles (etiquetes, botons, missatges). Els prompts i comentaris de codi poden ser en castellà/anglès, però cap text d'usuari final.
 
@@ -66,6 +66,8 @@ Regla no negociable: qualsevol xifra monetària o de minuts ha de portar `font-v
 - Motiu de la decisió: qualsevol via que acabi passant per Xcode (nativa o Capacitor) per publicar a l'App Store exigeix un macOS que el Mac disponible (2015) no pot executar amb les versions actuals d'Xcode. Es descarta expressament aquesta via mentre no hi hagi un Mac més recent o un servei de compilació al núvol (Codemagic, GitHub Actions amb runner macOS) — no és una limitació d'arquitectura, és una limitació d'eina de compilació.
 
 **Base de dades i hosting:** PostgreSQL (no MySQL — el propi esquema ja fa servir UUID i ENUM natius, que encaixen millor amb Postgres). En desenvolupament es fa servir el PostgreSQL local del `docker-compose.yml` (Prompt 1), sense dependre de connexió a internet. En producció, la base de dades viu a **Neon** (pla gratuït: 0,5 GB, es reactiva sola en segons davant d'inactivitat, sense necessitat d'entrar a cap panell a reactivar-la manualment — al contrari que Supabase, que es va descartar per pausar-se als 7 dies i requerir reactivació manual). Neon exigeix connexió SSL (`sslmode=require`); el datasource de Spring Boot per a l'entorn de producció ha de llegir la cadena de connexió de Neon des d'una variable d'entorn, mai hardcodejada.
+
+**Hosting del backend:** **Render** (pla gratuït, 750 hores d'instància al mes — cobreix un servei encès tot el mes). Es va descartar Railway perquè el seu pla gratuït real dura només 30 dies (crèdit inicial de 5$); passat aquest període caldria pagar el pla Hobby (5$/mes + consum), i no hi havia cap despesa prèvia que ho fes "gratis marginal". Es va descartar Fly.io perquè ja no ofereix pla gratuït per a comptes noves. Important: el servei gratuït de Render "s'adorm" als 15 minuts d'inactivitat i triga uns 60 segons a despertar-se amb la primera petició — cal preveure-ho a la interfície (per exemple, un estat de càrrega clar a la pantalla de la tauleta compartida en comptes de deixar-la en blanc mentre el backend arrenca).
 
 ---
 
@@ -140,8 +142,8 @@ Implementa el shell de navegació de Mapaka amb Vue Router:
 
 - Login amb usuari/contrasenya per a PARENT, i usuari/PIN per a CHILD (tal com descriu la secció 7.2 de Família+.pdf).
 - Guàrdies de ruta per rol: un CHILD mai pot accedir a rutes de PARENT ni viceversa.
-- Component AppShell: per sota de 768px de viewport, renderitza una barra inferior fixa amb 4 ítems (Inici, Tasques, Objectius, Pantalla) — només visible per a rol CHILD. Per sobre de 768px (o sempre per a rol PARENT), renderitza un panell lateral fix amb (Resum familiar, Aprovacions, Fills, Configuració).
-- L'ítem actiu de la navegació ha de portar un indicador animat (transform + transition, no display toggling brusc) que es desplaça entre posicions, reproduint el comportament de l'artefacte mapaka-maqueta-animada.
+- Component AppShell únic i reutilitzat pels dos rols (no dos components de navegació separats): per sota de 768px de viewport, renderitza sempre una barra inferior fixa de 4 ítems, amb la llista d'ítems (etiqueta, icona, ruta) depenent només del rol — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb comptador de pendents en un badge sobre la icona), Fills, Configuració. Per sobre de 768px, el rol PARENT canvia a un panell lateral fix amb els mateixos 4 ítems; el rol CHILD no té variant d'escriptori.
+- L'ítem actiu de la navegació ha de portar un indicador animat (transform + transition, no display toggling brusc) que es desplaça entre posicions, reproduint el comportament de l'artefacte mapaka-maqueta-animada — inclosa la variant "Vista PARENT — mòbil", que fa servir exactament el mateix patró de barra inferior que CHILD, només canviant els ítems.
 - Aplica l'atribut data-role a <html> just després de l'autenticació, perquè el sistema de disseny del Prompt 2 s'apliqui automàticament.
 ```
 
@@ -209,10 +211,26 @@ No configuris res relacionat amb Google Play (aquest projecte no s'hi publicarà
 
 ---
 
-## Prompt 10 — Verificació
+## Prompt 10 — Desplegament del backend a Render
 
 ```
-Revisa tot el que s'ha implementat als prompts 1-9 contra Família+.pdf i contra aquest document:
+Prepara el backend Spring Boot per desplegar-se a Render (pla gratuït):
+
+1. Crea un `render.yaml` (Render Blueprint) al backend/ que defineixi un servei web tipus Docker, apuntant al Dockerfile ja existent (secció 5 de Família+.pdf).
+2. Configura el healthcheck de Render perquè apunti a l'endpoint de Spring Boot Actuator (`/actuator/health`), ja inclòs des del Prompt 1.
+3. Totes les credencials (connexió a Neon, secret JWT, etc.) s'han de llegir de variables d'entorn definides al panell de Render — mai hardcodejades ni al `render.yaml` ni al codi.
+4. Important: el pla gratuït de Render "adorm" el servei als 15 minuts d'inactivitat i triga fins a un minut a despertar. Afegeix un estat de càrrega explícit al frontend (Vue 3) per a qualsevol crida a l'API que trigui més de 2-3 segons — especialment a la pantalla de "tauleta compartida" (Prompt 8), on un fill podria trobar-se la pantalla en blanc si el backend està "adormit" just quan toca l'objecte NFC. Un missatge del tipus "Despertant Mapaka…" amb una animació lleugera és suficient; no cal cap solució més complexa per a l'MVP.
+5. Documenta al README els passos per connectar el repositori a Render i les variables d'entorn necessàries.
+
+No configuris res relacionat amb Railway ni Fly.io — es van descartar per no ser gratuïts de forma continuada.
+```
+
+---
+
+## Prompt 11 — Verificació
+
+```
+Revisa tot el que s'ha implementat als prompts 1-10 contra Família+.pdf i contra aquest document:
 
 1. Cap acció que generi recompensa (diner o temps) és efectiva sense passar per un estat d'aprovació o pel repartiment explícit de la sessió NFC.
 2. Cap saldo es guarda com a valor fix — tot es calcula per suma de moviments (ledger), incloent el temps de pantalla assignat per sessions NFC.

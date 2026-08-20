@@ -1,30 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NavIcon from './NavIcon.vue'
+import BadgeCounter from '@/components/base/BadgeCounter.vue'
 
 type IconName = 'home' | 'tasks' | 'target' | 'device' | 'family' | 'check' | 'child' | 'settings'
 
-const props = defineProps<{
-  items: { name: string; label: string; icon: IconName }[]
+defineProps<{
+  items: { name: string; label: string; icon: IconName; badge?: number }[]
 }>()
 
 const route = useRoute()
-const activeIndex = computed(() => {
-  const index = props.items.findIndex((item) => item.name === route.name)
-  return index === -1 ? 0 : index
-})
 </script>
 
 <template>
-  <nav class="sidebar" :style="{ '--count': items.length, '--active': activeIndex }">
+  <nav class="sidebar">
     <div class="sidebar__brand">
-      <img src="@/assets/mapaka-logo.svg" alt="" width="32" height="32" />
+      <img src="@/assets/mapaka-logo.svg" alt="" width="26" height="26" />
       <span>Mapaka</span>
     </div>
 
     <div class="sidebar__items">
-      <span class="sidebar__indicator" />
       <RouterLink
         v-for="item in items"
         :key="item.name"
@@ -34,6 +29,7 @@ const activeIndex = computed(() => {
       >
         <NavIcon :name="item.icon" />
         <span>{{ item.label }}</span>
+        <BadgeCounter v-if="item.badge" :count="item.badge" class="sidebar__badge" />
       </RouterLink>
     </div>
   </nav>
@@ -48,9 +44,9 @@ const activeIndex = computed(() => {
   width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   padding: 1.5rem 1rem;
-  background: color-mix(in srgb, var(--bg) 85%, white);
+  background: white;
   border-right: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
   z-index: 20;
 }
@@ -60,56 +56,40 @@ const activeIndex = computed(() => {
   align-items: center;
   gap: 0.6rem;
   font-family: var(--font-heading);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1.1rem;
-  color: var(--text);
+  color: var(--primary);
   padding: 0 0.5rem;
 }
 
 .sidebar__items {
-  position: relative;
   display: flex;
   flex-direction: column;
-}
-
-.sidebar__indicator {
-  /* Alçada fixa (no percentual): l'indicador viu dins d'un flex sense alçada pròpia
-     definida, i un % d'alçada contra un contenidor 'auto' col·lapsa a 0. */
-  --item-height: 3.25rem;
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 4px;
-  height: var(--item-height);
-  border-radius: 999px;
-  background: var(--primary);
-  transform: translateY(calc(var(--active) * var(--item-height)));
-  transition: transform 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+  gap: 0.25rem;
 }
 
 .sidebar__item {
-  --item-height: 3.25rem;
   display: flex;
   align-items: center;
-  height: var(--item-height);
-  gap: 0.75rem;
-  padding: 0 0.75rem 0 1.25rem;
-  border-radius: 14px;
-  color: var(--muted);
+  gap: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 12px;
+  color: #5b5580;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.88rem;
   transition:
-    color 0.2s ease,
-    background 0.2s ease;
-}
-
-.sidebar__item:hover {
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .sidebar__item--active {
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.sidebar__badge {
+  margin-left: auto;
 }
 </style>

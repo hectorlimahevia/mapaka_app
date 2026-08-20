@@ -26,7 +26,7 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 | `mapaka_documento_global.md` | Este documento — la vista de conjunto. |
 | `mapaka_prompts_code.md` | 11 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, navegación, pantallas, feature NFC, empaquetado Android, despliegue, verificación). |
 | `mapaka-logo.svg` | El logo definitivo ("Cercles de família"), en SVG, listo para usar tal cual. |
-| Artefacto `mapaka-maqueta-animada` | Maqueta HTML interactiva y animada con el diseño aprobado: navegación CHILD/PARENT, pantallas, y el flujo completo de sesión NFC en la tableta compartida. Persistida en tu escritorio Claude — Code debe reproducir fielmente su aspecto, no reinterpretarlo. |
+| `mapaka_mockup.html` | Maqueta HTML interactiva y animada con el diseño aprobado: navegación CHILD/PARENT, pantallas, y el flujo completo de sesión NFC en la tableta compartida. Code debe reproducir fielmente su aspecto, no reinterpretarlo. |
 
 ---
 
@@ -57,7 +57,7 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 
 **Tipografía:** Baloo 2 (redondeada, juguetona) para titulares y botones; Nunito Sans (más neutra, con cifras tabulares) para cuerpo de texto y, sobre todo, para cualquier cantidad de dinero o minutos — la seriedad que le falta a una fuente redondeada se recupera con peso tipográfico alto (800/900) en los importes, no cambiando de fuente.
 
-**Navegación:** patrón adaptativo por rol y tamaño de pantalla. Barra inferior de 4 secciones (Inici, Tasques, Objectius, Pantalla) para CHILD en móvil. Panel lateral (Resum familiar, Aprovacions, Fills, Configuració) para PARENT en escritorio/tablet.
+**Navegación:** un único componente de AppShell adaptativo, no dos separados. Por debajo de 768px, cualquier rol ve una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (con contador de pendientes), Fills, Configuració. Por encima de 768px, el rol PARENT cambia a panel lateral fijo con los mismos 4 ítems; CHILD no tiene variante de escritorio. La vista "PARENT en móvil" reutiliza literalmente el mismo patrón de barra inferior que CHILD — solo cambian los ítems — para no duplicar trabajo de implementación ni introducir un tercer patrón de navegación.
 
 **Idioma de la interfaz:** catalán, en todo texto visible al usuario final.
 

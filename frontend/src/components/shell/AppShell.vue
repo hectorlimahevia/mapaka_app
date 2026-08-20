@@ -8,34 +8,47 @@ import SidebarNav from './SidebarNav.vue'
 const auth = useAuthStore()
 const { isMobile } = useViewport()
 
-const parentItems = [
-  { name: 'parent-resum', label: 'Resum familiar', icon: 'family' as const },
-  { name: 'parent-aprovacions', label: 'Aprovacions', icon: 'check' as const },
-  { name: 'parent-fills', label: 'Fills', icon: 'child' as const },
-  { name: 'parent-configuracio', label: 'Configuració', icon: 'settings' as const },
-]
-
-const childSidebarItems = [
+const childItems = [
   { name: 'child-inici', label: 'Inici', icon: 'home' as const },
   { name: 'child-tasques', label: 'Tasques', icon: 'tasks' as const },
   { name: 'child-objectius', label: 'Objectius', icon: 'target' as const },
   { name: 'child-pantalla', label: 'Pantalla', icon: 'device' as const },
 ]
 
-// Sidebar per sobre de 768px sempre, i sempre per a PARENT independentment de la mida.
-const showSidebar = computed(() => auth.role === 'PARENT' || !isMobile.value)
-const showBottomNav = computed(() => auth.role === 'CHILD' && isMobile.value)
+const parentItems = [
+  { name: 'parent-resum', label: 'Resum', icon: 'family' as const },
+  { name: 'parent-aprovacions', label: 'Aprova.', icon: 'check' as const },
+  { name: 'parent-fills', label: 'Fills', icon: 'child' as const },
+  { name: 'parent-configuracio', label: 'Config.', icon: 'settings' as const },
+]
+
+const parentSidebarItems = [
+  { name: 'parent-resum', label: 'Resum familiar', icon: 'family' as const },
+  { name: 'parent-aprovacions', label: 'Aprovacions', icon: 'check' as const },
+  { name: 'parent-fills', label: 'Fills', icon: 'child' as const },
+  { name: 'parent-configuracio', label: 'Configuració', icon: 'settings' as const },
+]
+
+// CHILD sempre veu la barra inferior (no té variant d'escriptori). PARENT canvia a
+// panell lateral per sobre de 768px — mateix AppShell, mateix patró de barra inferior
+// per sota (mapaka_mockup.html: "Vista PARENT — mòbil" reutilitza el de CHILD).
+const showSidebar = computed(() => auth.role === 'PARENT' && !isMobile.value)
+const bottomNavItems = computed(() => (auth.role === 'PARENT' ? parentItems : childItems))
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'app-shell--sidebar': showSidebar, 'app-shell--bottom-nav': showBottomNav }">
-    <SidebarNav v-if="showSidebar" :items="auth.role === 'PARENT' ? parentItems : childSidebarItems" />
+  <div class="app-shell" :class="{ 'app-shell--sidebar': showSidebar, 'app-shell--bottom-nav': !showSidebar }">
+    <SidebarNav v-if="showSidebar" :items="parentSidebarItems" />
 
     <main class="app-shell__content">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="screen" mode="out-in">
+          <component :is="Component" />
+        </Transition>
+      </RouterView>
     </main>
 
-    <BottomNav v-if="showBottomNav" />
+    <BottomNav v-if="!showSidebar" :items="bottomNavItems" />
   </div>
 </template>
 
@@ -50,5 +63,22 @@ const showBottomNav = computed(() => auth.role === 'CHILD' && isMobile.value)
 
 .app-shell--bottom-nav .app-shell__content {
   padding-bottom: 4.5rem;
+}
+</style>
+
+<style>
+/* No es pot fer scoped: la transició s'aplica a l'arrel del component enrutat,
+   que viu en un altre àmbit d'estil (reprodueix el fade+slide de mapaka_mockup.html). */
+.screen-enter-active,
+.screen-leave-active {
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s ease;
+}
+
+.screen-enter-from,
+.screen-leave-to {
+  opacity: 0;
+  transform: translateY(14px);
 }
 </style>
