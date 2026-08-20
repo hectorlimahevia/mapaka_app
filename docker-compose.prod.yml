@@ -1,0 +1,10 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # DATABASE_URL: jdbc:postgresql://<host-neon>/<db>?sslmode=require
+      # ha de proporcionar-se des de l'entorn (secrets de Render), mai hardcodejada aqui.
+      DATABASE_URL: ${DATABASE_URL}
+    ports:
+      - "8080:8080"

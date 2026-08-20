@@ -1,0 +1,19 @@
+# Variables d'entorn / secrets
+.env
+.env.*
+!.env.example
+
+# Sistema operatiu
+.DS_Store
+Thumbs.db
+
+# IDE (arrel del monorepo)
+.idea/
+*.iml
+
+# Empaquetat Android amb Capacitor (Fase 9)
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+*.keystore
+*.jks
