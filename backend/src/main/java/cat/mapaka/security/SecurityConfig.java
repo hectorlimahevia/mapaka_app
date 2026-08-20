@@ -47,6 +47,9 @@ public class SecurityConfig {
                         // l'etiqueta física, sense sessió d'usuari (mapaka_prompts_code.md Prompt 8).
                         .requestMatchers("/api/screen-tags/*/tap").permitAll()
                         .requestMatchers("/api/screen-sessions/*/stop", "/api/screen-sessions/*/assign").permitAll()
+                        // Selecció de família/perfil abans d'iniciar sessió (login infantil, secció 39) —
+                        // exposen només id/nom de família i nom/avatar/username de fill, mai dades sensibles.
+                        .requestMatchers("/api/families/lookup", "/api/families/*/login-profiles").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

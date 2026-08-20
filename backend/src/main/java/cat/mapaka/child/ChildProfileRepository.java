@@ -13,4 +13,7 @@ public interface ChildProfileRepository extends JpaRepository<ChildProfile, UUID
 
     @Query("SELECT c FROM ChildProfile c WHERE c.user.family.id = :familyId")
     List<ChildProfile> findAllByFamilyId(UUID familyId);
+
+    @Query("SELECT c FROM ChildProfile c JOIN FETCH c.user WHERE c.user.family.id = :familyId AND c.active = true")
+    List<ChildProfile> findAllActiveByFamilyIdFetchUser(UUID familyId);
 }
