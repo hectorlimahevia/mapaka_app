@@ -1,0 +1,27 @@
+:root {
+  --primary: #6C4DFF;
+  --secondary: #FF5D8F;
+  --accent: #FFC93C;
+  --bg: #FFFDF7;
+  --text: #2A2145;
+  --muted: #8A84AD;
+
+  --success: #2ECC71;
+  --error: #FF5252;
+  --warning: #F5A623;
+
+  --primary-adult: #4B3AA6;
+  --secondary-adult: #C9486B;
+  --accent-adult: #D9A72E;
+  --bg-adult: #F6F5F9;
+
+  --font-heading: "Baloo 2", sans-serif;
+  --font-body: "Nunito Sans", sans-serif;
+}
+
+[data-role="parent"] {
+  --primary: var(--primary-adult);
+  --secondary: var(--secondary-adult);
+  --accent: var(--accent-adult);
+  --bg: var(--bg-adult);
+}
