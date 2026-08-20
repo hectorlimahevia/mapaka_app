@@ -10,4 +10,6 @@ public interface TaskCompletionRepository extends JpaRepository<TaskCompletion, 
     List<TaskCompletion> findByChildIdAndStatus(UUID childId, TaskCompletionStatus status);
 
     List<TaskCompletion> findByTaskId(UUID taskId);
+
+    List<TaskCompletion> findByTaskIdAndChildIdOrderByCompletedAtDesc(UUID taskId, UUID childId);
 }

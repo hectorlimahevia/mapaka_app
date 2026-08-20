@@ -60,8 +60,12 @@ public class AuthService {
     private LoginResult issueTokens(AuthenticatedUser principal) {
         String accessToken = jwtService.generateAccessToken(principal);
         String refreshToken = jwtService.generateRefreshToken(principal.userId());
+        String displayName = principal.childId() == null ? null
+                : childProfileRepository.findById(principal.childId())
+                        .map(cat.mapaka.child.ChildProfile::getDisplayName)
+                        .orElse(null);
         AuthResponse response = new AuthResponse(
-                accessToken, principal.userId(), principal.familyId(), principal.role(), principal.childId());
+                accessToken, principal.userId(), principal.familyId(), principal.role(), principal.childId(), displayName);
         return new LoginResult(response, refreshToken);
     }
 

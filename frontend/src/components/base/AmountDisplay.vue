@@ -1,15 +1,26 @@
 <script setup lang="ts">
-withDefaults(
+import { computed } from 'vue'
+
+const props = withDefaults(
   defineProps<{
     value: number
     unit?: string
+    decimals?: number
   }>(),
-  { unit: '' },
+  { unit: '', decimals: 2 },
+)
+
+const formatted = computed(() =>
+  props.value.toLocaleString('ca-ES', {
+    minimumFractionDigits: props.decimals,
+    maximumFractionDigits: props.decimals,
+  }),
 )
 </script>
 
 <template>
-  <span class="amount-display">{{ value }}<span v-if="unit" class="amount-display__unit">{{ unit }}</span></span>
+  <span class="amount-display">{{ formatted
+    }}<span v-if="unit" class="amount-display__unit">{{ unit }}</span></span>
 </template>
 
 <style scoped>

@@ -6,6 +6,7 @@ export interface AuthResponse {
   familyId: string
   role: UserRole
   childId: string | null
+  displayName: string | null
 }
 
 export interface AdultLoginRequest {

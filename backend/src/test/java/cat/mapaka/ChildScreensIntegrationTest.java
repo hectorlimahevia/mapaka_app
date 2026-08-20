@@ -1,0 +1,211 @@
+package cat.mapaka;
+
+import cat.mapaka.child.ChildProfile;
+import cat.mapaka.child.ChildProfileRepository;
+import cat.mapaka.common.DomainException;
+import cat.mapaka.common.TransactionType;
+import cat.mapaka.family.Family;
+import cat.mapaka.family.FamilyRepository;
+import cat.mapaka.money.*;
+import cat.mapaka.savings.SavingsGoal;
+import cat.mapaka.savings.SavingsGoalController;
+import cat.mapaka.savings.SavingsGoalRepository;
+import cat.mapaka.savings.SavingsGoalStatus;
+import cat.mapaka.screentime.ScreenTimeController;
+import cat.mapaka.screentime.ScreenTimeRule;
+import cat.mapaka.screentime.ScreenTimeRuleRepository;
+import cat.mapaka.security.AuthenticatedUser;
+import cat.mapaka.task.*;
+import cat.mapaka.user.User;
+import cat.mapaka.user.UserRepository;
+import cat.mapaka.user.UserRole;
+import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@SpringBootTest
+class ChildScreensIntegrationTest {
+
+    static EmbeddedPostgres pg;
+
+    @BeforeAll
+    static void startDatabase() throws IOException {
+        pg = EmbeddedPostgres.start();
+    }
+
+    @AfterAll
+    static void stopDatabase() throws IOException {
+        pg.close();
+    }
+
+    @DynamicPropertySource
+    static void datasourceProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> pg.getJdbcUrl("postgres", "postgres"));
+        registry.add("spring.datasource.username", () -> "postgres");
+        registry.add("spring.datasource.password", () -> "postgres");
+        registry.add("JWT_SECRET", () -> "test-secret-0123456789abcdef0123456789abcdef");
+        registry.add("FRONTEND_URL", () -> "http://localhost:5173");
+    }
+
+    @Autowired FamilyRepository familyRepository;
+    @Autowired UserRepository userRepository;
+    @Autowired ChildProfileRepository childProfileRepository;
+    @Autowired MoneyTransactionRepository moneyTransactionRepository;
+    @Autowired SavingsGoalRepository savingsGoalRepository;
+    @Autowired ScreenTimeRuleRepository screenTimeRuleRepository;
+    @Autowired TaskRepository taskRepository;
+    @Autowired TaskRewardRepository taskRewardRepository;
+    @Autowired TaskAssignmentRepository taskAssignmentRepository;
+    @Autowired TaskCompletionRepository taskCompletionRepository;
+
+    @Autowired MoneyController moneyController;
+    @Autowired SavingsGoalController savingsGoalController;
+    @Autowired ScreenTimeController screenTimeController;
+    @Autowired TaskController taskController;
+
+    private ChildProfile seedChild() {
+        Family family = familyRepository.save(Family.builder()
+                .name("Test Family").currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
+                .build());
+        User parentUser = userRepository.save(User.builder()
+                .family(family).email("p" + UUID.randomUUID() + "@test.com")
+                .passwordHash(new BCryptPasswordEncoder().encode("x")).role(UserRole.PARENT).active(true)
+                .build());
+        User childUser = userRepository.save(User.builder()
+                .family(family).username("kid" + UUID.randomUUID())
+                .passwordHash(new BCryptPasswordEncoder().encode("1234")).role(UserRole.CHILD).active(true)
+                .build());
+        ChildProfile child = childProfileRepository.save(ChildProfile.builder()
+                .user(childUser).displayName("Kid").birthDate(LocalDate.of(2016, 1, 1))
+                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .build());
+        moneyTransactionRepository.save(MoneyTransaction.builder()
+                .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
+                .amount(new BigDecimal("14.00")).sourceType(MoneySourceType.MONTHLY_ALLOWANCE)
+                .createdBy(parentUser).build());
+        moneyTransactionRepository.save(MoneyTransaction.builder()
+                .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.DEBIT)
+                .amount(new BigDecimal("5.00")).sourceType(MoneySourceType.PURCHASE)
+                .createdBy(parentUser).build());
+        moneyTransactionRepository.save(MoneyTransaction.builder()
+                .child(child).walletType(WalletType.SAVINGS).transactionType(TransactionType.CREDIT)
+                .amount(new BigDecimal("6.00")).sourceType(MoneySourceType.MONTHLY_ALLOWANCE)
+                .createdBy(parentUser).build());
+        return child;
+    }
+
+    private AuthenticatedUser asChild(ChildProfile child) {
+        return new AuthenticatedUser(child.getUser().getId(), child.getUser().getFamily().getId(), UserRole.CHILD, child.getId());
+    }
+
+    /** @PreAuthorize necessita una Authentication real al SecurityContext, com la que
+     *  JwtAuthenticationFilter hi posaria en una petició HTTP real. */
+    private void authenticateAs(AuthenticatedUser user) {
+        var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(user, null, authorities));
+    }
+
+    @Test
+    @Transactional
+    void wallet_sumsLedgerCorrectly() {
+        ChildProfile child = seedChild();
+        WalletResponse wallet = moneyController.wallet(child.getId(), asChild(child));
+        assertThat(wallet.spendingBalance()).isEqualByComparingTo("9.00");
+        assertThat(wallet.savingsBalance()).isEqualByComparingTo("6.00");
+        assertThat(wallet.total()).isEqualByComparingTo("15.00");
+        assertThat(moneyController.transactions(child.getId(), asChild(child))).hasSize(3);
+    }
+
+    @Test
+    @Transactional
+    void savingsGoal_progressUsesSharedSavingsBalance() {
+        ChildProfile child = seedChild();
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(child).name("Bici").targetAmount(new BigDecimal("120.00")).status(SavingsGoalStatus.ACTIVE)
+                .build());
+
+        List<cat.mapaka.savings.SavingsGoalResponse> goals = savingsGoalController.goals(child.getId(), asChild(child));
+        assertThat(goals).hasSize(1);
+        assertThat(goals.get(0).currentAmount()).isEqualByComparingTo("6.00");
+    }
+
+    @Test
+    @Transactional
+    void screenTime_creditsDailyBaseOnceAndIsIdempotent() {
+        ChildProfile child = seedChild();
+        screenTimeRuleRepository.save(ScreenTimeRule.builder()
+                .child(child).baseMinutes(45).rolloverEnabled(false)
+                .validFrom(LocalDate.now().minusDays(1)).active(true)
+                .build());
+        AuthenticatedUser principal = asChild(child);
+        UUID childId = child.getId();
+
+        // DailyBaseCreditor obre una transacció pròpia (REQUIRES_NEW) que, en producció,
+        // sempre veu un fill ja confirmat d'una petició anterior. Aquí cal confirmar-lo
+        // explícitament perquè la transacció anidada el pugui veure de debò.
+        org.springframework.test.context.transaction.TestTransaction.flagForCommit();
+        org.springframework.test.context.transaction.TestTransaction.end();
+        org.springframework.test.context.transaction.TestTransaction.start();
+
+        var first = screenTimeController.today(childId, principal);
+        assertThat(first.baseMinutes()).isEqualTo(45);
+        assertThat(first.availableMinutes()).isEqualTo(45);
+
+        var second = screenTimeController.today(childId, principal);
+        assertThat(second.availableMinutes()).isEqualTo(45); // no duplicat el segon cop
+    }
+
+    @Test
+    @Transactional
+    void task_childCanCompleteOnce_thenMustWaitForApprovalBeforeRetrying() {
+        ChildProfile child = seedChild();
+        Family family = child.getUser().getFamily();
+
+        Task task = taskRepository.save(Task.builder()
+                .family(family).name("Rentar cotxe").taskType(TaskType.EXTRA)
+                .active(true).requiresApproval(true).repeatable(true)
+                .recurrenceType(RecurrenceType.WEEKLY).createdBy(child.getUser())
+                .build());
+        taskRewardRepository.save(TaskReward.builder()
+                .task(task).moneyAmount(new BigDecimal("3.00")).savingsAmount(BigDecimal.ZERO)
+                .screenMinutes(15).active(true).build());
+        taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(child).active(true).build());
+
+        List<ChildTaskResponse> before = taskController.tasks(child.getId(), asChild(child));
+        assertThat(before.get(0).status()).isEqualTo(ChildTaskStatus.AVAILABLE);
+
+        authenticateAs(asChild(child));
+        taskController.complete(task.getId(), asChild(child));
+
+        List<ChildTaskResponse> after = taskController.tasks(child.getId(), asChild(child));
+        assertThat(after.get(0).status()).isEqualTo(ChildTaskStatus.PENDING);
+
+        try {
+            assertThatThrownBy(() -> taskController.complete(task.getId(), asChild(child)))
+                    .isInstanceOf(DomainException.class)
+                    .hasMessageContaining("període");
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+}

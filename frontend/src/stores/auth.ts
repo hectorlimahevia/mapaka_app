@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const familyId = ref<string | null>(null)
   const role = ref<UserRole | null>(null)
   const childId = ref<string | null>(null)
+  const displayName = ref<string | null>(null)
   const initialized = ref(false)
 
   const isAuthenticated = computed(() => accessToken.value !== null)
@@ -22,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     familyId.value = data.familyId
     role.value = data.role
     childId.value = data.childId
+    displayName.value = data.displayName
     roleStore.setRole(data.role)
   }
 
@@ -31,6 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
     familyId.value = null
     role.value = null
     childId.value = null
+    displayName.value = null
     roleStore.setRole(null)
   }
 
@@ -76,6 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
     familyId,
     role,
     childId,
+    displayName,
     initialized,
     isAuthenticated,
     loginAdult,

@@ -11,6 +11,14 @@ public interface ChildProfileRepository extends JpaRepository<ChildProfile, UUID
 
     Optional<ChildProfile> findByUserId(UUID userId);
 
+    /**
+     * Carrega user i user.family d'un cop: evita LazyInitializationException quan el
+     * ChildProfile es fa servir fora d'una transacció (p. ex. a ChildAccessService,
+     * consultat des de múltiples controllers no transaccionals).
+     */
+    @Query("SELECT c FROM ChildProfile c JOIN FETCH c.user u JOIN FETCH u.family WHERE c.id = :id")
+    Optional<ChildProfile> findByIdFetchUserAndFamily(UUID id);
+
     @Query("SELECT c FROM ChildProfile c WHERE c.user.family.id = :familyId")
     List<ChildProfile> findAllByFamilyId(UUID familyId);
 

@@ -1,23 +1,159 @@
 <script setup lang="ts">
-import BaseCard from '@/components/base/BaseCard.vue'
+import { onMounted, ref } from 'vue'
+import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { useCountUp } from '@/composables/useCountUp'
+import AmountDisplay from '@/components/base/AmountDisplay.vue'
+import type { ChildTaskResponse, MoneyTransactionResponse, WalletResponse } from '@/types/child'
+
+const auth = useAuthStore()
+const { value: balanceDisplay, animateTo } = useCountUp()
+
+const savingsBalance = ref(0)
+const transactions = ref<MoneyTransactionResponse[]>([])
+const pendingTaskCount = ref(0)
+const loading = ref(true)
+
+onMounted(async () => {
+  const childId = auth.childId
+  if (!childId) return
+
+  const [walletRes, transactionsRes, tasksRes] = await Promise.all([
+    api.get<WalletResponse>(`/api/children/${childId}/wallet`),
+    api.get<MoneyTransactionResponse[]>(`/api/children/${childId}/money-transactions`),
+    api.get<ChildTaskResponse[]>(`/api/children/${childId}/tasks`),
+  ])
+
+  animateTo(walletRes.data.spendingBalance)
+  savingsBalance.value = walletRes.data.savingsBalance
+  transactions.value = transactionsRes.data.slice(0, 5)
+  pendingTaskCount.value = tasksRes.data.filter((t) => t.status === 'PENDING').length
+  loading.value = false
+})
 </script>
 
 <template>
-  <div class="placeholder">
-    <h1>Inici</h1>
-    <BaseCard>
-      <p>Aquí anirà el saldo, l'estalvi i les tasques disponibles (Fase 6).</p>
-    </BaseCard>
+  <div class="inici">
+    <h1 class="inici__greeting">Bon dia, {{ auth.displayName }}</h1>
+    <p class="inici__sub">
+      <template v-if="pendingTaskCount > 0">
+        Tens {{ pendingTaskCount }} tasca{{ pendingTaskCount > 1 ? 's' : '' }} pendent{{
+          pendingTaskCount > 1 ? 's' : ''
+        }}
+        d'aprovació
+      </template>
+      <template v-else>Benvingut/da de nou!</template>
+    </p>
+
+    <div class="balance-card">
+      <div class="balance-card__label">SALDO DISPONIBLE</div>
+      <div class="balance-card__amount">
+        <AmountDisplay :value="balanceDisplay" unit="€" />
+      </div>
+      <div class="balance-card__chip">Estalvi: <AmountDisplay :value="savingsBalance" unit="€" /></div>
+    </div>
+
+    <div class="section-label">Moviments recents</div>
+    <div v-if="!loading && transactions.length === 0" class="inici__empty">Encara no hi ha cap moviment.</div>
+    <div v-for="t in transactions" :key="t.id" class="mrow">
+      <span>{{ t.description || t.sourceType }}</span>
+      <span class="mrow__amt" :class="t.transactionType === 'CREDIT' ? 'mrow__amt--pos' : 'mrow__amt--neg'">
+        {{ t.transactionType === 'CREDIT' ? '+' : '-' }}<AmountDisplay :value="t.amount" unit="€" />
+      </span>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.placeholder {
-  max-width: 640px;
+.inici {
+  max-width: 480px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+.inici__greeting {
+  margin-bottom: 0.15rem;
+}
+
+.inici__sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 1.1rem;
+}
+
+.inici__empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
+
+.balance-card {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 20px;
+  padding: 1.25rem 1.4rem;
+  color: white;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+.balance-card__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  margin-bottom: 0.25rem;
+}
+
+.balance-card__amount {
+  font-size: 2.2rem;
+  margin-bottom: 0.75rem;
+}
+
+.balance-card__amount :deep(.amount-display) {
+  color: white;
+}
+
+.balance-card__chip {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.72rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.section-label {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.25rem 0 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mrow {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--primary) 15%, transparent);
+  font-size: 0.9rem;
+}
+
+.mrow:last-child {
+  border-bottom: none;
+}
+
+.mrow__amt {
+  display: inline-flex;
+  gap: 0.1rem;
+}
+
+.mrow__amt--pos {
+  color: var(--success);
+}
+
+.mrow__amt--neg {
+  color: var(--error);
 }
 </style>
