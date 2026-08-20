@@ -28,7 +28,10 @@ CREATE TABLE screen_time_transactions (
     -- Data local de la família (no UTC) a la qual pertany el moviment; permet la
     -- restricció idempotent de generació diària de la secció 15 de Família+.pdf.
     occurred_on DATE NOT NULL DEFAULT CURRENT_DATE,
-    created_by UUID NOT NULL REFERENCES users(id),
+    -- Nullable: a diferencia de money_transactions, aquest ledger rep moviments generats
+    -- automàticament sense cap usuari autenticat (DAILY_BASE per cron, NFC_SESSION des de
+    -- la tauleta compartida sense login individual — Prompt 8).
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     reversed_transaction_id UUID REFERENCES screen_time_transactions(id)
 );
