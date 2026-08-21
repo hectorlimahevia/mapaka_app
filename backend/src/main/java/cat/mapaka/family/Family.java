@@ -46,6 +46,14 @@ public class Family {
     @Column(name = "allow_savings_transfer", nullable = false)
     private boolean allowSavingsTransfer;
 
+    /** Codi de recuperació d'un sol ús (Prompt 6) — es guarda hashejat, mai en clar;
+     * null quan no n'hi ha cap de vigent (consumit o encara no generat). */
+    @Column(name = "recovery_code_hash")
+    private String recoveryCodeHash;
+
+    @Column(name = "recovery_code_generated_at")
+    private Instant recoveryCodeGeneratedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

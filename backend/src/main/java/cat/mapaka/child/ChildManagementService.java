@@ -4,10 +4,16 @@ import cat.mapaka.allowance.AllowanceRule;
 import cat.mapaka.allowance.AllowanceRuleRepository;
 import cat.mapaka.allowance.AllowanceRuleUpdateRequest;
 import cat.mapaka.common.DomainException;
+import cat.mapaka.family.Family;
 import cat.mapaka.screentime.ScreenTimeRule;
 import cat.mapaka.screentime.ScreenTimeRuleRepository;
 import cat.mapaka.screentime.ScreenTimeRuleUpdateRequest;
+import cat.mapaka.user.User;
+import cat.mapaka.user.UserRepository;
+import cat.mapaka.user.UserRole;
+import cat.mapaka.user.UsernameAllocator;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +32,49 @@ public class ChildManagementService {
     private final ChildProfileRepository childProfileRepository;
     private final AllowanceRuleRepository allowanceRuleRepository;
     private final ScreenTimeRuleRepository screenTimeRuleRepository;
+    private final UserRepository userRepository;
+    private final UsernameAllocator usernameAllocator;
+    private final PasswordEncoder passwordEncoder;
 
     public ChildManagementService(
             ChildProfileRepository childProfileRepository,
             AllowanceRuleRepository allowanceRuleRepository,
-            ScreenTimeRuleRepository screenTimeRuleRepository) {
+            ScreenTimeRuleRepository screenTimeRuleRepository,
+            UserRepository userRepository,
+            UsernameAllocator usernameAllocator,
+            PasswordEncoder passwordEncoder) {
         this.childProfileRepository = childProfileRepository;
         this.allowanceRuleRepository = allowanceRuleRepository;
         this.screenTimeRuleRepository = screenTimeRuleRepository;
+        this.userRepository = userRepository;
+        this.usernameAllocator = usernameAllocator;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /** Alta d'un fill (Prompt 6) — crea l'usuari CHILD (username derivat del nom, PIN hashejat
+     * igual que un password) i el seu perfil en una única transacció. */
+    @Transactional
+    public ChildDetailResponse createChild(Family family, CreateChildRequest request) {
+        User user = userRepository.save(User.builder()
+                .family(family)
+                .username(usernameAllocator.allocate(family.getId(), request.displayName()))
+                .passwordHash(passwordEncoder.encode(request.pin()))
+                .role(UserRole.CHILD)
+                .active(true)
+                .build());
+
+        ChildProfile child = childProfileRepository.save(ChildProfile.builder()
+                .user(user)
+                .displayName(request.displayName())
+                .birthDate(request.birthDate())
+                .avatar(request.avatar())
+                .colorTheme(request.colorTheme())
+                .allowanceEnabled(true)
+                .screenTimeEnabled(true)
+                .active(true)
+                .build());
+
+        return toDetail(child);
     }
 
     @Transactional(readOnly = true)

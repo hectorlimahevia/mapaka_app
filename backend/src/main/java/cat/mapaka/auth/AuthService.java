@@ -57,6 +57,13 @@ public class AuthService {
         return issueTokens(toAuthenticatedUser(user));
     }
 
+    /** Emet un parell de tokens per a un usuari ja creat (registre de família, alta de PARENT
+     * addicional) sense passar per la comprovació de contrasenya de login(). */
+    @Transactional
+    public LoginResult issueTokensForUser(User user) {
+        return issueTokens(toAuthenticatedUser(user));
+    }
+
     private LoginResult issueTokens(AuthenticatedUser principal) {
         String accessToken = jwtService.generateAccessToken(principal);
         String refreshToken = jwtService.generateRefreshToken(principal.userId());

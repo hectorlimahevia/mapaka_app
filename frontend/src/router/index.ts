@@ -12,6 +12,24 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/registre',
+      name: 'register-family',
+      component: () => import('@/views/RegisterFamilyView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/recuperar',
+      name: 'recover-request',
+      component: () => import('@/views/RecoverRequestView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/recuperar/nou-pin',
+      name: 'recover-set-pin',
+      component: () => import('@/views/RecoverSetPinView.vue'),
+      meta: { public: true },
+    },
+    {
       // URL gravada a l'etiqueta NFC física — sense login, identifica la família pel token.
       path: '/screen/:token',
       name: 'screen-session',

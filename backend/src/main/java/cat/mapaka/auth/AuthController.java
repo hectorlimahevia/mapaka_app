@@ -1,6 +1,7 @@
 package cat.mapaka.auth;
 
 import cat.mapaka.common.DomainException;
+import cat.mapaka.family.FamilyRegistrationService;
 import cat.mapaka.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -17,9 +18,11 @@ public class AuthController {
     private static final String REFRESH_COOKIE = "mapaka_refresh_token";
 
     private final AuthService authService;
+    private final FamilyRegistrationService familyRegistrationService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, FamilyRegistrationService familyRegistrationService) {
         this.authService = authService;
+        this.familyRegistrationService = familyRegistrationService;
     }
 
     @PostMapping("/login")
@@ -39,6 +42,17 @@ public class AuthController {
         AuthService.LoginResult result = authService.refresh(refreshToken);
         setRefreshCookie(response, result.refreshToken());
         return ResponseEntity.ok(result.response());
+    }
+
+    @PostMapping("/recover")
+    public ResponseEntity<RecoverResponse> recover(@Valid @RequestBody RecoverRequest request) {
+        return ResponseEntity.ok(familyRegistrationService.recover(request));
+    }
+
+    @PostMapping("/recover/reset-pin")
+    public ResponseEntity<Void> recoverResetPin(@Valid @RequestBody RecoverResetPinRequest request) {
+        familyRegistrationService.resetPinWithRecoveryToken(request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout")

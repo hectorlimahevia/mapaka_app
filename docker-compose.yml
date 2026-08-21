@@ -19,6 +19,7 @@ services:
     build: ./backend
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mapaka
     ports:
       - "8080:8080"
     depends_on:

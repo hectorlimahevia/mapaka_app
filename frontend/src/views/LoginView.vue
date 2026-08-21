@@ -5,7 +5,7 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
-import type { ChildLoginProfile, FamilySummary } from '@/types/auth'
+import type { FamilySummary, LoginProfile, UserRole } from '@/types/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -14,30 +14,13 @@ const mode = ref<'adult' | 'child'>('adult')
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// --- Adult ---
-const email = ref('')
-const password = ref('')
-
-async function submitAdult() {
-  error.value = null
-  loading.value = true
-  try {
-    await auth.loginAdult({ email: email.value, password: password.value })
-    await goHome()
-  } catch {
-    error.value = 'Email o contrasenya incorrectes.'
-  } finally {
-    loading.value = false
-  }
-}
-
-// --- Child: família → perfil → PIN ---
-const childStep = ref<'family' | 'profile' | 'pin'>('family')
+// --- Família → perfil → PIN, igual per a tots dos rols (Prompt 6) ---
+const step = ref<'family' | 'profile' | 'pin'>('family')
 const familyQuery = ref('')
 const familyResults = ref<FamilySummary[]>([])
 const selectedFamily = ref<FamilySummary | null>(null)
-const profiles = ref<ChildLoginProfile[]>([])
-const selectedProfile = ref<ChildLoginProfile | null>(null)
+const profiles = ref<LoginProfile[]>([])
+const selectedProfile = ref<LoginProfile | null>(null)
 const pin = ref('')
 
 let searchTimeout: ReturnType<typeof setTimeout>
@@ -53,37 +36,42 @@ watch(familyQuery, (q) => {
   }, 300)
 })
 
+function profilesForMode(all: LoginProfile[], targetMode: 'adult' | 'child'): LoginProfile[] {
+  const role: UserRole = targetMode === 'adult' ? 'PARENT' : 'CHILD'
+  return all.filter((profile) => profile.role === role)
+}
+
 async function selectFamily(family: FamilySummary) {
   error.value = null
   selectedFamily.value = family
   loading.value = true
   try {
-    const { data } = await api.get<ChildLoginProfile[]>(`/api/families/${family.id}/login-profiles`)
+    const { data } = await api.get<LoginProfile[]>(`/api/families/${family.id}/login-profiles`)
     profiles.value = data
-    childStep.value = 'profile'
+    step.value = 'profile'
   } finally {
     loading.value = false
   }
 }
 
-function selectProfile(profile: ChildLoginProfile) {
+function selectProfile(profile: LoginProfile) {
   selectedProfile.value = profile
   pin.value = ''
   error.value = null
-  childStep.value = 'pin'
+  step.value = 'pin'
 }
 
-function backTo(step: 'family' | 'profile') {
+function backTo(target: 'family' | 'profile') {
   error.value = null
-  childStep.value = step
+  step.value = target
 }
 
-async function submitChild() {
+async function submitPin() {
   if (!selectedFamily.value || !selectedProfile.value) return
   error.value = null
   loading.value = true
   try {
-    await auth.loginChild({
+    await auth.login({
       familyId: selectedFamily.value.id,
       username: selectedProfile.value.username,
       password: pin.value,
@@ -103,12 +91,14 @@ async function goHome() {
 function switchMode(next: 'adult' | 'child') {
   mode.value = next
   error.value = null
-  childStep.value = 'family'
+  step.value = 'family'
   familyQuery.value = ''
   familyResults.value = []
   selectedFamily.value = null
   selectedProfile.value = null
 }
+
+const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
 </script>
 
 <template>
@@ -124,23 +114,8 @@ function switchMode(next: 'adult' | 'child') {
     </div>
 
     <BaseCard class="login__card">
-      <form v-if="mode === 'adult'" class="login__form" @submit.prevent="submitAdult">
-        <label>
-          Email
-          <input v-model="email" type="email" required autocomplete="username" />
-        </label>
-        <label>
-          Contrasenya
-          <input v-model="password" type="password" required autocomplete="current-password" />
-        </label>
-        <p v-if="error" class="login__error">{{ error }}</p>
-        <BaseButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? 'Entrant…' : 'Entrar' }}
-        </BaseButton>
-      </form>
-
-      <div v-else class="login__form">
-        <template v-if="childStep === 'family'">
+      <div class="login__form">
+        <template v-if="step === 'family'">
           <label>
             Nom de la família
             <input v-model="familyQuery" type="text" placeholder="Sande-Lima" autocomplete="off" />
@@ -152,11 +127,11 @@ function switchMode(next: 'adult' | 'child') {
           </ul>
         </template>
 
-        <template v-else-if="childStep === 'profile'">
+        <template v-else-if="step === 'profile'">
           <button type="button" class="login__back" @click="backTo('family')">← Canviar família</button>
           <p class="login__prompt">Qui ets?</p>
-          <ul class="login__profiles">
-            <li v-for="profile in profiles" :key="profile.username">
+          <ul v-if="visibleProfiles().length" class="login__profiles">
+            <li v-for="profile in visibleProfiles()" :key="profile.username">
               <button type="button" class="login__profile" @click="selectProfile(profile)">
                 <img v-if="profile.avatar" :src="profile.avatar" alt="" />
                 <span v-else class="login__profile-fallback">{{ profile.displayName.charAt(0) }}</span>
@@ -164,23 +139,31 @@ function switchMode(next: 'adult' | 'child') {
               </button>
             </li>
           </ul>
+          <p v-else class="login__empty">
+            Aquesta família encara no té cap {{ mode === 'adult' ? 'adult' : 'fill' }} donat d'alta.
+          </p>
         </template>
 
         <template v-else>
           <button type="button" class="login__back" @click="backTo('profile')">← {{ selectedProfile?.displayName }} no sóc jo</button>
-          <form @submit.prevent="submitChild">
+          <form @submit.prevent="submitPin">
             <label>
               PIN de {{ selectedProfile?.displayName }}
-              <input v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" required autofocus />
+              <input v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus />
             </label>
             <p v-if="error" class="login__error">{{ error }}</p>
             <BaseButton type="submit" variant="accent" :disabled="loading">
               {{ loading ? 'Entrant…' : 'Entrar' }}
             </BaseButton>
           </form>
+          <RouterLink :to="{ name: 'recover-request' }" class="login__forgot">Has oblidat el PIN?</RouterLink>
         </template>
       </div>
     </BaseCard>
+
+    <RouterLink v-if="step === 'family'" :to="{ name: 'register-family' }" class="login__register">
+      Ets nou a Mapaka? Crea una família →
+    </RouterLink>
   </div>
 </template>
 
@@ -272,6 +255,12 @@ function switchMode(next: 'adult' | 'child') {
   margin: 0;
 }
 
+.login__empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
 .login__list {
   list-style: none;
   margin: 0;
@@ -342,5 +331,20 @@ function switchMode(next: 'adult' | 'child') {
   font-weight: 700;
   cursor: pointer;
   padding: 0;
+}
+
+.login__forgot {
+  align-self: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.login__register {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
 }
 </style>

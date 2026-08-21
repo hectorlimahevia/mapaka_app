@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { useRoleStore } from '@/stores/role'
-import type { AdultLoginRequest, ChildLoginRequest, AuthResponse, UserRole } from '@/types/auth'
+import type { PinLoginRequest, AuthResponse, FamilyRegisterResponse, UserRole } from '@/types/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const roleStore = useRoleStore()
@@ -37,14 +37,16 @@ export const useAuthStore = defineStore('auth', () => {
     roleStore.setRole(null)
   }
 
-  async function loginAdult(payload: AdultLoginRequest) {
+  /** Família + perfil + PIN — mateix flux per a PARENT i CHILD des del Prompt 6. */
+  async function login(payload: PinLoginRequest) {
     const { data } = await api.post<AuthResponse>('/api/auth/login', payload)
     applyAuthResponse(data)
   }
 
-  async function loginChild(payload: ChildLoginRequest) {
-    const { data } = await api.post<AuthResponse>('/api/auth/login', payload)
-    applyAuthResponse(data)
+  /** L'assistent de registre ja retorna sessió iniciada (auth) perquè es pugui continuar
+   *  afegint fills sense haver de tornar a entrar. */
+  function applyRegisterResponse(result: FamilyRegisterResponse) {
+    applyAuthResponse(result.auth)
   }
 
   /** Access token només en memòria (mai localStorage). En recarregar la pàgina es recupera
@@ -82,8 +84,8 @@ export const useAuthStore = defineStore('auth', () => {
     displayName,
     initialized,
     isAuthenticated,
-    loginAdult,
-    loginChild,
+    login,
+    applyRegisterResponse,
     refresh,
     tryRestoreSession,
     clearSession,

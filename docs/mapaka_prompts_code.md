@@ -1,6 +1,6 @@
 # Mapaka — Prompts per a Code
 
-Aquest document recull totes les decisions preses durant la fase de disseny (marca, color, tipografia, navegació, la funcionalitat NFC de temps de pantalla i l'estratègia de distribució multiplataforma) convertides en instruccions llestes perquè Code (l'agent de codi) implementi el projecte pas a pas.
+Aquest document recull totes les decisions preses durant la fase de disseny (marca, color, tipografia, navegació, autenticació i registre, la funcionalitat NFC de temps de pantalla i l'estratègia de distribució multiplataforma) convertides en instruccions llestes perquè Code (l'agent de codi) implementi el projecte pas a pas.
 
 ## Com fer servir aquest document
 
@@ -56,6 +56,10 @@ Regla no negociable: qualsevol xifra monetària o de minuts ha de portar `font-v
 **Navegació:** patró adaptatiu pel mateix component d'AppShell, no dos components separats. Per sota de `768px`, qualsevol rol veu una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb badge de pendents), Fills, Configuració. Per sobre de `768px`, el rol PARENT canvia a panell lateral fix (Resum familiar, Aprovacions, Fills, Configuració); CHILD no té vista d'escriptori pròpia perquè no és el seu cas d'ús principal. Referència visual exacta: els tres frames de l'artefacte mapaka-maqueta-animada / `mapaka_mockup.html` — "Vista CHILD — mòbil", "Vista PARENT — mòbil" i "Vista PARENT — escriptori".
 
 **Idioma de la interfície:** català, en tots els textos visibles (etiquetes, botons, missatges). Els prompts i comentaris de codi poden ser en castellà/anglès, però cap text d'usuari final.
+
+**Autenticació:** PIN numèric de 4 dígits per a **tots dos rols**, PARENT inclòs — no hi ha contrasenya alfanumèrica enlloc de l'aplicació. Es tria expressament per mantenir la infraestructura a cost zero: una contrasenya amb recuperació per correu exigiria donar d'alta un servei d'enviament d'email transaccional només per a aquest propòsit. El PIN es guarda sempre com a hash (mai en clar ni reversible) al mateix camp `password_hash` de la taula `users`, independentment del rol. Vegeu el Prompt 6 per al flux complet de creació de família, alta de perfils i recuperació de PIN.
+
+**Animació d'entrada del login — "Muntatge en cascada":** cada cercle del logo arriba d'una direcció diferent (el primari des de sota, el secundari des de dalt-dreta, l'accent des de baix-esquerra) i encaixa amb un lleuger rebot (`cubic-bezier(.2,.9,.3,1.4)`), amb un petit retard esglaonat entre els tres (~140ms). El wordmark "Mapaka" apareix després, amb un col·lapse de `letter-spacing` combinat amb un fade-in. Implementació de referència exacta (keyframes CSS inclosos, llestos per portar a un component Vue): `mapaka_login_animacions.html`, proposta 2. Respecta `prefers-reduced-motion` (desactiva l'animació i mostra l'estat final directament).
 
 **Maqueta de referència visual:** l'artefacte `mapaka-maqueta-animada` (HTML autocontingut) conté l'aparença i les transicions exactes aprovades — Code hauria de reproduir-ne fidelment els components, no reinterpretar-los.
 
@@ -140,7 +144,8 @@ Documenta tots els endpoints amb OpenAPI/Swagger, incloent exemples de request/r
 ```
 Implementa el shell de navegació de Mapaka amb Vue Router:
 
-- Login amb usuari/contrasenya per a PARENT, i usuari/PIN per a CHILD (tal com descriu la secció 7.2 de Família+.pdf).
+- Login amb PIN numèric de 4 dígits per a tots dos rols (vegeu "Autenticació" al context de disseny). Per a CHILD, reprodueix el patró "selecciona el teu perfil" de la secció 7.2 de Família+.pdf: primer es tria l'avatar/nom dins la família, després es demana el PIN — mai un camp d'usuari en text lliure. Per a PARENT, un únic camp de PIN n'hi ha prou perquè el correu/usuari ja identifica la família.
+- Pantalla de login amb l'animació d'entrada del logo descrita al context de disseny ("Muntatge en cascada").
 - Guàrdies de ruta per rol: un CHILD mai pot accedir a rutes de PARENT ni viceversa.
 - Component AppShell únic i reutilitzat pels dos rols (no dos components de navegació separats): per sota de 768px de viewport, renderitza sempre una barra inferior fixa de 4 ítems, amb la llista d'ítems (etiqueta, icona, ruta) depenent només del rol — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb comptador de pendents en un badge sobre la icona), Fills, Configuració. Per sobre de 768px, el rol PARENT canvia a un panell lateral fix amb els mateixos 4 ítems; el rol CHILD no té variant d'escriptori.
 - L'ítem actiu de la navegació ha de portar un indicador animat (transform + transition, no display toggling brusc) que es desplaça entre posicions, reproduint el comportament de l'artefacte mapaka-maqueta-animada — inclosa la variant "Vista PARENT — mòbil", que fa servir exactament el mateix patró de barra inferior que CHILD, només canviant els ítems.
@@ -149,7 +154,36 @@ Implementa el shell de navegació de Mapaka amb Vue Router:
 
 ---
 
-## Prompt 6 — Frontend: pantalles CHILD
+## Prompt 6 — Registre de família, alta de perfils i recuperació de PIN
+
+```
+Família+.pdf defineix POST /api/families i POST /api/children però no connecta un flux real d'alta ni cap mecanisme de recuperació — implementa'l des de zero seguint aquestes regles:
+
+Backend:
+- POST /api/families/register — endpoint públic (sense autenticació prèvia): rep el nom de la família i les dades del primer PARENT (nom, PIN de 4 dígits). Crea la família i el primer usuari PARENT en una única transacció. Genera també un codi de recuperació d'un sol ús (per exemple 8 caràcters alfanumèrics), el desa hashejat a un nou camp `families.recovery_code_hash`, i el retorna en clar **només en aquesta resposta** — no es torna a poder consultar mai més.
+- POST /api/families/current/parents — afegir un PARENT addicional. Requereix estar autenticat com a PARENT de la mateixa família.
+- POST /api/children ja existeix a Família+.pdf; assegura't que accepta el PIN de 4 dígits en l'alta i el hasheja igual que un password.
+- PATCH /api/users/{id}/pin — reseteja el PIN d'un altre membre de la família. Requereix estar autenticat com a PARENT de la mateixa família (un PARENT pot resetejar el PIN de qualsevol CHILD o d'un altre PARENT).
+- POST /api/auth/recover — rep el codi de recuperació d'un sol ús i, si coincideix amb el hash de la família, retorna un token temporal de curta durada (per exemple 10 minuts) que només permet cridar PATCH /api/users/{id}/pin sobre el primer PARENT de la família, per definir-hi un PIN nou. El codi es consumeix: un cop fet servir, `recovery_code_hash` es posa a NULL i cal generar-ne un de nou des de Configuració.
+- Nou camp a la migració Flyway del Prompt 3: `families.recovery_code_hash VARCHAR(255) NULL`, `families.recovery_code_generated_at TIMESTAMP NULL`.
+- Mai registris el PIN ni el codi de recuperació en clar als logs (mateixa regla que ja aplica a `password` a la secció de seguretat de Família+.pdf).
+
+Frontend — assistent d'alta en 4 passos (pantalla pública, abans del login):
+1. Nom de la família.
+2. Dades del primer PARENT: nom + PIN de 4 dígits (input numèric, doble entrada per confirmar).
+3. Afegir fills: nom, edat, color/avatar, PIN de 4 dígits per a cadascun — es poden afegir unL rere l'altre amb un botó "Afegir un altre fill"; el pas es pot saltar i fer-ho més tard des de Configuració.
+4. Pantalla final: mostra el codi de recuperació una única vegada, amb un avís clar de "apunta'l en un lloc seguro, no es tornarà a mostrar" i un botó de còpia al porta-retalls. Sense aquest pas no es pot continuar (checkbox "l'he desat").
+
+Frontend — recuperació de PIN (accessible des del login):
+- Si la família té més d'un PARENT: l'enllaç "Has oblidat el PIN?" explica que un altre pare/mare l'ha de resetejar des de Configuració → Fills i pares, i no ofereix cap altre camí.
+- Si no n'hi ha prou (un sol PARENT, o vol recuperar-lo sense l'altre present): formulari per introduir el codi de recuperació, que crida POST /api/auth/recover i, si és vàlid, porta directament a la pantalla de definir un PIN nou.
+
+Reutilitza els components base del Prompt 2 (inputs, botons) i l'animació de login del context de disseny per a la pantalla final de l'assistent.
+```
+
+---
+
+## Prompt 7 — Frontend: pantalles CHILD
 
 ```
 Implementa les 4 pantalles del rol CHILD, connectades als endpoints reals del backend (no dades fictícies):
@@ -164,7 +198,7 @@ Reprodueix fidelment l'aparença de l'artefacte mapaka-maqueta-animada (colors, 
 
 ---
 
-## Prompt 7 — Frontend: pantalles PARENT
+## Prompt 8 — Frontend: pantalles PARENT
 
 ```
 Implementa les pantalles del rol PARENT connectades al backend real:
@@ -179,7 +213,7 @@ Inclou aquí també la vista de "Aprovacions" els resultats de sessions NFC amb 
 
 ---
 
-## Prompt 8 — Feature: sessió NFC compartida (tauleta)
+## Prompt 9 — Feature: sessió NFC compartida (tauleta)
 
 ```
 Implementa la pantalla de "tauleta compartida" per a la sessió NFC de temps de pantalla, com una ruta pública dins de l'app (accessible via la URL gravada a l'etiqueta física, sense necessitar login individual del fill — identifica la família pel token de l'etiqueta):
@@ -196,7 +230,7 @@ Reprodueix l'aparença i les transicions del bloc "Tauleta compartida" de l'arte
 
 ---
 
-## Prompt 9 — Empaquetat Android amb Capacitor (APK d'instal·lació directa)
+## Prompt 10 — Empaquetat Android amb Capacitor (APK d'instal·lació directa)
 
 ```
 Afegeix Capacitor al projecte frontend existent, sense modificar el codi Vue 3 ja implementat:
@@ -211,7 +245,7 @@ No configuris res relacionat amb Google Play (aquest projecte no s'hi publicarà
 
 ---
 
-## Prompt 10 — Desplegament del backend a Render
+## Prompt 11 — Desplegament del backend a Render
 
 ```
 Prepara el backend Spring Boot per desplegar-se a Render (pla gratuït):
@@ -227,10 +261,10 @@ No configuris res relacionat amb Railway ni Fly.io — es van descartar per no s
 
 ---
 
-## Prompt 11 — Verificació
+## Prompt 12 — Verificació
 
 ```
-Revisa tot el que s'ha implementat als prompts 1-10 contra Família+.pdf i contra aquest document:
+Revisa tot el que s'ha implementat als prompts 1-11 contra Família+.pdf i contra aquest document:
 
 1. Cap acció que generi recompensa (diner o temps) és efectiva sense passar per un estat d'aprovació o pel repartiment explícit de la sessió NFC.
 2. Cap saldo es guarda com a valor fix — tot es calcula per suma de moviments (ledger), incloent el temps de pantalla assignat per sessions NFC.
@@ -239,6 +273,8 @@ Revisa tot el que s'ha implementat als prompts 1-10 contra Família+.pdf i contr
 5. Els imports i minuts es mostren amb font-variant-numeric: tabular-nums.
 6. La navegació canvia correctament de bottom-nav a sidebar segons breakpoint i rol.
 7. Escriu tests d'integració per als tres endpoints nous de sessió NFC (tap, stop, assign), incloent el cas de repartiment amb saldo negatiu.
+8. El PIN (de qualsevol rol) i el codi de recuperació de família mai apareixen en clar en logs, respostes d'error ni al codi font — sempre hashejats. El codi de recuperació només es mostra un cop, a la resposta de POST /api/families/register.
+9. Escriu tests d'integració per al flux de registre (POST /api/families/register), l'alta d'un fill amb PIN, i el flux de recuperació (POST /api/auth/recover) incloent el cas del codi ja consumit.
 
 Informa de qualsevol incoherència trobada abans de continuar.
 ```

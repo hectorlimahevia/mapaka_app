@@ -14,6 +14,8 @@ Hay dos roles de usuario con permisos muy distintos:
 - **PARENT** (adulto administrador): control total — crea y gestiona hijos, tareas, reglas de paga y de pantalla, aprueba o rechaza toda recompensa, consulta históricos.
 - **CHILD** (hijo/a): rol de consulta y ejecución limitada — ve su saldo, sus tareas, sus objetivos de ahorro y su tiempo de pantalla; puede marcar tareas como hechas, pero nunca aprobar nada ni alterar saldos directamente.
 
+Ambos roles entran con un **PIN numérico de 4 dígitos** — no hay contraseña alfanumérica en ningún punto de la app. Es una decisión deliberada de coste cero: una contraseña con recuperación por correo obligaría a dar de alta un servicio de envío de email solo para eso. Ver la sección 4 para el flujo completo de alta y recuperación.
+
 Principio de negocio no negociable, heredado del documento funcional original: **ninguna acción que genere recompensa económica o de tiempo de pantalla es efectiva hasta que un adulto la valida.** Todo el sistema de ledgers (dinero y pantalla) está construido alrededor de esa regla.
 
 ---
@@ -24,9 +26,10 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 |---|---|
 | `Família+.pdf` | Especificación funcional y técnica original (84 páginas): visión de producto, roles, arquitectura de referencia, modelo de datos completo tabla por tabla, sistema de paga y de tiempo de pantalla. Sigue siendo la fuente de verdad para el modelo de datos y las reglas de negocio base — este documento global no la duplica, la resume y la conecta con todo lo decidido después. |
 | `mapaka_documento_global.md` | Este documento — la vista de conjunto. |
-| `mapaka_prompts_code.md` | 11 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, navegación, pantallas, feature NFC, empaquetado Android, despliegue, verificación). |
+| `mapaka_prompts_code.md` | 12 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, navegación y autenticación, registro de familia y recuperación de PIN, pantallas, feature NFC, empaquetado Android, despliegue, verificación). |
 | `mapaka-logo.svg` | El logo definitivo ("Cercles de família"), en SVG, listo para usar tal cual. |
-| `mapaka_mockup.html` | Maqueta HTML interactiva y animada con el diseño aprobado: navegación CHILD/PARENT, pantallas, y el flujo completo de sesión NFC en la tableta compartida. Code debe reproducir fielmente su aspecto, no reinterpretarlo. |
+| `mapaka_mockup.html` | Maqueta HTML interactiva y animada con el diseño aprobado: navegación CHILD/PARENT (móvil y escritorio), y el flujo completo de sesión NFC en la tableta compartida. Publicada también como artefacto propio ("Mapaka Maqueta") — Code debe reproducir fielmente su aspecto, no reinterpretarlo. |
+| `mapaka_login_animacions.html` | Las 3 propuestas de animación de entrada del logo en el login; la elegida ("Muntatge en cascada") es la referencia de coreografía exacta para el Prompt 6. |
 
 ---
 
@@ -61,9 +64,24 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 
 **Idioma de la interfaz:** catalán, en todo texto visible al usuario final.
 
+**Animación de login — "Muntatge en cascada":** cada círculo del logo llega de una dirección distinta y encaja con un ligero rebote, con un pequeño retardo escalonado entre los tres; el wordmark "Mapaka" aparece después con un colapso de espaciado entre letras. Elegida entre 3 propuestas — la referencia visual exacta (keyframes CSS) está en `mapaka_login_animacions.html`.
+
 ---
 
-## 4. Arquitectura técnica
+## 4. Registro de familia y recuperación de PIN
+
+El documento funcional original (`Família+.pdf`) nunca llegó a definir esto: solo describe el login con una cuenta ya existente, sin un flujo de alta ni de recuperación de acceso. Se ha diseñado desde cero, con estas reglas:
+
+- **Alta:** un asistente público de 4 pasos — nombre de la familia, datos del primer PARENT (nombre + PIN), alta de los hijos (nombre, edad, avatar, PIN de cada uno — opcional en este paso, se puede completar después), y una pantalla final que muestra un **código de recuperación de un solo uso**, visible una única vez, que hay que guardar fuera de la app (en papel, como el PUK de una SIM).
+- **Padres adicionales:** se añaden desde dentro de la app (Configuració), no en el alta pública — requiere estar ya autenticado como PARENT de esa familia.
+- **PIN olvidado, con más de un PARENT:** lo resetea el otro padre/madre desde Configuració → Fills i pares. No hay otro camino — evita depender de correo.
+- **PIN olvidado, con un solo PARENT:** se introduce el código de recuperación generado en el alta; si es válido, permite definir un PIN nuevo y el código queda consumido (hay que generar uno nuevo después).
+
+Detalle técnico completo (endpoints, campos nuevos en la tabla `families`, tests requeridos) en el Prompt 6 de `mapaka_prompts_code.md`.
+
+---
+
+## 5. Arquitectura técnica
 
 ```
 Browser / PWA
@@ -84,7 +102,7 @@ El modelo de datos completo (families, users, child_profiles, allowance_rules, m
 
 ---
 
-## 5. Cómo se distribuye la app (sin coste, sin tiendas de apps)
+## 6. Cómo se distribuye la app (sin coste, sin tiendas de apps)
 
 Es una única aplicación — no hay tres versiones distintas del código, solo cambia cómo llega a cada dispositivo:
 
@@ -95,7 +113,7 @@ Es una única aplicación — no hay tres versiones distintas del código, solo 
 
 ---
 
-## 6. La funcionalidad de tiempo de pantalla por NFC
+## 7. La funcionalidad de tiempo de pantalla por NFC
 
 Un objeto físico impreso en 3D, compartido por la familia, con una etiqueta NFC embebida (tipo NTAG213, sin batería ni electrónica). El flujo:
 
@@ -108,7 +126,7 @@ Este flujo funciona igual en cualquier dispositivo (Android, iOS, escritorio) po
 
 ---
 
-## 7. Infraestructura y hosting (coste total: 0 €)
+## 8. Infraestructura y hosting (coste total: 0 €)
 
 | Pieza | Dónde vive | Por qué |
 |---|---|---|
@@ -118,8 +136,8 @@ Este flujo funciona igual en cualquier dispositivo (Android, iOS, escritorio) po
 
 ---
 
-## 8. Estado del proyecto y próximos pasos
+## 9. Estado del proyecto y próximos pasos
 
-Todo lo anterior está decidido y documentado. El siguiente paso es la implementación: abrir `mapaka_prompts_code.md` y ejecutar los 11 prompts en orden con Code, revisando el resultado de cada uno antes de pasar al siguiente. Ese documento contiene las instrucciones técnicas exactas; este documento es el que explica el porqué de cada una, para volver a él cuando haga falta recordar una decisión o poner a alguien nuevo en contexto.
+Todo lo anterior está decidido y documentado. El siguiente paso es la implementación: abrir `mapaka_prompts_code.md` y ejecutar los 12 prompts en orden con Code, revisando el resultado de cada uno antes de pasar al siguiente. Ese documento contiene las instrucciones técnicas exactas; este documento es el que explica el porqué de cada una, para volver a él cuando haga falta recordar una decisión o poner a alguien nuevo en contexto.
 
 Decisiones explícitamente pendientes o fuera de alcance por ahora: publicación en App Store / Google Play (descartada mientras no cambien las prioridades), monetización o modelo comercial (fuera de alcance actual).

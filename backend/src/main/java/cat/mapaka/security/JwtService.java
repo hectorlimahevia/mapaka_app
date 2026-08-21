@@ -63,6 +63,30 @@ public class JwtService {
         return refreshExpiration;
     }
 
+    /** Token de curta durada emès per POST /api/auth/recover — només permet el reset de PIN
+     * del primer PARENT de la família (mapaka_prompts_code.md Prompt 6). */
+    public String generateRecoveryToken(UUID userId, UUID familyId) {
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("purpose", "recovery")
+                .claim("familyId", familyId.toString())
+                .issuedAt(new Date())
+                .expiration(Date.from(new Date().toInstant().plus(Duration.ofMinutes(10))))
+                .signWith(key)
+                .compact();
+    }
+
+    public RecoveryClaims parseRecoveryToken(String token) {
+        Claims claims = parseClaims(token);
+        if (!"recovery".equals(claims.get("purpose", String.class))) {
+            throw new io.jsonwebtoken.JwtException("Token no és un token de recuperació");
+        }
+        return new RecoveryClaims(UUID.fromString(claims.getSubject()), UUID.fromString(claims.get("familyId", String.class)));
+    }
+
+    public record RecoveryClaims(UUID userId, UUID familyId) {
+    }
+
     public AuthenticatedUser parseAccessToken(String token) {
         Claims claims = parseClaims(token);
         if (!"access".equals(claims.get("purpose", String.class))) {

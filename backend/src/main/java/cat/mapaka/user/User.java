@@ -35,6 +35,11 @@ public class User {
     @Column
     private String username;
 
+    /** Nom per mostrar al selector "Qui ets?" del login — només rellevant per a PARENT
+     * (els fills ja tenen el seu a child_profiles.display_name). */
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 

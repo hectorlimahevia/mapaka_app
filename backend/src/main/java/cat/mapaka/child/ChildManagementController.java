@@ -2,11 +2,13 @@ package cat.mapaka.child;
 
 import cat.mapaka.allowance.AllowanceRuleUpdateRequest;
 import cat.mapaka.common.DomainException;
+import cat.mapaka.family.Family;
 import cat.mapaka.family.FamilyAccessService;
 import cat.mapaka.screentime.ScreenTimeRuleUpdateRequest;
 import cat.mapaka.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,13 @@ public class ChildManagementController {
         this.familyAccessService = familyAccessService;
         this.childProfileRepository = childProfileRepository;
         this.childManagementService = childManagementService;
+    }
+
+    @PostMapping("/api/children")
+    public ResponseEntity<ChildDetailResponse> create(
+            @Valid @RequestBody CreateChildRequest request, @AuthenticationPrincipal AuthenticatedUser user) {
+        Family family = familyAccessService.requireParentAccess(user.familyId(), user);
+        return ResponseEntity.ok(childManagementService.createChild(family, request));
     }
 
     @GetMapping("/api/families/{id}/children/detail")

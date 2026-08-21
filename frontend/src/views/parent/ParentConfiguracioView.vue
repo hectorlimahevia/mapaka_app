@@ -2,7 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
 import type { FamilySettings } from '@/types/parent'
+import type { LoginProfile } from '@/types/auth'
 
 const auth = useAuthStore()
 const loading = ref(true)
@@ -12,11 +15,27 @@ const settings = reactive<FamilySettings>({
   allowSavingsTransfer: true,
 })
 
+const members = ref<LoginProfile[]>([])
+const addingParent = ref(false)
+const savingParent = ref(false)
+const addParentError = ref<string | null>(null)
+const newParent = reactive({ displayName: '', pin: '', pinConfirm: '' })
+
+const resettingUserId = ref<string | null>(null)
+const resetPin = ref('')
+const resetPinConfirm = ref('')
+const resetError = ref<string | null>(null)
+const savingReset = ref(false)
+
 async function load() {
   const familyId = auth.familyId
   if (!familyId) return
-  const { data } = await api.get<FamilySettings>(`/api/families/${familyId}/settings`)
-  Object.assign(settings, data)
+  const [settingsRes, membersRes] = await Promise.all([
+    api.get<FamilySettings>(`/api/families/${familyId}/settings`),
+    api.get<LoginProfile[]>(`/api/families/${familyId}/login-profiles`),
+  ])
+  Object.assign(settings, settingsRes.data)
+  members.value = membersRes.data
   loading.value = false
 }
 
@@ -25,6 +44,66 @@ async function toggle(key: keyof FamilySettings) {
   settings[key] = !settings[key]
   const familyId = auth.familyId
   await api.patch(`/api/families/${familyId}/settings`, settings)
+}
+
+function startAddParent() {
+  addingParent.value = true
+  addParentError.value = null
+  Object.assign(newParent, { displayName: '', pin: '', pinConfirm: '' })
+}
+
+async function submitAddParent() {
+  addParentError.value = null
+  if (!newParent.displayName.trim()) {
+    addParentError.value = 'Cal un nom.'
+    return
+  }
+  if (!/^\d{4}$/.test(newParent.pin)) {
+    addParentError.value = 'El PIN ha de tenir exactament 4 dígits.'
+    return
+  }
+  if (newParent.pin !== newParent.pinConfirm) {
+    addParentError.value = 'Els PIN no coincideixen.'
+    return
+  }
+  savingParent.value = true
+  try {
+    await api.post('/api/families/current/parents', { displayName: newParent.displayName, pin: newParent.pin })
+    addingParent.value = false
+    await load()
+  } catch {
+    addParentError.value = 'No s\'ha pogut afegir. Torna-ho a provar.'
+  } finally {
+    savingParent.value = false
+  }
+}
+
+function startResetPin(member: LoginProfile) {
+  resettingUserId.value = member.id
+  resetError.value = null
+  resetPin.value = ''
+  resetPinConfirm.value = ''
+}
+
+async function submitResetPin(userId: string) {
+  resetError.value = null
+  if (!/^\d{4}$/.test(resetPin.value)) {
+    resetError.value = 'El PIN ha de tenir exactament 4 dígits.'
+    return
+  }
+  if (resetPin.value !== resetPinConfirm.value) {
+    resetError.value = 'Els PIN no coincideixen.'
+    return
+  }
+  savingReset.value = true
+  try {
+    await api.patch(`/api/users/${userId}/pin`, { newPin: resetPin.value })
+    resettingUserId.value = null
+  } catch {
+    resetError.value = 'No s\'ha pogut actualitzar el PIN.'
+  } finally {
+    savingReset.value = false
+  }
 }
 
 onMounted(load)
@@ -72,6 +151,64 @@ onMounted(load)
     <RouterLink :to="{ name: 'parent-nfc-tags' }" class="config__nfc-link">
       Etiquetes NFC de la sessió de pantalla compartida →
     </RouterLink>
+
+    <h2 class="config__section-title">Fills i pares</h2>
+
+    <BaseCard v-for="member in members" :key="member.id" class="member-card">
+      <div class="member-card__row">
+        <span class="member-card__name">{{ member.displayName }}</span>
+        <span class="member-card__role">{{ member.role === 'PARENT' ? 'Adult' : 'Fill' }}</span>
+        <BaseButton
+          v-if="resettingUserId !== member.id"
+          variant="accent"
+          @click="startResetPin(member)"
+        >
+          Resetejar PIN
+        </BaseButton>
+      </div>
+      <form v-if="resettingUserId === member.id" class="member-card__form" @submit.prevent="submitResetPin(member.id)">
+        <label>
+          PIN nou
+          <input v-model="resetPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus />
+        </label>
+        <label>
+          Confirma
+          <input v-model="resetPinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
+        </label>
+        <p v-if="resetError" class="config__error">{{ resetError }}</p>
+        <div class="member-card__form-actions">
+          <BaseButton type="submit" variant="primary" :disabled="savingReset">
+            {{ savingReset ? 'Desant…' : 'Desar' }}
+          </BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="savingReset" @click="resettingUserId = null">Cancel·la</BaseButton>
+        </div>
+      </form>
+    </BaseCard>
+
+    <BaseCard v-if="addingParent" class="member-card">
+      <form class="member-card__form" @submit.prevent="submitAddParent">
+        <label>
+          Nom de l'adult
+          <input v-model="newParent.displayName" type="text" required autofocus />
+        </label>
+        <label>
+          PIN de 4 dígits
+          <input v-model="newParent.pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
+        </label>
+        <label>
+          Confirma el PIN
+          <input v-model="newParent.pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
+        </label>
+        <p v-if="addParentError" class="config__error">{{ addParentError }}</p>
+        <div class="member-card__form-actions">
+          <BaseButton type="submit" variant="primary" :disabled="savingParent">
+            {{ savingParent ? 'Afegint…' : 'Afegir adult' }}
+          </BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="savingParent" @click="addingParent = false">Cancel·la</BaseButton>
+        </div>
+      </form>
+    </BaseCard>
+    <BaseButton v-else variant="accent" class="config__add-parent" @click="startAddParent">+ Afegir un altre adult</BaseButton>
   </div>
 </template>
 
@@ -138,5 +275,72 @@ onMounted(load)
   font-size: 0.85rem;
   color: var(--primary);
   text-decoration: none;
+}
+
+.config__section-title {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.config__error {
+  color: var(--error);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.config__add-parent {
+  margin-top: 0.25rem;
+}
+
+.member-card {
+  margin-bottom: 0.6rem;
+}
+
+.member-card__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.member-card__name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+  flex: 1;
+}
+
+.member-card__role {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.member-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.member-card__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.member-card__form input {
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+.member-card__form-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>
