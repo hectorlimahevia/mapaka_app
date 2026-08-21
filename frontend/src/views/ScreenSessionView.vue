@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { isNfcSupported, scanForScreenToken } from '@/services/nfc'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { AssignSessionResponse, ChildSummary, ScreenSessionStatusResponse } from '@/types/nfc'
 
+const { t } = useI18n()
 const route = useRoute()
 const token = route.params.token as string
 
@@ -89,8 +92,8 @@ async function tap(tagToken: string = token) {
   try {
     const { data } = await api.post<ScreenSessionStatusResponse>(`/api/screen-tags/${tagToken}/tap`)
     applyStatus(data)
-  } catch {
-    errorMessage.value = 'No s\'ha pogut reconèixer l\'objecte Mapaka. Torna-ho a provar.'
+  } catch (err) {
+    errorMessage.value = apiErrorMessage(err)
   } finally {
     loading.value = false
   }
@@ -155,28 +158,28 @@ function reset() {
             <path d="M18.2 5.8a9 9 0 010 12.4" />
           </svg>
         </div>
-        <h1 class="t-title">Toca l'objecte Mapaka</h1>
-        <p class="t-sub">Apropa l'objecte NFC a la tauleta per començar el temps de joc</p>
+        <h1 class="t-title">{{ t('nfc.tapPrompt') }}</h1>
+        <p class="t-sub">{{ t('nfc.tapHint') }}</p>
         <p v-if="errorMessage" class="t-error">{{ errorMessage }}</p>
         <BaseButton variant="primary" :disabled="loading" @click="tap()">
-          {{ loading ? 'Un moment…' : 'Simular toc / Iniciar temps' }}
+          {{ loading ? t('nfc.waiting') : t('nfc.simulateOrStart') }}
         </BaseButton>
         <BaseButton v-if="nfcAvailable" variant="accent" :disabled="loading" class="t-scan-btn" @click="scanNow">
-          Escanejar ara
+          {{ t('nfc.scanNow') }}
         </BaseButton>
       </div>
 
       <div v-else-if="state === 'active'" class="tstate">
-        <p class="t-sub">Sessió en marxa…</p>
+        <p class="t-sub">{{ t('nfc.sessionRunning') }}</p>
         <div class="t-timer">{{ timerLabel }}</div>
-        <p class="t-sub t-sub--tight">Encara no s'assigna a cap fill</p>
-        <BaseButton variant="danger" :disabled="loading" @click="stop">Aturar</BaseButton>
-        <p class="t-hint">(o torna a tocar l'objecte Mapaka)</p>
+        <p class="t-sub t-sub--tight">{{ t('nfc.notAssignedYet') }}</p>
+        <BaseButton variant="danger" :disabled="loading" @click="stop">{{ t('nfc.stop') }}</BaseButton>
+        <p class="t-hint">{{ t('nfc.tapAgainHint') }}</p>
       </div>
 
       <div v-else-if="state === 'whoplayed'" class="tstate">
-        <h1 class="t-title">Qui ha jugat?</h1>
-        <p class="t-sub">Temps total: {{ chargedMinutes(elapsedSeconds) }} min</p>
+        <h1 class="t-title">{{ t('nfc.whoPlayed') }}</h1>
+        <p class="t-sub">{{ t('nfc.totalTime', { n: chargedMinutes(elapsedSeconds) }) }}</p>
         <div class="kid-select-row">
           <button
             v-for="child in familyChildren"
@@ -190,27 +193,27 @@ function reset() {
           </button>
         </div>
         <BaseButton variant="primary" :disabled="loading || selectedChildIds.size === 0" @click="confirmSplit">
-          Confirmar repartiment
+          {{ t('nfc.confirmSplit') }}
         </BaseButton>
       </div>
 
       <div v-else class="tstate">
-        <h1 class="t-title">Temps repartit</h1>
-        <p class="t-sub">Descomptat del saldo de temps de pantalla de cada fill</p>
+        <h1 class="t-title">{{ t('nfc.resultTitle') }}</h1>
+        <p class="t-sub">{{ t('nfc.resultSubtitle') }}</p>
         <div class="result-list">
           <div v-for="p in results" :key="p.childId" class="result-row">
             <div>
               <div class="result-row__name">{{ p.displayName }}</div>
               <div v-if="p.negativeBalance" class="result-row__warn">
-                Saldo negatiu: es recupera amb la propera paga de temps
+                {{ t('nfc.negativeBalanceWarning') }}
               </div>
             </div>
             <div class="result-row__min" :class="{ 'result-row__min--negative': p.negativeBalance }">
-              -{{ chargedMinutes(p.assignedSeconds) }} min
+              -{{ chargedMinutes(p.assignedSeconds) }} {{ t('common.minutesAbbr') }}
             </div>
           </div>
         </div>
-        <BaseButton variant="primary" @click="reset">Fet</BaseButton>
+        <BaseButton variant="primary" @click="reset">{{ t('nfc.done') }}</BaseButton>
       </div>
     </div>
   </div>

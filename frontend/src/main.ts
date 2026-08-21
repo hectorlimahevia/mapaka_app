@@ -6,10 +6,18 @@ import './assets/base.css'
 
 import App from './App.vue'
 import router from './router'
+import { i18n, loadLocaleMessages, detectInitialLocale } from './i18n'
 
-const app = createApp(App)
+async function bootstrap() {
+  await loadLocaleMessages(detectInitialLocale())
 
-app.use(createPinia())
-app.use(router)
+  const app = createApp(App)
 
-app.mount('#app')
+  app.use(createPinia())
+  app.use(i18n)
+  app.use(router)
+
+  app.mount('#app')
+}
+
+bootstrap()

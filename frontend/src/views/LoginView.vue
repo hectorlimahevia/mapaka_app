@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import MapakaLogo from '@/components/base/MapakaLogo.vue'
+import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { FamilySummary, LoginProfile, UserRole } from '@/types/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -78,8 +82,8 @@ async function submitPin() {
       password: pin.value,
     })
     await goHome()
-  } catch {
-    error.value = 'PIN incorrecte.'
+  } catch (err) {
+    error.value = apiErrorMessage(err)
   } finally {
     loading.value = false
   }
@@ -107,16 +111,16 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
     <MapakaLogo class="login__brand" />
 
     <div class="login__toggle">
-      <button type="button" :class="{ active: mode === 'child' }" @click="switchMode('child')">Sóc un fill</button>
-      <button type="button" :class="{ active: mode === 'adult' }" @click="switchMode('adult')">Sóc un adult</button>
+      <button type="button" :class="{ active: mode === 'child' }" @click="switchMode('child')">{{ t('login.childToggle') }}</button>
+      <button type="button" :class="{ active: mode === 'adult' }" @click="switchMode('adult')">{{ t('login.adultToggle') }}</button>
     </div>
 
     <BaseCard class="login__card">
       <div class="login__form">
         <template v-if="step === 'family'">
           <label>
-            Nom de la família
-            <input v-model="familyQuery" type="text" placeholder="Sande-Lima" autocomplete="off" />
+            {{ t('login.familyNameLabel') }}
+            <input v-model="familyQuery" type="text" :placeholder="t('login.familyNamePlaceholder')" autocomplete="off" />
           </label>
           <ul v-if="familyResults.length" class="login__list">
             <li v-for="family in familyResults" :key="family.id">
@@ -126,8 +130,8 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
         </template>
 
         <template v-else-if="step === 'profile'">
-          <button type="button" class="login__back" @click="backTo('family')">← Canviar família</button>
-          <p class="login__prompt">Qui ets?</p>
+          <button type="button" class="login__back" @click="backTo('family')">← {{ t('login.changeFamily') }}</button>
+          <p class="login__prompt">{{ t('login.whoAreYou') }}</p>
           <ul v-if="visibleProfiles().length" class="login__profiles">
             <li v-for="profile in visibleProfiles()" :key="profile.username">
               <button type="button" class="login__profile" @click="selectProfile(profile)">
@@ -138,30 +142,34 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
             </li>
           </ul>
           <p v-else class="login__empty">
-            Aquesta família encara no té cap {{ mode === 'adult' ? 'adult' : 'fill' }} donat d'alta.
+            {{ mode === 'adult' ? t('login.emptyAdults') : t('login.emptyChildren') }}
           </p>
         </template>
 
         <template v-else>
-          <button type="button" class="login__back" @click="backTo('profile')">← {{ selectedProfile?.displayName }} no sóc jo</button>
+          <button type="button" class="login__back" @click="backTo('profile')">
+            ← {{ t('login.notMe', { name: selectedProfile?.displayName }) }}
+          </button>
           <form @submit.prevent="submitPin">
             <label>
-              PIN de {{ selectedProfile?.displayName }}
+              {{ t('login.pinLabel', { name: selectedProfile?.displayName }) }}
               <input v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus />
             </label>
             <p v-if="error" class="login__error">{{ error }}</p>
             <BaseButton type="submit" variant="accent" :disabled="loading">
-              {{ loading ? 'Entrant…' : 'Entrar' }}
+              {{ loading ? t('login.submitting') : t('login.submit') }}
             </BaseButton>
           </form>
-          <RouterLink :to="{ name: 'recover-request' }" class="login__forgot">Has oblidat el PIN?</RouterLink>
+          <RouterLink :to="{ name: 'recover-request' }" class="login__forgot">{{ t('login.forgotPin') }}</RouterLink>
         </template>
       </div>
     </BaseCard>
 
     <RouterLink v-if="step === 'family'" :to="{ name: 'register-family' }" class="login__register">
-      Ets nou a Mapaka? Crea una família →
+      {{ t('login.registerCta') }}
     </RouterLink>
+
+    <LanguageSwitcher />
   </div>
 </template>
 

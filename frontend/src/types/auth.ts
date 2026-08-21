@@ -7,6 +7,7 @@ export interface AuthResponse {
   role: UserRole
   childId: string | null
   displayName: string | null
+  locale: string
 }
 
 /** PIN d'entrada — igual per a PARENT i CHILD des del Prompt 6 (família + perfil + PIN). */
@@ -33,6 +34,7 @@ export interface FamilyRegisterRequest {
   familyName: string
   parentDisplayName: string
   parentPin: string
+  locale: string
 }
 
 export interface FamilyRegisterResponse {
@@ -46,6 +48,7 @@ export interface CreateChildRequest {
   avatar: string | null
   colorTheme: string | null
   pin: string
+  locale: string
 }
 
 export interface RecoverRequest {

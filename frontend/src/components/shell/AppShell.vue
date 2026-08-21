@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useApprovalsStore } from '@/stores/approvals'
 import { useViewport } from '@/composables/useViewport'
@@ -7,36 +8,37 @@ import BottomNav from './BottomNav.vue'
 import SidebarNav from './SidebarNav.vue'
 import TopBar from './TopBar.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const approvals = useApprovalsStore()
 const { isMobile } = useViewport()
 
-const childItems = [
-  { name: 'child-inici', label: 'Inici', icon: 'home' as const },
-  { name: 'child-tasques', label: 'Tasques', icon: 'tasks' as const },
-  { name: 'child-objectius', label: 'Objectius', icon: 'target' as const },
-  { name: 'child-pantalla', label: 'Pantalla', icon: 'device' as const },
-]
+const childItems = computed(() => [
+  { name: 'child-inici', label: t('nav.inici'), icon: 'home' as const },
+  { name: 'child-tasques', label: t('nav.tasques'), icon: 'tasks' as const },
+  { name: 'child-objectius', label: t('nav.objectius'), icon: 'target' as const },
+  { name: 'child-pantalla', label: t('nav.pantalla'), icon: 'device' as const },
+])
 
 const parentItems = computed(() => [
-  { name: 'parent-resum', label: 'Resum', icon: 'family' as const },
-  { name: 'parent-aprovacions', label: 'Aprova.', icon: 'check' as const, badge: approvals.pendingCount },
-  { name: 'parent-fills', label: 'Fills', icon: 'child' as const },
-  { name: 'parent-configuracio', label: 'Config.', icon: 'settings' as const },
+  { name: 'parent-resum', label: t('nav.resum'), icon: 'family' as const },
+  { name: 'parent-aprovacions', label: t('nav.aprovacions'), icon: 'check' as const, badge: approvals.pendingCount },
+  { name: 'parent-fills', label: t('nav.fills'), icon: 'child' as const },
+  { name: 'parent-configuracio', label: t('nav.config'), icon: 'settings' as const },
 ])
 
 const parentSidebarItems = computed(() => [
-  { name: 'parent-resum', label: 'Resum familiar', icon: 'family' as const },
-  { name: 'parent-aprovacions', label: 'Aprovacions', icon: 'check' as const, badge: approvals.pendingCount },
-  { name: 'parent-fills', label: 'Fills', icon: 'child' as const },
-  { name: 'parent-configuracio', label: 'Configuració', icon: 'settings' as const },
+  { name: 'parent-resum', label: t('nav.resumFull'), icon: 'family' as const },
+  { name: 'parent-aprovacions', label: t('nav.aprovacionsFull'), icon: 'check' as const, badge: approvals.pendingCount },
+  { name: 'parent-fills', label: t('nav.fills'), icon: 'child' as const },
+  { name: 'parent-configuracio', label: t('nav.configFull'), icon: 'settings' as const },
 ])
 
 // CHILD sempre veu la barra inferior (no té variant d'escriptori). PARENT canvia a
 // panell lateral per sobre de 768px — mateix AppShell, mateix patró de barra inferior
 // per sota (mapaka_mockup.html: "Vista PARENT — mòbil" reutilitza el de CHILD).
 const showSidebar = computed(() => auth.role === 'PARENT' && !isMobile.value)
-const bottomNavItems = computed(() => (auth.role === 'PARENT' ? parentItems.value : childItems))
+const bottomNavItems = computed(() => (auth.role === 'PARENT' ? parentItems.value : childItems.value))
 
 watch(() => auth.role, (role) => { if (role === 'PARENT') approvals.refresh() }, { immediate: true })
 onMounted(() => { if (auth.role === 'PARENT') approvals.refresh() })

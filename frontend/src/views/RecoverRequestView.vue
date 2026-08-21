@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useRecoveryStore } from '@/stores/recovery'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import MapakaLogo from '@/components/base/MapakaLogo.vue'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { FamilySummary, RecoverResponse } from '@/types/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const recovery = useRecoveryStore()
 
@@ -48,8 +51,8 @@ async function submit() {
     })
     recovery.setToken(data.recoveryToken)
     await router.push({ name: 'recover-set-pin' })
-  } catch {
-    error.value = 'Codi de recuperació no vàlid.'
+  } catch (err) {
+    error.value = apiErrorMessage(err)
   } finally {
     loading.value = false
   }
@@ -61,17 +64,13 @@ async function submit() {
     <MapakaLogo class="recover__brand" />
 
     <BaseCard class="recover__card">
-      <p class="recover__prompt">Has oblidat el PIN?</p>
-      <p class="recover__hint">
-        Si un altre pare o mare de la família encara té accés, és més fàcil que et reseteixi el PIN des de
-        Configuració → Fills i pares. Si no, introdueix aquí el codi de recuperació que es va mostrar en crear
-        la família.
-      </p>
+      <p class="recover__prompt">{{ t('login.forgotPin') }}</p>
+      <p class="recover__hint">{{ t('login.recoverHint') }}</p>
 
       <template v-if="!selectedFamily">
         <label>
-          Nom de la família
-          <input v-model="familyQuery" type="text" placeholder="Sande-Lima" autocomplete="off" />
+          {{ t('login.familyNameLabel') }}
+          <input v-model="familyQuery" type="text" :placeholder="t('login.familyNamePlaceholder')" autocomplete="off" />
         </label>
         <ul v-if="familyResults.length" class="recover__list">
           <li v-for="family in familyResults" :key="family.id">
@@ -81,19 +80,19 @@ async function submit() {
       </template>
 
       <form v-else class="recover__form" @submit.prevent="submit">
-        <button type="button" class="recover__back" @click="selectedFamily = null">← Canviar família</button>
+        <button type="button" class="recover__back" @click="selectedFamily = null">← {{ t('login.changeFamily') }}</button>
         <label>
-          Codi de recuperació
-          <input v-model="code" type="text" placeholder="ABCD1234" required autofocus />
+          {{ t('login.recoverCodeLabel') }}
+          <input v-model="code" type="text" :placeholder="t('login.recoverCodePlaceholder')" required autofocus />
         </label>
         <p v-if="error" class="recover__error">{{ error }}</p>
         <BaseButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? 'Comprovant…' : 'Continuar' }}
+          {{ loading ? t('login.recoverChecking') : t('login.recoverContinue') }}
         </BaseButton>
       </form>
     </BaseCard>
 
-    <RouterLink :to="{ name: 'login' }" class="recover__cancel">← Tornar a l'inici de sessió</RouterLink>
+    <RouterLink :to="{ name: 'login' }" class="recover__cancel">← {{ t('login.backToLogin') }}</RouterLink>
   </div>
 </template>
 

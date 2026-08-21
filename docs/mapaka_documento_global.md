@@ -26,7 +26,7 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 |---|---|
 | `Família+.pdf` | Especificación funcional y técnica original (84 páginas): visión de producto, roles, arquitectura de referencia, modelo de datos completo tabla por tabla, sistema de paga y de tiempo de pantalla. Sigue siendo la fuente de verdad para el modelo de datos y las reglas de negocio base — este documento global no la duplica, la resume y la conecta con todo lo decidido después. |
 | `mapaka_documento_global.md` | Este documento — la vista de conjunto. |
-| `mapaka_prompts_code.md` | 12 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, navegación y autenticación, registro de familia y recuperación de PIN, pantallas, feature NFC, empaquetado Android, despliegue, verificación). |
+| `mapaka_prompts_code.md` | 13 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, idioma/i18n, navegación y autenticación, registro de familia y recuperación de PIN, pantallas, feature NFC, empaquetado Android, despliegue, verificación). |
 | `mapaka-logo.svg` | El logo definitivo ("Cercles de família"), en SVG, listo para usar tal cual. |
 | `mapaka_mockup.html` | Maqueta HTML interactiva y animada con el diseño aprobado: navegación CHILD/PARENT (móvil y escritorio), y el flujo completo de sesión NFC en la tableta compartida. Publicada también como artefacto propio ("Mapaka Maqueta") — Code debe reproducir fielmente su aspecto, no reinterpretarlo. |
 | `mapaka_login_animacions.html` | Las 3 propuestas de animación de entrada del logo en el login; la elegida ("Muntatge en cascada") es la referencia de coreografía exacta para el Prompt 6. |
@@ -62,7 +62,7 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 
 **Navegación:** un único componente de AppShell adaptativo, no dos separados. Por debajo de 768px, cualquier rol ve una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (con contador de pendientes), Fills, Configuració. Por encima de 768px, el rol PARENT cambia a panel lateral fijo con los mismos 4 ítems; CHILD no tiene variante de escritorio. La vista "PARENT en móvil" reutiliza literalmente el mismo patrón de barra inferior que CHILD — solo cambian los ítems — para no duplicar trabajo de implementación ni introducir un tercer patrón de navegación.
 
-**Idioma de la interfaz:** catalán, en todo texto visible al usuario final.
+**Idioma de la interfaz:** multilingüe desde el diseño — catalán como idioma base, con castellano e inglés seleccionables. Ver sección 5.
 
 **Animación de login — "Muntatge en cascada":** cada círculo del logo llega de una dirección distinta y encaja con un ligero rebote, con un pequeño retardo escalonado entre los tres; el wordmark "Mapaka" aparece después con un colapso de espaciado entre letras. Elegida entre 3 propuestas — la referencia visual exacta (keyframes CSS) está en `mapaka_login_animacions.html`.
 
@@ -77,11 +77,24 @@ El documento funcional original (`Família+.pdf`) nunca llegó a definir esto: s
 - **PIN olvidado, con más de un PARENT:** lo resetea el otro padre/madre desde Configuració → Fills i pares. No hay otro camino — evita depender de correo.
 - **PIN olvidado, con un solo PARENT:** se introduce el código de recuperación generado en el alta; si es válido, permite definir un PIN nuevo y el código queda consumido (hay que generar uno nuevo después).
 
-Detalle técnico completo (endpoints, campos nuevos en la tabla `families`, tests requeridos) en el Prompt 6 de `mapaka_prompts_code.md`.
+Detalle técnico completo (endpoints, campos nuevos en la tabla `families`, tests requeridos) en el Prompt 7 de `mapaka_prompts_code.md`.
 
 ---
 
-## 5. Arquitectura técnica
+## 5. Idioma: interfaz multilingüe (català, castellano, inglés)
+
+El catalán es el idioma base y la fuente de verdad de todos los textos — cualquier etiqueta nueva se escribe primero en catalán y se traduce después. Ningún texto va escrito literalmente dentro de un componente: todo pasa por `vue-i18n`, con un fichero de traducción por idioma (`ca.json`, `es.json`, `en.json`) organizado por pantalla. Esto se decidió construir desde el principio (Prompt 5, antes de las pantallas) en lugar de traducirlo después, para no tener que rastrear texto catalán suelto por todo el código ya escrito.
+
+Cómo se elige el idioma:
+
+- Sin sesión (login/registro): se recuerda en el dispositivo (`localStorage`); si no hay nada guardado, se detecta por el idioma del navegador, y si no es ninguno de los tres soportados, cae en catalán.
+- Con sesión: el idioma queda guardado en el perfil de cada usuario (`users.locale`), así que se recupera igual entrando desde otro dispositivo. Los padres lo cambian desde Configuració; para los hijos, que no tienen pantalla de configuración propia, hay un icono pequeño en la pantalla Inici.
+
+Dos límites deliberados: los importes de dinero **no** cambian de formato con el idioma (siempre "14,00 €", sea cual sea la lengua de la interfaz — es la moneda propia de la familia, no algo que deba adaptarse); y el texto que la propia familia escribe (nombres de tareas, de objetivos de ahorro, de los hijos) nunca se traduce automáticamente — solo se traduce el "chasis" de la aplicación.
+
+---
+
+## 6. Arquitectura técnica
 
 ```
 Browser / PWA
@@ -102,7 +115,7 @@ El modelo de datos completo (families, users, child_profiles, allowance_rules, m
 
 ---
 
-## 6. Cómo se distribuye la app (sin coste, sin tiendas de apps)
+## 7. Cómo se distribuye la app (sin coste, sin tiendas de apps)
 
 Es una única aplicación — no hay tres versiones distintas del código, solo cambia cómo llega a cada dispositivo:
 
@@ -113,7 +126,7 @@ Es una única aplicación — no hay tres versiones distintas del código, solo 
 
 ---
 
-## 7. La funcionalidad de tiempo de pantalla por NFC
+## 8. La funcionalidad de tiempo de pantalla por NFC
 
 Un objeto físico impreso en 3D, compartido por la familia, con una etiqueta NFC embebida (tipo NTAG213, sin batería ni electrónica). El flujo:
 
@@ -126,7 +139,7 @@ Este flujo funciona igual en cualquier dispositivo (Android, iOS, escritorio) po
 
 ---
 
-## 8. Infraestructura y hosting (coste total: 0 €)
+## 9. Infraestructura y hosting (coste total: 0 €)
 
 | Pieza | Dónde vive | Por qué |
 |---|---|---|
@@ -136,8 +149,8 @@ Este flujo funciona igual en cualquier dispositivo (Android, iOS, escritorio) po
 
 ---
 
-## 9. Estado del proyecto y próximos pasos
+## 10. Estado del proyecto y próximos pasos
 
-Todo lo anterior está decidido y documentado. El siguiente paso es la implementación: abrir `mapaka_prompts_code.md` y ejecutar los 12 prompts en orden con Code, revisando el resultado de cada uno antes de pasar al siguiente. Ese documento contiene las instrucciones técnicas exactas; este documento es el que explica el porqué de cada una, para volver a él cuando haga falta recordar una decisión o poner a alguien nuevo en contexto.
+Todo lo anterior está decidido y documentado. El siguiente paso es la implementación: abrir `mapaka_prompts_code.md` y ejecutar los 13 prompts en orden con Code, revisando el resultado de cada uno antes de pasar al siguiente. Ese documento contiene las instrucciones técnicas exactas; este documento es el que explica el porqué de cada una, para volver a él cuando haga falta recordar una decisión o poner a alguien nuevo en contexto.
 
 Decisiones explícitamente pendientes o fuera de alcance por ahora: publicación en App Store / Google Play (descartada mientras no cambien las prioridades), monetización o modelo comercial (fuera de alcance actual).

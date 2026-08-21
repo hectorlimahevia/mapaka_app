@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import type { SavingsGoalResponse } from '@/types/child'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const goals = ref<SavingsGoalResponse[]>([])
 const loading = ref(true)
@@ -28,10 +30,10 @@ onMounted(async () => {
 
 <template>
   <div class="objectius">
-    <h1>Objectius d'estalvi</h1>
-    <p class="objectius__sub">El que estalvies avança el teu objectiu</p>
+    <h1>{{ t('objectius.title') }}</h1>
+    <p class="objectius__sub">{{ t('objectius.subtitle') }}</p>
 
-    <p v-if="!loading && goals.length === 0" class="objectius__empty">Encara no tens cap objectiu d'estalvi.</p>
+    <p v-if="!loading && goals.length === 0" class="objectius__empty">{{ t('objectius.empty') }}</p>
 
     <div v-for="goal in goals" :key="goal.id" class="goal-card">
       <div class="goal-card__top">

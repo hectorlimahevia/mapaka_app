@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import type { ChildFamilySummary, FamilyMoneyTransactionResponse } from '@/types/parent'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const children = ref<ChildFamilySummary[]>([])
 const movements = ref<FamilyMoneyTransactionResponse[]>([])
@@ -25,10 +27,10 @@ onMounted(async () => {
 
 <template>
   <div class="resum">
-    <h1>Resum familiar</h1>
-    <p class="resum__sub">Vista general de saldo i activitat de cada fill</p>
+    <h1>{{ t('resum.title') }}</h1>
+    <p class="resum__sub">{{ t('resum.subtitle') }}</p>
 
-    <p v-if="!loading && children.length === 0" class="resum__empty">Encara no hi ha cap fill donat d'alta.</p>
+    <p v-if="!loading && children.length === 0" class="resum__empty">{{ t('resum.emptyChildren') }}</p>
 
     <div class="kids-grid">
       <div v-for="child in children" :key="child.childId" class="kid-card">
@@ -36,17 +38,15 @@ onMounted(async () => {
         <div class="kid-card__amount"><AmountDisplay :value="child.spendingBalance" unit="€" /></div>
         <div class="kid-card__sub">
           <template v-if="child.pendingApprovalsCount > 0">
-            {{ child.pendingApprovalsCount }} aprovació{{ child.pendingApprovalsCount > 1 ? 'ns' : '' }} pendent{{
-              child.pendingApprovalsCount > 1 ? 's' : ''
-            }}
+            {{ t('resum.pendingApprovals', { n: child.pendingApprovalsCount }, child.pendingApprovalsCount) }}
           </template>
-          <template v-else>Cap aprovació pendent</template>
+          <template v-else>{{ t('resum.noPendingApprovals') }}</template>
         </div>
       </div>
     </div>
 
-    <div class="section-label">Moviments recents de la família</div>
-    <div v-if="!loading && movements.length === 0" class="resum__empty">Encara no hi ha cap moviment.</div>
+    <div class="section-label">{{ t('resum.recentFamilyMovements') }}</div>
+    <div v-if="!loading && movements.length === 0" class="resum__empty">{{ t('resum.noMovements') }}</div>
     <div v-for="m in movements" :key="m.id" class="mrow">
       <span>{{ m.childDisplayName }} — {{ m.description || m.sourceType }}</span>
       <span class="mrow__amt" :class="m.transactionType === 'CREDIT' ? 'mrow__amt--pos' : 'mrow__amt--neg'">

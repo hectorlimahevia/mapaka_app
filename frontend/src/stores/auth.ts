@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { useRoleStore } from '@/stores/role'
+import { setAppLocale, type AppLocale } from '@/i18n'
 import type { PinLoginRequest, AuthResponse, FamilyRegisterResponse, UserRole } from '@/types/auth'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -17,7 +18,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => accessToken.value !== null)
 
-  function applyAuthResponse(data: AuthResponse) {
+  /** L'idioma de l'usuari (Prompt 5) s'aplica de seguida en completar el login/refresh,
+   *  perquè el dispositiu quedi amb la llengua correcta abans fins i tot de tornar a entrar. */
+  async function applyAuthResponse(data: AuthResponse) {
     accessToken.value = data.accessToken
     userId.value = data.userId
     familyId.value = data.familyId
@@ -25,6 +28,7 @@ export const useAuthStore = defineStore('auth', () => {
     childId.value = data.childId
     displayName.value = data.displayName
     roleStore.setRole(data.role)
+    await setAppLocale(data.locale as AppLocale)
   }
 
   function clearSession() {
@@ -40,13 +44,13 @@ export const useAuthStore = defineStore('auth', () => {
   /** Família + perfil + PIN — mateix flux per a PARENT i CHILD des del Prompt 6. */
   async function login(payload: PinLoginRequest) {
     const { data } = await api.post<AuthResponse>('/api/auth/login', payload)
-    applyAuthResponse(data)
+    await applyAuthResponse(data)
   }
 
   /** L'assistent de registre ja retorna sessió iniciada (auth) perquè es pugui continuar
    *  afegint fills sense haver de tornar a entrar. */
-  function applyRegisterResponse(result: FamilyRegisterResponse) {
-    applyAuthResponse(result.auth)
+  async function applyRegisterResponse(result: FamilyRegisterResponse) {
+    await applyAuthResponse(result.auth)
   }
 
   /** Access token només en memòria (mai localStorage). En recarregar la pàgina es recupera
@@ -54,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function refresh(): Promise<boolean> {
     try {
       const { data } = await api.post<AuthResponse>('/api/auth/refresh')
-      applyAuthResponse(data)
+      await applyAuthResponse(data)
       return true
     } catch {
       return false

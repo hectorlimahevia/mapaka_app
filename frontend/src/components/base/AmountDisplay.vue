@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatMoney } from '@/utils/money'
 
 const props = withDefaults(
   defineProps<{
@@ -10,12 +11,7 @@ const props = withDefaults(
   { unit: '', decimals: 2 },
 )
 
-const formatted = computed(() =>
-  props.value.toLocaleString('ca-ES', {
-    minimumFractionDigits: props.decimals,
-    maximumFractionDigits: props.decimals,
-  }),
-)
+const formatted = computed(() => formatMoney(props.value, props.decimals))
 </script>
 
 <template>

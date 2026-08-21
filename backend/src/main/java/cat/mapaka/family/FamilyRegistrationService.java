@@ -71,6 +71,7 @@ public class FamilyRegistrationService {
                 .passwordHash(passwordEncoder.encode(request.parentPin()))
                 .role(UserRole.PARENT)
                 .active(true)
+                .locale(request.locale() != null ? request.locale() : "ca")
                 .build());
 
         String recoveryCode = generateRecoveryCode();
@@ -96,6 +97,7 @@ public class FamilyRegistrationService {
                 .passwordHash(passwordEncoder.encode(request.pin()))
                 .role(UserRole.PARENT)
                 .active(true)
+                .locale(request.locale() != null ? request.locale() : "ca")
                 .build());
     }
 

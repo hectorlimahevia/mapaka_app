@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import NavIcon from './NavIcon.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -22,7 +24,7 @@ async function logout() {
       <img src="@/assets/mapaka-logo.svg" alt="" width="22" height="22" />
       <span>Mapaka</span>
     </button>
-    <button type="button" class="top-bar__logout" aria-label="Tancar sessió" @click="logout">
+    <button type="button" class="top-bar__logout" :aria-label="t('nav.logout')" @click="logout">
       <NavIcon name="logout" />
     </button>
   </header>

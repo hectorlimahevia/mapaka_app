@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useRecoveryStore } from '@/stores/recovery'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import MapakaLogo from '@/components/base/MapakaLogo.vue'
+import { apiErrorMessage } from '@/utils/apiError'
 
+const { t } = useI18n()
 const router = useRouter()
 const recovery = useRecoveryStore()
 
@@ -25,11 +28,11 @@ onMounted(() => {
 async function submit() {
   error.value = null
   if (!/^\d{4}$/.test(pin.value)) {
-    error.value = 'El PIN ha de tenir exactament 4 dígits.'
+    error.value = t('common.pinInvalid')
     return
   }
   if (pin.value !== pinConfirm.value) {
-    error.value = 'Els PIN no coincideixen.'
+    error.value = t('common.pinMismatch')
     return
   }
   loading.value = true
@@ -40,8 +43,8 @@ async function submit() {
     })
     recovery.clear()
     done.value = true
-  } catch {
-    error.value = 'El token ha caducat. Torna a demanar la recuperació.'
+  } catch (err) {
+    error.value = apiErrorMessage(err)
   } finally {
     loading.value = false
   }
@@ -54,24 +57,24 @@ async function submit() {
 
     <BaseCard class="set-pin__card">
       <template v-if="done">
-        <p class="set-pin__prompt">PIN actualitzat ✓</p>
+        <p class="set-pin__prompt">{{ t('login.pinUpdated') }}</p>
         <BaseButton type="button" variant="primary" @click="router.push({ name: 'login' })">
-          Anar a l'inici de sessió
+          {{ t('login.goToLogin') }}
         </BaseButton>
       </template>
       <form v-else class="set-pin__form" @submit.prevent="submit">
-        <p class="set-pin__prompt">Defineix un PIN nou</p>
+        <p class="set-pin__prompt">{{ t('login.setNewPinTitle') }}</p>
         <label>
-          PIN de 4 dígits
+          {{ t('common.pinLabel') }}
           <input v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus />
         </label>
         <label>
-          Confirma el PIN
+          {{ t('common.pinConfirmLabel') }}
           <input v-model="pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <p v-if="error" class="set-pin__error">{{ error }}</p>
         <BaseButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? 'Desant…' : 'Desar PIN nou' }}
+          {{ loading ? t('common.saving') : t('login.saveNewPin') }}
         </BaseButton>
       </form>
     </BaseCard>

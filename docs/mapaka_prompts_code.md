@@ -1,6 +1,6 @@
 # Mapaka — Prompts per a Code
 
-Aquest document recull totes les decisions preses durant la fase de disseny (marca, color, tipografia, navegació, autenticació i registre, la funcionalitat NFC de temps de pantalla i l'estratègia de distribució multiplataforma) convertides en instruccions llestes perquè Code (l'agent de codi) implementi el projecte pas a pas.
+Aquest document recull totes les decisions preses durant la fase de disseny (marca, color, tipografia, navegació, autenticació i registre, idioma, la funcionalitat NFC de temps de pantalla i l'estratègia de distribució multiplataforma) convertides en instruccions llestes perquè Code (l'agent de codi) implementi el projecte pas a pas.
 
 ## Com fer servir aquest document
 
@@ -55,7 +55,7 @@ Regla no negociable: qualsevol xifra monetària o de minuts ha de portar `font-v
 
 **Navegació:** patró adaptatiu pel mateix component d'AppShell, no dos components separats. Per sota de `768px`, qualsevol rol veu una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb badge de pendents), Fills, Configuració. Per sobre de `768px`, el rol PARENT canvia a panell lateral fix (Resum familiar, Aprovacions, Fills, Configuració); CHILD no té vista d'escriptori pròpia perquè no és el seu cas d'ús principal. Referència visual exacta: els tres frames de l'artefacte mapaka-maqueta-animada / `mapaka_mockup.html` — "Vista CHILD — mòbil", "Vista PARENT — mòbil" i "Vista PARENT — escriptori".
 
-**Idioma de la interfície:** català, en tots els textos visibles (etiquetes, botons, missatges). Els prompts i comentaris de codi poden ser en castellà/anglès, però cap text d'usuari final.
+**Idioma de la interfície:** multilingüe des del principi — català (idioma base i font de veritat de totes les traduccions), amb castellà i anglès disponibles i seleccionables. Cap text visible a la interfície es pot escriure literalment dins d'un component: sempre a través del sistema d'i18n del Prompt 5. Els prompts i comentaris de codi poden ser en castellà/anglès, però cap text d'usuari final fora dels fitxers de traducció.
 
 **Autenticació:** PIN numèric de 4 dígits per a **tots dos rols**, PARENT inclòs — no hi ha contrasenya alfanumèrica enlloc de l'aplicació. Es tria expressament per mantenir la infraestructura a cost zero: una contrasenya amb recuperació per correu exigiria donar d'alta un servei d'enviament d'email transaccional només per a aquest propòsit. El PIN es guarda sempre com a hash (mai en clar ni reversible) al mateix camp `password_hash` de la taula `users`, independentment del rol. Vegeu el Prompt 6 per al flux complet de creació de família, alta de perfils i recuperació de PIN.
 
@@ -118,6 +118,8 @@ Afegeix a més les taules noves per a la funcionalitat de sessió NFC compartida
 - screen_session_participant: id, session_id (FK), child_id (FK), assigned_seconds, created_at.
 
 Cada fila de screen_session_participant, en tancar-se, ha de generar una transacció al Screen Time Ledger existent (screen_time_transactions o l'equivalent que ja defineix el document) amb source_type = 'NFC_SESSION' i source_id apuntant a screen_session_participant.id, permetent saldo negatiu (sense restricció CHECK >= 0) tal com es va decidir.
+
+Afegeix també a la taula `users`: `locale VARCHAR(2) NOT NULL DEFAULT 'ca' CHECK (locale IN ('ca','es','en'))` — preferència d'idioma de cada membre de la família (vegeu Prompt 5, internacionalització).
 ```
 
 ---
@@ -133,13 +135,48 @@ Endpoints REST necessaris per a la sessió NFC:
 - POST /api/screen-sessions/{id}/stop — alternativa explícita al segon toc, per al botó "Aturar" de la interfície.
 - POST /api/screen-sessions/{id}/assign — rep una llista de child_id seleccionats. Reparteix elapsed_seconds entre ells a parts iguals (arrodoniment: el residu de segons s'assigna al primer child_id de la llista, per no perdre precisió), crea els screen_session_participant corresponents, i genera les transaccions de consum al ledger, permetent saldo negatiu.
 - GET /api/families/{id}/children — llista de fills per emplenar el selector "Qui ha jugat?".
+- PATCH /api/users/{id}/locale — actualitza la preferència d'idioma (`ca`/`es`/`en`) de l'usuari autenticat. Cap altre usuari pot canviar l'idioma d'un altre membre.
+- GET /api/auth/me (ja definit a Família+.pdf) ha d'incloure el camp `locale` a la resposta, perquè el frontend apliqui l'idioma guardat just després del login sense haver de fer una crida addicional.
+
+Cap missatge d'error ni de validació que generi el backend s'ha d'enviar mai com a text literal en cap idioma — sempre com a codi semàntic (per exemple `PIN_INVALID_LENGTH`, `RECOVERY_CODE_EXPIRED`, `INSUFFICIENT_PERMISSIONS`). És el frontend qui tradueix aquest codi al missatge visible amb el sistema d'i18n del Prompt 5. Documenta els codis d'error possibles a l'OpenAPI de cada endpoint.
 
 Documenta tots els endpoints amb OpenAPI/Swagger, incloent exemples de request/response.
 ```
 
 ---
 
-## Prompt 5 — Frontend: shell de navegació i autenticació
+## Prompt 5 — Internacionalització (i18n): configuració base
+
+```
+Configura el sistema d'internacionalització abans de construir cap pantalla, perquè tots els prompts següents (login, registre, CHILD, PARENT, sessió NFC) ja escriguin els textos a través d'ell des del principi, en comptes d'haver-los d'extreure més tard.
+
+- Llibreria: vue-i18n (Composition API, `legacy: false`), amb càrrega diferida (lazy) dels fitxers de cada idioma perquè el bundle inicial només inclogui l'idioma actiu.
+- Estructura de fitxers: `frontend/src/i18n/locales/ca.json`, `es.json`, `en.json`. El català és el fitxer font — qualsevol clau nova es crea primer allà. Organitza les claus per pantalla/namespace, seguint exactament els noms ja establerts a la maqueta i als prompts: `common` (botons i etiquetes compartides), `nav`, `login`, `registre`, `inici`, `tasques`, `objectius`, `pantalla`, `resum`, `aprovacions`, `fills`, `config`, `nfc`, i `errors` (un mapa codi-de-backend → missatge, per als codis semàntics definits al Prompt 4 — mai el backend enviant text directament).
+- Convenció de claus: semàntiques, no el text literal català (per exemple `nav.inici`, `login.pinLabel`, `tasques.rewardLabel`) — així una clau no s'ha de renombrar quan canviï la traducció.
+- Afegeix un script de comprovació (per exemple a `package.json`, executable en local i pensat per a un futur pas de CI) que falli si `es.json` o `en.json` no tenen exactament el mateix conjunt de claus que `ca.json` — evita que quedin claus a mig traduir sense que ningú se n'adoni.
+- Mai tradueixis automàticament dades introduïdes per la família (noms de tasques, d'objectius d'estalvi, de fills, de la família mateixa) — només es tradueix el "xassís" de l'aplicació (etiquetes, botons, missatges del sistema). El nom "Mapaka" tampoc es tradueix mai.
+
+Detecció i persistència de l'idioma:
+
+1. A l'obrir l'app sense sessió (login/registre): si hi ha un idioma guardat a `localStorage` (clau `mapaka-locale`), s'aplica. Si no n'hi ha, es detecta amb `navigator.language`, mapejant a `ca`/`es`/`en`; qualsevol altre idioma cau al català per defecte.
+2. En completar el login, `GET /api/auth/me` (o la resposta del login) inclou el camp `locale` de l'usuari — s'aplica immediatament i es desa també a `localStorage`, perquè la següent vegada que s'obri l'app en aquest dispositiu ja hi hagi la llengua correcta abans fins i tot d'iniciar sessió.
+3. Canviar d'idioma sempre actualitza `localStorage` a l'instant; si hi ha sessió activa, a més crida `PATCH /api/users/{id}/locale` perquè quedi guardat al perfil i es recuperi en iniciar sessió des d'un altre dispositiu.
+
+Selector d'idioma (component `LanguageSwitcher`, reutilitzat arreu — CA / ES / EN):
+
+- A la pantalla de login/registre: visible sense necessitat d'autenticar-se.
+- Per a PARENT: dins de Configuració.
+- Per a CHILD: com que la navegació CHILD no té pantalla de configuració pròpia, afegeix una icona petita (globus/bandera) a la capçalera de la pantalla Inici — l'únic punt d'accés per a aquest rol.
+
+Formats numèrics i de data:
+
+- Els imports monetaris **no** varien de format amb l'idioma: sempre coma decimal i símbol "€" darrere (`14,00 €`), independentment de si la interfície està en català, castellà o anglès — és la moneda pròpia de la família, no un valor que s'hagi d'adaptar culturalment. Manté'l com una utilitat `formatMoney()` compartida, no via `$n` de vue-i18n.
+- Les dates (per exemple "Resums mensuals") sí que es formaten segons l'idioma actiu amb `Intl.DateTimeFormat`, perquè és només una etiqueta de lectura ("20 d'agost" / "20 de agosto" / "August 20").
+```
+
+---
+
+## Prompt 6 — Frontend: shell de navegació i autenticació
 
 ```
 Implementa el shell de navegació de Mapaka amb Vue Router:
@@ -154,7 +191,7 @@ Implementa el shell de navegació de Mapaka amb Vue Router:
 
 ---
 
-## Prompt 6 — Registre de família, alta de perfils i recuperació de PIN
+## Prompt 7 — Registre de família, alta de perfils i recuperació de PIN
 
 ```
 Família+.pdf defineix POST /api/families i POST /api/children però no connecta un flux real d'alta ni cap mecanisme de recuperació — implementa'l des de zero seguint aquestes regles:
@@ -183,7 +220,7 @@ Reutilitza els components base del Prompt 2 (inputs, botons) i l'animació de lo
 
 ---
 
-## Prompt 7 — Frontend: pantalles CHILD
+## Prompt 8 — Frontend: pantalles CHILD
 
 ```
 Implementa les 4 pantalles del rol CHILD, connectades als endpoints reals del backend (no dades fictícies):
@@ -198,7 +235,7 @@ Reprodueix fidelment l'aparença de l'artefacte mapaka-maqueta-animada (colors, 
 
 ---
 
-## Prompt 8 — Frontend: pantalles PARENT
+## Prompt 9 — Frontend: pantalles PARENT
 
 ```
 Implementa les pantalles del rol PARENT connectades al backend real:
@@ -213,7 +250,7 @@ Inclou aquí també la vista de "Aprovacions" els resultats de sessions NFC amb 
 
 ---
 
-## Prompt 9 — Feature: sessió NFC compartida (tauleta)
+## Prompt 10 — Feature: sessió NFC compartida (tauleta)
 
 ```
 Implementa la pantalla de "tauleta compartida" per a la sessió NFC de temps de pantalla, com una ruta pública dins de l'app (accessible via la URL gravada a l'etiqueta física, sense necessitar login individual del fill — identifica la família pel token de l'etiqueta):
@@ -230,7 +267,7 @@ Reprodueix l'aparença i les transicions del bloc "Tauleta compartida" de l'arte
 
 ---
 
-## Prompt 10 — Empaquetat Android amb Capacitor (APK d'instal·lació directa)
+## Prompt 11 — Empaquetat Android amb Capacitor (APK d'instal·lació directa)
 
 ```
 Afegeix Capacitor al projecte frontend existent, sense modificar el codi Vue 3 ja implementat:
@@ -245,7 +282,7 @@ No configuris res relacionat amb Google Play (aquest projecte no s'hi publicarà
 
 ---
 
-## Prompt 11 — Desplegament del backend a Render
+## Prompt 12 — Desplegament del backend a Render
 
 ```
 Prepara el backend Spring Boot per desplegar-se a Render (pla gratuït):
@@ -261,20 +298,21 @@ No configuris res relacionat amb Railway ni Fly.io — es van descartar per no s
 
 ---
 
-## Prompt 12 — Verificació
+## Prompt 13 — Verificació
 
 ```
-Revisa tot el que s'ha implementat als prompts 1-11 contra Família+.pdf i contra aquest document:
+Revisa tot el que s'ha implementat als prompts 1-12 contra Família+.pdf i contra aquest document:
 
 1. Cap acció que generi recompensa (diner o temps) és efectiva sense passar per un estat d'aprovació o pel repartiment explícit de la sessió NFC.
 2. Cap saldo es guarda com a valor fix — tot es calcula per suma de moviments (ledger), incloent el temps de pantalla assignat per sessions NFC.
 3. Els rols CHILD no poden accedir a cap endpoint ni ruta reservada a PARENT.
-4. Tots els textos visibles a la interfície estan en català.
-5. Els imports i minuts es mostren amb font-variant-numeric: tabular-nums.
+4. Cap text visible a la interfície està escrit literalment dins d'un component — tot passa per `$t()`. Executa el script de paritat de claus entre `ca.json`, `es.json` i `en.json` i confirma que no hi ha cap clau que falti a cap dels tres. Prova manualment el canvi d'idioma des del selector en almenys dues pantalles (una CHILD, una PARENT) i confirma que persisteix després de recarregar i després de tancar sessió i tornar a entrar.
+5. Els imports i minuts es mostren amb font-variant-numeric: tabular-nums, i els imports monetaris mantenen sempre el format `14,00 €` independentment de l'idioma actiu de la interfície.
 6. La navegació canvia correctament de bottom-nav a sidebar segons breakpoint i rol.
 7. Escriu tests d'integració per als tres endpoints nous de sessió NFC (tap, stop, assign), incloent el cas de repartiment amb saldo negatiu.
 8. El PIN (de qualsevol rol) i el codi de recuperació de família mai apareixen en clar en logs, respostes d'error ni al codi font — sempre hashejats. El codi de recuperació només es mostra un cop, a la resposta de POST /api/families/register.
 9. Escriu tests d'integració per al flux de registre (POST /api/families/register), l'alta d'un fill amb PIN, i el flux de recuperació (POST /api/auth/recover) incloent el cas del codi ja consumit.
+10. Cap endpoint del backend retorna mai un missatge d'error com a text literal — sempre un codi semàntic que el frontend tradueix.
 
 Informa de qualsevol incoherència trobada abans de continuar.
 ```

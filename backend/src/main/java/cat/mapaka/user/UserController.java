@@ -26,4 +26,13 @@ public class UserController {
             @PathVariable UUID id, @Valid @RequestBody ResetPinRequest request, @AuthenticationPrincipal AuthenticatedUser user) {
         userManagementService.resetPin(id, request.newPin(), user);
     }
+
+    /** Qualsevol usuari autenticat (PARENT o CHILD) pot canviar el seu propi idioma —
+     * substitueix la restricció de classe (només PARENT) per a aquest mètode. */
+    @PatchMapping("/api/users/{id}/locale")
+    @PreAuthorize("isAuthenticated()")
+    public void updateLocale(
+            @PathVariable UUID id, @Valid @RequestBody UpdateLocaleRequest request, @AuthenticationPrincipal AuthenticatedUser user) {
+        userManagementService.updateLocale(id, request.locale(), user);
+    }
 }

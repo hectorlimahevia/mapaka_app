@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useApprovalsStore } from '@/stores/approvals'
@@ -7,6 +8,7 @@ import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import type { NegativeBalanceSessionResponse, PendingApprovalResponse } from '@/types/parent'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const approvalsStore = useApprovalsStore()
 
@@ -44,32 +46,32 @@ onMounted(load)
 
 <template>
   <div class="aprovacions">
-    <h1>Aprovacions pendents</h1>
-    <p class="aprovacions__sub">Cap acció de recompensa és efectiva fins que l'aproves</p>
+    <h1>{{ t('aprovacions.title') }}</h1>
+    <p class="aprovacions__sub">{{ t('aprovacions.subtitle') }}</p>
 
-    <p v-if="!loading && approvals.length === 0" class="aprovacions__empty">No hi ha res pendent d'aprovació.</p>
+    <p v-if="!loading && approvals.length === 0" class="aprovacions__empty">{{ t('aprovacions.empty') }}</p>
 
     <TransitionGroup name="approval" tag="div">
       <div v-for="item in approvals" :key="item.taskCompletionId" class="approval-row">
         <div class="approval-row__info">
           <div class="approval-row__title">{{ item.childName }} — {{ item.taskName }}</div>
           <div class="approval-row__sub">
-            Recompensa sol·licitada:
+            {{ t('aprovacions.requestedReward') }}
             <template v-if="item.rewardMoney > 0"><AmountDisplay :value="item.rewardMoney" unit="€" /></template>
-            <template v-if="item.rewardScreenMinutes > 0"> +{{ item.rewardScreenMinutes }} min</template>
+            <template v-if="item.rewardScreenMinutes > 0"> +{{ item.rewardScreenMinutes }} {{ t('common.minutesAbbr') }}</template>
           </div>
         </div>
         <div class="approval-row__actions">
-          <BaseButton variant="primary" :disabled="!!resolvingId" @click="resolve(item, 'approve')">Aprovar</BaseButton>
-          <BaseButton variant="danger" :disabled="!!resolvingId" @click="resolve(item, 'reject')">Rebutjar</BaseButton>
+          <BaseButton variant="primary" :disabled="!!resolvingId" @click="resolve(item, 'approve')">{{ t('aprovacions.approve') }}</BaseButton>
+          <BaseButton variant="danger" :disabled="!!resolvingId" @click="resolve(item, 'reject')">{{ t('aprovacions.reject') }}</BaseButton>
         </div>
       </div>
     </TransitionGroup>
 
     <template v-if="negativeSessions.length > 0">
-      <div class="section-label">Sessions de pantalla amb saldo negatiu</div>
+      <div class="section-label">{{ t('aprovacions.negativeBalanceSectionTitle') }}</div>
       <div v-for="(s, i) in negativeSessions" :key="i" class="negative-row">
-        {{ s.childName }} ha quedat en saldo negatiu de temps de pantalla — es recupera amb la propera paga de temps.
+        {{ t('aprovacions.negativeBalanceRow', { name: s.childName }) }}
       </div>
     </template>
   </div>

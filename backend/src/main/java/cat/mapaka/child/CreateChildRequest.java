@@ -11,5 +11,6 @@ public record CreateChildRequest(
         @NotNull LocalDate birthDate,
         String avatar,
         String colorTheme,
-        @Pattern(regexp = "^\\d{4}$", message = "El PIN ha de tenir exactament 4 dígits") String pin) {
+        @Pattern(regexp = "^\\d{4}$", message = "El PIN ha de tenir exactament 4 dígits") String pin,
+        @Pattern(regexp = "^(ca|es|en)$") String locale) {
 }

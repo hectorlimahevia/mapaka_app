@@ -61,6 +61,7 @@ public class ChildManagementService {
                 .passwordHash(passwordEncoder.encode(request.pin()))
                 .role(UserRole.CHILD)
                 .active(true)
+                .locale(request.locale() != null ? request.locale() : "ca")
                 .build());
 
         ChildProfile child = childProfileRepository.save(ChildProfile.builder()

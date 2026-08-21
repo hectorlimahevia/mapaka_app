@@ -43,6 +43,11 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    /** Idioma preferit (ca/es/en) — recuperat en iniciar sessió des de qualsevol dispositiu. */
+    @Builder.Default
+    @Column(nullable = false, length = 5)
+    private String locale = "ca";
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "role", nullable = false, columnDefinition = "user_role")

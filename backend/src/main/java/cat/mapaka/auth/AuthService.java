@@ -45,8 +45,7 @@ public class AuthService {
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
-        AuthenticatedUser principal = toAuthenticatedUser(user);
-        return issueTokens(principal);
+        return issueTokens(user);
     }
 
     public LoginResult refresh(String refreshToken) {
@@ -54,17 +53,18 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .filter(User::isActive)
                 .orElseThrow(() -> new DomainException("INVALID_TOKEN", HttpStatus.UNAUTHORIZED, "Token no vàlid"));
-        return issueTokens(toAuthenticatedUser(user));
+        return issueTokens(user);
     }
 
     /** Emet un parell de tokens per a un usuari ja creat (registre de família, alta de PARENT
      * addicional) sense passar per la comprovació de contrasenya de login(). */
     @Transactional
     public LoginResult issueTokensForUser(User user) {
-        return issueTokens(toAuthenticatedUser(user));
+        return issueTokens(user);
     }
 
-    private LoginResult issueTokens(AuthenticatedUser principal) {
+    private LoginResult issueTokens(User user) {
+        AuthenticatedUser principal = toAuthenticatedUser(user);
         String accessToken = jwtService.generateAccessToken(principal);
         String refreshToken = jwtService.generateRefreshToken(principal.userId());
         String displayName = principal.childId() == null ? null
@@ -72,7 +72,8 @@ public class AuthService {
                         .map(cat.mapaka.child.ChildProfile::getDisplayName)
                         .orElse(null);
         AuthResponse response = new AuthResponse(
-                accessToken, principal.userId(), principal.familyId(), principal.role(), principal.childId(), displayName);
+                accessToken, principal.userId(), principal.familyId(), principal.role(), principal.childId(),
+                displayName, user.getLocale());
         return new LoginResult(response, refreshToken);
     }
 

@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import type { ChildTaskResponse } from '@/types/child'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const tasks = ref<ChildTaskResponse[]>([])
 const loading = ref(true)
 const completingId = ref<string | null>(null)
 
-const statusLabel: Record<ChildTaskResponse['status'], string> = {
+const statusLabel = computed<Record<ChildTaskResponse['status'], string>>(() => ({
   AVAILABLE: '',
-  PENDING: "Pendent d'aprovació",
-  APPROVED: 'Aprovada',
-  REJECTED: 'Rebutjada',
-}
+  PENDING: t('tasques.statusPending'),
+  APPROVED: t('tasques.statusApproved'),
+  REJECTED: t('tasques.statusRejected'),
+}))
 
 async function loadTasks() {
   const childId = auth.childId
@@ -41,10 +43,10 @@ onMounted(loadTasks)
 
 <template>
   <div class="tasques">
-    <h1>Les teves tasques</h1>
-    <p class="tasques__sub">Toca el cercle per marcar-la com feta</p>
+    <h1>{{ t('tasques.title') }}</h1>
+    <p class="tasques__sub">{{ t('tasques.subtitle') }}</p>
 
-    <p v-if="!loading && tasks.length === 0" class="tasques__empty">Encara no tens cap tasca assignada.</p>
+    <p v-if="!loading && tasks.length === 0" class="tasques__empty">{{ t('tasques.empty') }}</p>
 
     <div
       v-for="task in tasks"
@@ -61,10 +63,10 @@ onMounted(loadTasks)
           {{ task.name }}
         </div>
         <div class="task-row__reward">
-          Recompensa:
+          {{ t('tasques.rewardLabel') }}
           <AmountDisplay v-if="task.rewardMoney > 0" :value="task.rewardMoney" unit="€" />
           <span v-if="task.rewardMoney > 0 && task.rewardScreenMinutes > 0"> · </span>
-          <span v-if="task.rewardScreenMinutes > 0">+{{ task.rewardScreenMinutes }} min</span>
+          <span v-if="task.rewardScreenMinutes > 0">+{{ task.rewardScreenMinutes }} {{ t('common.minutesAbbr') }}</span>
         </div>
       </div>
       <div class="task-row__status">{{ statusLabel[task.status] }}</div>

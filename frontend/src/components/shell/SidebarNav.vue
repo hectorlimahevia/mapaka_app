@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import NavIcon from './NavIcon.vue'
 import BadgeCounter from '@/components/base/BadgeCounter.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -10,6 +11,7 @@ defineProps<{
   items: { name: string; label: string; icon: IconName; badge?: number }[]
 }>()
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -43,7 +45,7 @@ async function logout() {
 
     <button type="button" class="sidebar__logout" @click="logout">
       <NavIcon name="logout" />
-      <span>Tancar sessió</span>
+      <span>{{ t('nav.logout') }}</span>
     </button>
   </nav>
 </template>

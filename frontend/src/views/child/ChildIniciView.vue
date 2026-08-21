@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useCountUp } from '@/composables/useCountUp'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
+import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 import type { ChildTaskResponse, MoneyTransactionResponse, WalletResponse } from '@/types/child'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const { value: balanceDisplay, animateTo } = useCountUp()
 
@@ -34,27 +37,27 @@ onMounted(async () => {
 
 <template>
   <div class="inici">
-    <h1 class="inici__greeting">Bon dia, {{ auth.displayName }}</h1>
+    <div class="inici__head">
+      <h1 class="inici__greeting">{{ t('inici.greeting', { name: auth.displayName }) }}</h1>
+      <LanguageSwitcher />
+    </div>
     <p class="inici__sub">
       <template v-if="pendingTaskCount > 0">
-        Tens {{ pendingTaskCount }} tasca{{ pendingTaskCount > 1 ? 's' : '' }} pendent{{
-          pendingTaskCount > 1 ? 's' : ''
-        }}
-        d'aprovació
+        {{ t('inici.pendingTasks', { n: pendingTaskCount }, pendingTaskCount) }}
       </template>
-      <template v-else>Benvingut/da de nou!</template>
+      <template v-else>{{ t('inici.welcomeBack') }}</template>
     </p>
 
     <div class="balance-card">
-      <div class="balance-card__label">SALDO DISPONIBLE</div>
+      <div class="balance-card__label">{{ t('inici.availableBalance') }}</div>
       <div class="balance-card__amount">
         <AmountDisplay :value="balanceDisplay" unit="€" />
       </div>
-      <div class="balance-card__chip">Estalvi: <AmountDisplay :value="savingsBalance" unit="€" /></div>
+      <div class="balance-card__chip">{{ t('inici.savingsLabel') }} <AmountDisplay :value="savingsBalance" unit="€" /></div>
     </div>
 
-    <div class="section-label">Moviments recents</div>
-    <div v-if="!loading && transactions.length === 0" class="inici__empty">Encara no hi ha cap moviment.</div>
+    <div class="section-label">{{ t('inici.recentMovements') }}</div>
+    <div v-if="!loading && transactions.length === 0" class="inici__empty">{{ t('inici.noMovements') }}</div>
     <div v-for="t in transactions" :key="t.id" class="mrow">
       <span>{{ t.description || t.sourceType }}</span>
       <span class="mrow__amt" :class="t.transactionType === 'CREDIT' ? 'mrow__amt--pos' : 'mrow__amt--neg'">
@@ -71,8 +74,16 @@ onMounted(async () => {
   padding: 1.5rem 1.25rem 2rem;
 }
 
-.inici__greeting {
+.inici__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.15rem;
+}
+
+.inici__greeting {
+  margin-bottom: 0;
 }
 
 .inici__sub {
@@ -99,6 +110,7 @@ onMounted(async () => {
 .balance-card__label {
   font-size: 0.7rem;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
   opacity: 0.85;
   margin-bottom: 0.25rem;
 }

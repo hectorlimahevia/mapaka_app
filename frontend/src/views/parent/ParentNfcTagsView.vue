@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { isNativePlatform, writeScreenUrlToTag } from '@/services/nfc'
@@ -7,6 +8,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import type { ScreenTagResponse } from '@/types/parent'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const tags = ref<ScreenTagResponse[]>([])
 const loading = ref(true)
@@ -40,12 +42,12 @@ async function createTag() {
 function writeTag(tag: ScreenTagResponse) {
   if (writingTagId.value) return
   writingTagId.value = tag.id
-  writeMessage.value = "Apropa l'etiqueta NFC en blanc al dispositiu…"
+  writeMessage.value = t('nfc.writePrompt')
   cancelWrite?.()
   cancelWrite = writeScreenUrlToTag(
     tag.url,
     () => {
-      writeMessage.value = 'Etiqueta escrita correctament!'
+      writeMessage.value = t('nfc.writeSuccess')
       writingTagId.value = null
     },
     (message) => {
@@ -60,21 +62,16 @@ onMounted(load)
 
 <template>
   <div class="nfc-tags">
-    <h1>Etiquetes NFC</h1>
-    <p class="nfc-tags__sub">
-      Vincula un objecte físic amb una etiqueta NFC a la sessió de temps de pantalla compartida.
-    </p>
+    <h1>{{ t('nfc.tagsTitle') }}</h1>
+    <p class="nfc-tags__sub">{{ t('nfc.tagsSubtitle') }}</p>
 
-    <p v-if="!nativeApp" class="nfc-tags__hint">
-      Escriure etiquetes des de l'app només és possible a la versió Android instal·lada — aquí pots crear
-      l'etiqueta i copiar la URL per gravar-la amb una altra eina.
-    </p>
+    <p v-if="!nativeApp" class="nfc-tags__hint">{{ t('nfc.webHint') }}</p>
 
     <BaseButton variant="primary" :disabled="creating" @click="createTag">
-      {{ creating ? 'Creant…' : 'Crear etiqueta nova' }}
+      {{ creating ? t('nfc.creating') : t('nfc.createTag') }}
     </BaseButton>
 
-    <p v-if="!loading && tags.length === 0" class="nfc-tags__empty">Encara no hi ha cap etiqueta registrada.</p>
+    <p v-if="!loading && tags.length === 0" class="nfc-tags__empty">{{ t('nfc.emptyTags') }}</p>
 
     <BaseCard v-for="tag in tags" :key="tag.id" class="tag-card">
       <div class="tag-card__token">{{ tag.token }}</div>
@@ -85,7 +82,7 @@ onMounted(load)
         :disabled="writingTagId !== null"
         @click="writeTag(tag)"
       >
-        {{ writingTagId === tag.id ? 'Esperant etiqueta…' : 'Escriure a una etiqueta' }}
+        {{ writingTagId === tag.id ? t('nfc.waitingForTag') : t('nfc.writeToTag') }}
       </BaseButton>
     </BaseCard>
 

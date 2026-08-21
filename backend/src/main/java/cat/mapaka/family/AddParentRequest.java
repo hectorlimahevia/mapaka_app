@@ -5,5 +5,6 @@ import jakarta.validation.constraints.Pattern;
 
 public record AddParentRequest(
         @NotBlank String displayName,
-        @Pattern(regexp = "^\\d{4}$", message = "El PIN ha de tenir exactament 4 dígits") String pin) {
+        @Pattern(regexp = "^\\d{4}$", message = "El PIN ha de tenir exactament 4 dígits") String pin,
+        @Pattern(regexp = "^(ca|es|en)$") String locale) {
 }

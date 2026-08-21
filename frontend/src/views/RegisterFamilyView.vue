@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import MapakaLogo from '@/components/base/MapakaLogo.vue'
+import { apiErrorMessage } from '@/utils/apiError'
+import { i18n } from '@/i18n'
 import type { FamilyRegisterResponse } from '@/types/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -35,11 +39,11 @@ function nextFromFamily() {
 async function registerParent() {
   error.value = null
   if (!/^\d{4}$/.test(parent.pin)) {
-    error.value = 'El PIN ha de tenir exactament 4 dígits.'
+    error.value = t('common.pinInvalid')
     return
   }
   if (parent.pin !== parent.pinConfirm) {
-    error.value = 'Els PIN no coincideixen.'
+    error.value = t('common.pinMismatch')
     return
   }
   loading.value = true
@@ -48,12 +52,13 @@ async function registerParent() {
       familyName: familyName.value,
       parentDisplayName: parent.displayName,
       parentPin: parent.pin,
+      locale: i18n.global.locale.value,
     })
-    auth.applyRegisterResponse(data)
+    await auth.applyRegisterResponse(data)
     recoveryCode.value = data.recoveryCode
     step.value = 3
-  } catch {
-    error.value = 'No s\'ha pogut crear la família. Torna-ho a provar.'
+  } catch (err) {
+    error.value = apiErrorMessage(err)
   } finally {
     loading.value = false
   }
@@ -62,15 +67,15 @@ async function registerParent() {
 async function addChild() {
   error.value = null
   if (!child.displayName.trim() || !child.birthDate) {
-    error.value = 'Cal un nom i una data de naixement.'
+    error.value = t('registre.missingChildFields')
     return
   }
   if (!/^\d{4}$/.test(child.pin)) {
-    error.value = 'El PIN ha de tenir exactament 4 dígits.'
+    error.value = t('common.pinInvalid')
     return
   }
   if (child.pin !== child.pinConfirm) {
-    error.value = 'Els PIN no coincideixen.'
+    error.value = t('common.pinMismatch')
     return
   }
   savingChild.value = true
@@ -81,14 +86,15 @@ async function addChild() {
       avatar: null,
       colorTheme: child.colorTheme,
       pin: child.pin,
+      locale: i18n.global.locale.value,
     })
     addedChildren.value.push(child.displayName)
     child.displayName = ''
     child.birthDate = ''
     child.pin = ''
     child.pinConfirm = ''
-  } catch {
-    error.value = 'No s\'ha pogut afegir el fill. Torna-ho a provar.'
+  } catch (err) {
+    error.value = apiErrorMessage(err)
   } finally {
     savingChild.value = false
   }
@@ -113,55 +119,55 @@ async function finish() {
     <MapakaLogo class="register__brand" />
 
     <BaseCard class="register__card">
-      <p class="register__step">Pas {{ step }} de 4</p>
+      <p class="register__step">{{ t('registre.step', { step }) }}</p>
 
       <form v-if="step === 1" class="register__form" @submit.prevent="nextFromFamily">
         <label>
-          Nom de la família
-          <input v-model="familyName" type="text" placeholder="Sande-Lima" required autofocus />
+          {{ t('registre.familyNameLabel') }}
+          <input v-model="familyName" type="text" :placeholder="t('login.familyNamePlaceholder')" required autofocus />
         </label>
-        <BaseButton type="submit" variant="primary">Següent</BaseButton>
+        <BaseButton type="submit" variant="primary">{{ t('registre.next') }}</BaseButton>
       </form>
 
       <form v-else-if="step === 2" class="register__form" @submit.prevent="registerParent">
         <label>
-          El teu nom
+          {{ t('registre.yourNameLabel') }}
           <input v-model="parent.displayName" type="text" required autofocus />
         </label>
         <label>
-          PIN de 4 dígits
+          {{ t('common.pinLabel') }}
           <input v-model="parent.pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <label>
-          Confirma el PIN
+          {{ t('common.pinConfirmLabel') }}
           <input v-model="parent.pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <p v-if="error" class="register__error">{{ error }}</p>
         <BaseButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? 'Creant…' : 'Crear família' }}
+          {{ loading ? t('registre.creating') : t('registre.createFamily') }}
         </BaseButton>
       </form>
 
       <div v-else-if="step === 3" class="register__form">
-        <p class="register__prompt">Afegeix els fills (ho pots fer més tard des de Configuració)</p>
+        <p class="register__prompt">{{ t('registre.childrenPrompt') }}</p>
         <ul v-if="addedChildren.length" class="register__added">
           <li v-for="name in addedChildren" :key="name">✓ {{ name }}</li>
         </ul>
         <form class="register__child-form" @submit.prevent="addChild">
           <label>
-            Nom del fill
+            {{ t('registre.childNameLabel') }}
             <input v-model="child.displayName" type="text" />
           </label>
           <label>
-            Data de naixement
+            {{ t('registre.birthDateLabel') }}
             <input v-model="child.birthDate" type="date" />
           </label>
           <label>
-            PIN de 4 dígits
+            {{ t('common.pinLabel') }}
             <input v-model="child.pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" />
           </label>
           <label>
-            Confirma el PIN
+            {{ t('common.pinConfirmLabel') }}
             <input v-model="child.pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" />
           </label>
           <div class="register__colors">
@@ -177,28 +183,25 @@ async function finish() {
           </div>
           <p v-if="error" class="register__error">{{ error }}</p>
           <BaseButton type="submit" variant="accent" :disabled="savingChild">
-            {{ savingChild ? 'Afegint…' : 'Afegir fill' }}
+            {{ savingChild ? t('registre.adding') : t('registre.addChild') }}
           </BaseButton>
         </form>
-        <BaseButton type="button" variant="primary" @click="goToRecovery">Continuar</BaseButton>
+        <BaseButton type="button" variant="primary" @click="goToRecovery">{{ t('registre.continue') }}</BaseButton>
       </div>
 
       <div v-else class="register__form">
-        <p class="register__prompt">Codi de recuperació</p>
-        <p class="register__warning">
-          Apunta'l en un lloc segur — no es tornarà a mostrar mai més. Si un dia oblides el PIN i ets l'únic
-          adult de la família, el necessitaràs per recuperar l'accés.
-        </p>
+        <p class="register__prompt">{{ t('registre.recoveryCodeTitle') }}</p>
+        <p class="register__warning">{{ t('registre.recoveryCodeWarning') }}</p>
         <div class="register__code">{{ recoveryCode }}</div>
         <BaseButton type="button" variant="accent" @click="copyCode">
-          {{ codeCopied ? 'Copiat ✓' : 'Copiar al porta-retalls' }}
+          {{ codeCopied ? t('registre.copied') : t('registre.copyCode') }}
         </BaseButton>
         <label class="register__checkbox">
           <input v-model="savedConfirmed" type="checkbox" />
-          L'he desat
+          {{ t('registre.savedConfirm') }}
         </label>
         <BaseButton type="button" variant="primary" :disabled="!savedConfirmed" @click="finish">
-          Anar a Mapaka
+          {{ t('registre.goToApp') }}
         </BaseButton>
       </div>
     </BaseCard>

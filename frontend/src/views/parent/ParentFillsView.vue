@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import { apiErrorMessage } from '@/utils/apiError'
+import { i18n } from '@/i18n'
 import type { ChildDetailResponse } from '@/types/parent'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const children = ref<ChildDetailResponse[]>([])
 const loading = ref(true)
@@ -30,15 +34,15 @@ function startAddChild() {
 async function submitAddChild() {
   addChildError.value = null
   if (!newChild.displayName.trim() || !newChild.birthDate) {
-    addChildError.value = 'Cal un nom i una data de naixement.'
+    addChildError.value = t('fills.missingChildFields')
     return
   }
   if (!/^\d{4}$/.test(newChild.pin)) {
-    addChildError.value = 'El PIN ha de tenir exactament 4 dígits.'
+    addChildError.value = t('common.pinInvalid')
     return
   }
   if (newChild.pin !== newChild.pinConfirm) {
-    addChildError.value = 'Els PIN no coincideixen.'
+    addChildError.value = t('common.pinMismatch')
     return
   }
   savingChild.value = true
@@ -49,11 +53,12 @@ async function submitAddChild() {
       avatar: null,
       colorTheme: newChild.colorTheme,
       pin: newChild.pin,
+      locale: i18n.global.locale.value,
     })
     addingChild.value = false
     await load()
-  } catch {
-    addChildError.value = 'No s\'ha pogut afegir el fill. Torna-ho a provar.'
+  } catch (err) {
+    addChildError.value = apiErrorMessage(err)
   } finally {
     savingChild.value = false
   }
@@ -101,27 +106,27 @@ onMounted(load)
 
 <template>
   <div class="fills">
-    <h1>Fills</h1>
-    <p class="fills__sub">Gestiona el perfil, la paga i les regles de cada fill</p>
+    <h1>{{ t('fills.title') }}</h1>
+    <p class="fills__sub">{{ t('fills.subtitle') }}</p>
 
-    <p v-if="!loading && children.length === 0" class="fills__empty">Encara no hi ha cap fill donat d'alta.</p>
+    <p v-if="!loading && children.length === 0" class="fills__empty">{{ t('fills.empty') }}</p>
 
     <BaseCard v-if="addingChild" class="child-card">
       <form class="child-card__form" @submit.prevent="submitAddChild">
         <label>
-          Nom del fill
+          {{ t('fills.childNameLabel') }}
           <input v-model="newChild.displayName" type="text" required autofocus />
         </label>
         <label>
-          Data de naixement
+          {{ t('fills.birthDateLabel') }}
           <input v-model="newChild.birthDate" type="date" required />
         </label>
         <label>
-          PIN de 4 dígits
+          {{ t('common.pinLabel') }}
           <input v-model="newChild.pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <label>
-          Confirma el PIN
+          {{ t('common.pinConfirmLabel') }}
           <input v-model="newChild.pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <div class="child-card__colors">
@@ -138,49 +143,49 @@ onMounted(load)
         <p v-if="addChildError" class="fills__error">{{ addChildError }}</p>
         <div class="child-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="savingChild">
-            {{ savingChild ? 'Afegint…' : 'Afegir fill' }}
+            {{ savingChild ? t('fills.adding') : t('fills.addChild') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingChild" @click="addingChild = false">Cancel·la</BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="savingChild" @click="addingChild = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
-    <BaseButton v-else variant="accent" class="fills__add" @click="startAddChild">+ Afegir fill</BaseButton>
+    <BaseButton v-else variant="accent" class="fills__add" @click="startAddChild">+ {{ t('fills.addChild') }}</BaseButton>
 
     <BaseCard v-for="child in children" :key="child.childId" class="child-card">
       <div class="child-card__head">
         <div>
           <div class="child-card__name">{{ child.displayName }}</div>
-          <div class="child-card__age">{{ child.age }} anys</div>
+          <div class="child-card__age">{{ t('fills.age', { n: child.age }) }}</div>
         </div>
-        <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">Edita</BaseButton>
+        <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
       </div>
 
       <div v-if="editingId !== child.childId" class="child-card__info">
         <span v-if="child.allowanceMonthlyAmount !== null">
-          Paga: <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
-          ({{ child.allowanceSpendingPercentage }}% gastar · {{ child.allowanceSavingsPercentage }}% estalviar)
+          {{ t('fills.allowancePrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
+          {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
         </span>
-        <span v-else>Sense paga configurada</span>
-        <span v-if="child.screenBaseMinutes !== null">Pantalla: {{ child.screenBaseMinutes }} min/dia</span>
-        <span v-else>Sense temps de pantalla configurat</span>
+        <span v-else>{{ t('fills.noAllowance') }}</span>
+        <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: child.screenBaseMinutes }) }}</span>
+        <span v-else>{{ t('fills.noScreenTime') }}</span>
       </div>
 
       <form v-else class="child-card__form" @submit.prevent="save(child.childId)">
         <label>
-          Paga mensual (€)
+          {{ t('fills.monthlyAmountLabel') }}
           <input v-model.number="form.monthlyAmount" type="number" min="0" step="0.5" required />
         </label>
         <label>
-          % per gastar (la resta va a estalvi)
+          {{ t('fills.spendingPercentageLabel') }}
           <input v-model.number="form.spendingPercentage" type="number" min="0" max="100" required />
         </label>
         <label>
-          Minuts de pantalla per dia
+          {{ t('fills.screenMinutesLabel') }}
           <input v-model.number="form.baseMinutes" type="number" min="0" required />
         </label>
         <div class="child-card__form-actions">
-          <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? 'Desant…' : 'Desar' }}</BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="saving" @click="cancelEdit">Cancel·la</BaseButton>
+          <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? t('common.saving') : t('common.save') }}</BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="saving" @click="cancelEdit">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>

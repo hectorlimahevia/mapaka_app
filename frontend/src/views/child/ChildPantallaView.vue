@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import type { ScreenTimeStatusResponse } from '@/types/child'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const status = ref<ScreenTimeStatusResponse>({ baseMinutes: 0, availableMinutes: 0 })
 const dashOffset = ref(490)
@@ -27,8 +29,8 @@ onMounted(async () => {
 
 <template>
   <div class="pantalla">
-    <h1>Temps de pantalla</h1>
-    <p class="pantalla__sub">Minuts disponibles avui</p>
+    <h1>{{ t('pantalla.title') }}</h1>
+    <p class="pantalla__sub">{{ t('pantalla.subtitle') }}</p>
 
     <div class="ring-wrap">
       <svg width="180" height="180" viewBox="0 0 180 180">
@@ -54,16 +56,13 @@ onMounted(async () => {
         </defs>
       </svg>
       <div class="ring-wrap__value" :class="{ 'ring-wrap__value--negative': status.availableMinutes < 0 }">
-        {{ status.availableMinutes }} min
+        {{ status.availableMinutes }} {{ t('pantalla.minutesUnit') }}
       </div>
-      <div class="ring-wrap__caption">de {{ status.baseMinutes }} min assignats avui</div>
+      <div class="ring-wrap__caption">{{ t('pantalla.assignedCaption', { n: status.baseMinutes }) }}</div>
     </div>
 
     <div class="nfc-hint">
-      <p>
-        📱 Per jugar amb la pantalla compartida, toca l'objecte Mapaka contra la tauleta de la família per
-        començar un temps de joc — no cal fer res aquí.
-      </p>
+      <p>{{ t('pantalla.nfcHint') }}</p>
     </div>
   </div>
 </template>

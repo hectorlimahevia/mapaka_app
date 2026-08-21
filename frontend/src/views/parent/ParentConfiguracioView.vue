@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
+import { apiErrorMessage } from '@/utils/apiError'
+import { i18n } from '@/i18n'
 import type { FamilySettings } from '@/types/parent'
 import type { LoginProfile } from '@/types/auth'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const loading = ref(true)
 const settings = reactive<FamilySettings>({
@@ -55,24 +60,28 @@ function startAddParent() {
 async function submitAddParent() {
   addParentError.value = null
   if (!newParent.displayName.trim()) {
-    addParentError.value = 'Cal un nom.'
+    addParentError.value = t('config.missingName')
     return
   }
   if (!/^\d{4}$/.test(newParent.pin)) {
-    addParentError.value = 'El PIN ha de tenir exactament 4 dígits.'
+    addParentError.value = t('common.pinInvalid')
     return
   }
   if (newParent.pin !== newParent.pinConfirm) {
-    addParentError.value = 'Els PIN no coincideixen.'
+    addParentError.value = t('common.pinMismatch')
     return
   }
   savingParent.value = true
   try {
-    await api.post('/api/families/current/parents', { displayName: newParent.displayName, pin: newParent.pin })
+    await api.post('/api/families/current/parents', {
+      displayName: newParent.displayName,
+      pin: newParent.pin,
+      locale: i18n.global.locale.value,
+    })
     addingParent.value = false
     await load()
-  } catch {
-    addParentError.value = 'No s\'ha pogut afegir. Torna-ho a provar.'
+  } catch (err) {
+    addParentError.value = apiErrorMessage(err)
   } finally {
     savingParent.value = false
   }
@@ -88,19 +97,19 @@ function startResetPin(member: LoginProfile) {
 async function submitResetPin(userId: string) {
   resetError.value = null
   if (!/^\d{4}$/.test(resetPin.value)) {
-    resetError.value = 'El PIN ha de tenir exactament 4 dígits.'
+    resetError.value = t('common.pinInvalid')
     return
   }
   if (resetPin.value !== resetPinConfirm.value) {
-    resetError.value = 'Els PIN no coincideixen.'
+    resetError.value = t('common.pinMismatch')
     return
   }
   savingReset.value = true
   try {
     await api.patch(`/api/users/${userId}/pin`, { newPin: resetPin.value })
     resettingUserId.value = null
-  } catch {
-    resetError.value = 'No s\'ha pogut actualitzar el PIN.'
+  } catch (err) {
+    resetError.value = apiErrorMessage(err)
   } finally {
     savingReset.value = false
   }
@@ -111,11 +120,11 @@ onMounted(load)
 
 <template>
   <div class="config">
-    <h1>Configuració</h1>
-    <p class="config__sub">Regles generals de paga, estalvi i pantalla</p>
+    <h1>{{ t('config.title') }}</h1>
+    <p class="config__sub">{{ t('config.subtitle') }}</p>
 
     <div class="settings-row">
-      <span>Aprovació obligatòria per a totes les recompenses</span>
+      <span>{{ t('config.taskApprovalRequired') }}</span>
       <button
         type="button"
         class="switch"
@@ -126,7 +135,7 @@ onMounted(load)
       />
     </div>
     <div class="settings-row">
-      <span>Notificar per correu les aprovacions pendents</span>
+      <span>{{ t('config.notifyPendingApprovals') }}</span>
       <button
         type="button"
         class="switch"
@@ -137,7 +146,7 @@ onMounted(load)
       />
     </div>
     <div class="settings-row">
-      <span>Permetre transferència disponible → estalvi</span>
+      <span>{{ t('config.allowSavingsTransfer') }}</span>
       <button
         type="button"
         class="switch"
@@ -149,38 +158,43 @@ onMounted(load)
     </div>
 
     <RouterLink :to="{ name: 'parent-nfc-tags' }" class="config__nfc-link">
-      Etiquetes NFC de la sessió de pantalla compartida →
+      {{ t('config.nfcLink') }}
     </RouterLink>
 
-    <h2 class="config__section-title">Fills i pares</h2>
+    <div class="config__language">
+      <span>{{ t('common.language') }}</span>
+      <LanguageSwitcher />
+    </div>
+
+    <h2 class="config__section-title">{{ t('config.familyMembersTitle') }}</h2>
 
     <BaseCard v-for="member in members" :key="member.id" class="member-card">
       <div class="member-card__row">
         <span class="member-card__name">{{ member.displayName }}</span>
-        <span class="member-card__role">{{ member.role === 'PARENT' ? 'Adult' : 'Fill' }}</span>
+        <span class="member-card__role">{{ member.role === 'PARENT' ? t('config.roleAdult') : t('config.roleChild') }}</span>
         <BaseButton
           v-if="resettingUserId !== member.id"
           variant="accent"
           @click="startResetPin(member)"
         >
-          Resetejar PIN
+          {{ t('config.resetPin') }}
         </BaseButton>
       </div>
       <form v-if="resettingUserId === member.id" class="member-card__form" @submit.prevent="submitResetPin(member.id)">
         <label>
-          PIN nou
+          {{ t('config.pinNewLabel') }}
           <input v-model="resetPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus />
         </label>
         <label>
-          Confirma
+          {{ t('config.pinConfirmLabel') }}
           <input v-model="resetPinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <p v-if="resetError" class="config__error">{{ resetError }}</p>
         <div class="member-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="savingReset">
-            {{ savingReset ? 'Desant…' : 'Desar' }}
+            {{ savingReset ? t('common.saving') : t('common.save') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingReset" @click="resettingUserId = null">Cancel·la</BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="savingReset" @click="resettingUserId = null">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -188,27 +202,27 @@ onMounted(load)
     <BaseCard v-if="addingParent" class="member-card">
       <form class="member-card__form" @submit.prevent="submitAddParent">
         <label>
-          Nom de l'adult
+          {{ t('config.adultNameLabel') }}
           <input v-model="newParent.displayName" type="text" required autofocus />
         </label>
         <label>
-          PIN de 4 dígits
+          {{ t('common.pinLabel') }}
           <input v-model="newParent.pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <label>
-          Confirma el PIN
+          {{ t('common.pinConfirmLabel') }}
           <input v-model="newParent.pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
         </label>
         <p v-if="addParentError" class="config__error">{{ addParentError }}</p>
         <div class="member-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="savingParent">
-            {{ savingParent ? 'Afegint…' : 'Afegir adult' }}
+            {{ savingParent ? t('config.adding') : t('config.addAdult') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingParent" @click="addingParent = false">Cancel·la</BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="savingParent" @click="addingParent = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
-    <BaseButton v-else variant="accent" class="config__add-parent" @click="startAddParent">+ Afegir un altre adult</BaseButton>
+    <BaseButton v-else variant="accent" class="config__add-parent" @click="startAddParent">{{ t('config.addParent') }}</BaseButton>
   </div>
 </template>
 
@@ -275,6 +289,17 @@ onMounted(load)
   font-size: 0.85rem;
   color: var(--primary);
   text-decoration: none;
+}
+
+.config__language {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  margin-top: 0.6rem;
+  font-size: 0.87rem;
 }
 
 .config__section-title {

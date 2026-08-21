@@ -12,7 +12,8 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "i18n:check": "node scripts/check-i18n-keys.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -23,6 +24,7 @@
     "pinia": "^4.0.2",
     "vue": "^3.5.40",
     "vue-chartjs": "^5.3.4",
+    "vue-i18n": "^11.4.8",
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
