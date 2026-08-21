@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mapaka</string>
+    <string name="title_activity_main">Mapaka</string>
+    <string name="package_name">cat.mapaka.app</string>
+    <string name="custom_url_scheme">cat.mapaka.app</string>
+</resources>

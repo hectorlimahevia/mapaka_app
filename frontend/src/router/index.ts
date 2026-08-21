@@ -40,6 +40,7 @@ const router = createRouter({
         { path: 'aprovacions', name: 'parent-aprovacions', component: () => import('@/views/parent/ParentAprovacionsView.vue') },
         { path: 'fills', name: 'parent-fills', component: () => import('@/views/parent/ParentFillsView.vue') },
         { path: 'configuracio', name: 'parent-configuracio', component: () => import('@/views/parent/ParentConfiguracioView.vue') },
+        { path: 'etiquetes-nfc', name: 'parent-nfc-tags', component: () => import('@/views/parent/ParentNfcTagsView.vue') },
       ],
     },
     { path: '/', redirect: { name: 'login' } },

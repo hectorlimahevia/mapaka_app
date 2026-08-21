@@ -15,6 +15,9 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capgo/capacitor-nfc": "^8.2.5",
     "axios": "^1.19.0",
     "chart.js": "^4.5.1",
     "pinia": "^4.0.2",
@@ -23,6 +26,7 @@
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",

@@ -54,3 +54,11 @@ export interface ChildDetailResponse {
   allowanceSavingsPercentage: number | null
   screenBaseMinutes: number | null
 }
+
+export interface ScreenTagResponse {
+  id: string
+  token: string
+  active: boolean
+  createdAt: string
+  url: string
+}

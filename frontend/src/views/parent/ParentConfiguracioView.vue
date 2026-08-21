@@ -68,6 +68,10 @@ onMounted(load)
         @click="toggle('allowSavingsTransfer')"
       />
     </div>
+
+    <RouterLink :to="{ name: 'parent-nfc-tags' }" class="config__nfc-link">
+      Etiquetes NFC de la sessió de pantalla compartida →
+    </RouterLink>
   </div>
 </template>
 
@@ -125,5 +129,14 @@ onMounted(load)
 
 .switch--on::after {
   transform: translateX(16px);
+}
+
+.config__nfc-link {
+  display: inline-block;
+  margin-top: 1.25rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--primary);
+  text-decoration: none;
 }
 </style>

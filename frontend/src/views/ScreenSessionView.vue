@@ -1,12 +1,36 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/services/api'
 import BaseButton from '@/components/base/BaseButton.vue'
+import { isNfcSupported, scanForScreenToken } from '@/services/nfc'
 import type { AssignSessionResponse, ChildSummary, ScreenSessionStatusResponse } from '@/types/nfc'
 
 const route = useRoute()
 const token = route.params.token as string
+
+// "Escanejar ara" és exclusiu d'Android empaquetat (Prompt 9) — la pantalla ha de
+// funcionar igual de bé sense NFC actiu (patró passiu del Prompt 8).
+const nfcAvailable = ref(false)
+let cancelScan: (() => void) | null = null
+
+onMounted(async () => {
+  nfcAvailable.value = await isNfcSupported()
+})
+
+onUnmounted(() => cancelScan?.())
+
+function scanNow() {
+  if (loading.value) return
+  errorMessage.value = null
+  cancelScan?.()
+  cancelScan = scanForScreenToken(
+    (scannedToken) => tap(scannedToken),
+    (message) => {
+      errorMessage.value = message
+    },
+  )
+}
 
 type State = 'idle' | 'active' | 'whoplayed' | 'result'
 const state = ref<State>('idle')
@@ -58,12 +82,12 @@ function applyStatus(data: ScreenSessionStatusResponse) {
   }
 }
 
-async function tap() {
+async function tap(tagToken: string = token) {
   if (loading.value) return
   loading.value = true
   errorMessage.value = null
   try {
-    const { data } = await api.post<ScreenSessionStatusResponse>(`/api/screen-tags/${token}/tap`)
+    const { data } = await api.post<ScreenSessionStatusResponse>(`/api/screen-tags/${tagToken}/tap`)
     applyStatus(data)
   } catch {
     errorMessage.value = 'No s\'ha pogut reconèixer l\'objecte Mapaka. Torna-ho a provar.'
@@ -134,8 +158,11 @@ function reset() {
         <h1 class="t-title">Toca l'objecte Mapaka</h1>
         <p class="t-sub">Apropa l'objecte NFC a la tauleta per començar el temps de joc</p>
         <p v-if="errorMessage" class="t-error">{{ errorMessage }}</p>
-        <BaseButton variant="primary" :disabled="loading" @click="tap">
+        <BaseButton variant="primary" :disabled="loading" @click="tap()">
           {{ loading ? 'Un moment…' : 'Simular toc / Iniciar temps' }}
+        </BaseButton>
+        <BaseButton v-if="nfcAvailable" variant="accent" :disabled="loading" class="t-scan-btn" @click="scanNow">
+          Escanejar ara
         </BaseButton>
       </div>
 
@@ -241,6 +268,10 @@ function reset() {
   font-size: 0.85rem;
   font-weight: 700;
   margin: -0.5rem 0 1rem;
+}
+
+.t-scan-btn {
+  margin-top: 0.6rem;
 }
 
 .t-timer {

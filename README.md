@@ -26,7 +26,7 @@ Aixeca PostgreSQL local, el backend (perfil `dev`, port 8080) i el frontend (ser
 
 ## Empaquetat mòbil
 
-- **Android:** Capacitor, distribuït com a APK d'instal·lació directa (sense Google Play).
+- **Android:** Capacitor (`frontend/android/`), distribuït com a APK d'instal·lació directa (sense Google Play). Vegeu [`frontend/android/README.md`](frontend/android/README.md) per generar la clau de signatura i l'APK.
 - **iOS:** PWA instal·lada des de Safari (sense empaquetat natiu).
 
 Detall complet a `docs/mapaka_documento_global.md` secció 5.
