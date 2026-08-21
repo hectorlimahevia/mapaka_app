@@ -5,6 +5,7 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import MapakaLogo from '@/components/base/MapakaLogo.vue'
 import type { FamilyRegisterResponse } from '@/types/auth'
 
 const router = useRouter()
@@ -109,10 +110,7 @@ async function finish() {
 
 <template>
   <div class="register">
-    <div class="register__brand">
-      <img src="@/assets/mapaka-logo.svg" alt="" width="56" height="56" />
-      <h1>Mapaka</h1>
-    </div>
+    <MapakaLogo class="register__brand" />
 
     <BaseCard class="register__card">
       <p class="register__step">Pas {{ step }} de 4</p>
@@ -216,17 +214,6 @@ async function finish() {
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 1.5rem;
-}
-
-.register__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.register__brand h1 {
-  font-size: 1.75rem;
 }
 
 .register__card {

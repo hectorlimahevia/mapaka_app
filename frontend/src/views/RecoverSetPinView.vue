@@ -5,6 +5,7 @@ import api from '@/services/api'
 import { useRecoveryStore } from '@/stores/recovery'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import MapakaLogo from '@/components/base/MapakaLogo.vue'
 
 const router = useRouter()
 const recovery = useRecoveryStore()
@@ -49,10 +50,7 @@ async function submit() {
 
 <template>
   <div class="set-pin">
-    <div class="set-pin__brand">
-      <img src="@/assets/mapaka-logo.svg" alt="" width="56" height="56" />
-      <h1>Mapaka</h1>
-    </div>
+    <MapakaLogo class="set-pin__brand" />
 
     <BaseCard class="set-pin__card">
       <template v-if="done">
@@ -89,17 +87,6 @@ async function submit() {
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 1.5rem;
-}
-
-.set-pin__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.set-pin__brand h1 {
-  font-size: 1.75rem;
 }
 
 .set-pin__card {

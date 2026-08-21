@@ -5,6 +5,7 @@ import api from '@/services/api'
 import { useRecoveryStore } from '@/stores/recovery'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import MapakaLogo from '@/components/base/MapakaLogo.vue'
 import type { FamilySummary, RecoverResponse } from '@/types/auth'
 
 const router = useRouter()
@@ -57,10 +58,7 @@ async function submit() {
 
 <template>
   <div class="recover">
-    <div class="recover__brand">
-      <img src="@/assets/mapaka-logo.svg" alt="" width="56" height="56" />
-      <h1>Mapaka</h1>
-    </div>
+    <MapakaLogo class="recover__brand" />
 
     <BaseCard class="recover__card">
       <p class="recover__prompt">Has oblidat el PIN?</p>
@@ -108,17 +106,6 @@ async function submit() {
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 1.5rem;
-}
-
-.recover__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.recover__brand h1 {
-  font-size: 1.75rem;
 }
 
 .recover__card {

@@ -5,6 +5,7 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import MapakaLogo from '@/components/base/MapakaLogo.vue'
 import type { FamilySummary, LoginProfile, UserRole } from '@/types/auth'
 
 const router = useRouter()
@@ -103,10 +104,7 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
 
 <template>
   <div class="login">
-    <div class="login__brand">
-      <img src="@/assets/mapaka-logo.svg" alt="" width="56" height="56" />
-      <h1>Mapaka</h1>
-    </div>
+    <MapakaLogo class="login__brand" />
 
     <div class="login__toggle">
       <button type="button" :class="{ active: mode === 'child' }" @click="switchMode('child')">Sóc un fill</button>
@@ -176,17 +174,6 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 1.5rem;
-}
-
-.login__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.login__brand h1 {
-  font-size: 1.75rem;
 }
 
 .login__toggle {
