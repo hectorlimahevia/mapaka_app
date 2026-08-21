@@ -81,12 +81,6 @@ public class NfcScreenSessionService {
 
             int assignedSeconds = share + (i == 0 ? remainder : 0);
 
-            participantRepository.save(ScreenSessionParticipant.builder()
-                    .session(session)
-                    .child(child)
-                    .assignedSeconds(assignedSeconds)
-                    .build());
-
             int minutes = assignedSeconds > 0 ? Math.max(1, Math.round(assignedSeconds / 60f)) : 0;
             if (minutes > 0) {
                 screenTimeTransactionRepository.save(ScreenTimeTransaction.builder()
@@ -102,8 +96,17 @@ public class NfcScreenSessionService {
             }
 
             int balance = screenTimeTransactionRepository.balanceFor(childId);
+            boolean negative = balance < 0;
+
+            participantRepository.save(ScreenSessionParticipant.builder()
+                    .session(session)
+                    .child(child)
+                    .assignedSeconds(assignedSeconds)
+                    .resultingBalanceNegative(negative)
+                    .build());
+
             results.add(new AssignSessionResponse.ParticipantResult(
-                    childId, child.getDisplayName(), assignedSeconds, balance, balance < 0));
+                    childId, child.getDisplayName(), assignedSeconds, balance, negative));
         }
 
         return new AssignSessionResponse(sessionId, results);

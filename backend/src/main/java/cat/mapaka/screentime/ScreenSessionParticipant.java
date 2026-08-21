@@ -33,6 +33,10 @@ public class ScreenSessionParticipant {
     @Column(name = "assigned_seconds", nullable = false)
     private int assignedSeconds;
 
+    /** Informatiu per a la vista d'Aprovacions del PARENT (Prompt 7) — no bloqueja res. */
+    @Column(name = "resulting_balance_negative", nullable = false)
+    private boolean resultingBalanceNegative;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -13,6 +13,12 @@ public interface MoneyTransactionRepository extends JpaRepository<MoneyTransacti
     List<MoneyTransaction> findByChildIdOrderByCreatedAtDesc(UUID childId);
 
     @Query("""
+        SELECT t FROM MoneyTransaction t JOIN FETCH t.child
+        WHERE t.child.user.family.id = :familyId ORDER BY t.createdAt DESC
+        """)
+    List<MoneyTransaction> findByFamilyIdOrderByCreatedAtDesc(UUID familyId);
+
+    @Query("""
         SELECT COALESCE(SUM(CASE WHEN t.transactionType = :credit THEN t.amount ELSE -t.amount END), 0)
         FROM MoneyTransaction t
         WHERE t.child.id = :childId AND t.walletType = :walletType
