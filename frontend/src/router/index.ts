@@ -12,6 +12,13 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      // URL gravada a l'etiqueta NFC física — sense login, identifica la família pel token.
+      path: '/screen/:token',
+      name: 'screen-session',
+      component: () => import('@/views/ScreenSessionView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/child',
       component: AppShell,
       meta: { role: 'CHILD' },
