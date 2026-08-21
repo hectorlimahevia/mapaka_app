@@ -5,6 +5,7 @@ import { useApprovalsStore } from '@/stores/approvals'
 import { useViewport } from '@/composables/useViewport'
 import BottomNav from './BottomNav.vue'
 import SidebarNav from './SidebarNav.vue'
+import TopBar from './TopBar.vue'
 
 const auth = useAuthStore()
 const approvals = useApprovalsStore()
@@ -44,6 +45,7 @@ onMounted(() => { if (auth.role === 'PARENT') approvals.refresh() })
 <template>
   <div class="app-shell" :class="{ 'app-shell--sidebar': showSidebar, 'app-shell--bottom-nav': !showSidebar }">
     <SidebarNav v-if="showSidebar" :items="parentSidebarItems" />
+    <TopBar v-if="!showSidebar" />
 
     <main class="app-shell__content">
       <RouterView v-slot="{ Component }">
@@ -67,6 +69,7 @@ onMounted(() => { if (auth.role === 'PARENT') approvals.refresh() })
 }
 
 .app-shell--bottom-nav .app-shell__content {
+  padding-top: 3.5rem;
   padding-bottom: 4.5rem;
 }
 </style>

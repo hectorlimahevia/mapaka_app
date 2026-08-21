@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import NavIcon from './NavIcon.vue'
 import BadgeCounter from '@/components/base/BadgeCounter.vue'
+import { useAuthStore } from '@/stores/auth'
 
 type IconName = 'home' | 'tasks' | 'target' | 'device' | 'family' | 'check' | 'child' | 'settings'
 
@@ -10,14 +11,21 @@ defineProps<{
 }>()
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+
+async function logout() {
+  await auth.logout()
+  await router.push({ name: 'login' })
+}
 </script>
 
 <template>
   <nav class="sidebar">
-    <div class="sidebar__brand">
+    <RouterLink :to="{ name: 'parent-resum' }" class="sidebar__brand">
       <img src="@/assets/mapaka-logo.svg" alt="" width="26" height="26" />
       <span>Mapaka</span>
-    </div>
+    </RouterLink>
 
     <div class="sidebar__items">
       <RouterLink
@@ -32,6 +40,11 @@ const route = useRoute()
         <BadgeCounter v-if="item.badge" :count="item.badge" class="sidebar__badge" />
       </RouterLink>
     </div>
+
+    <button type="button" class="sidebar__logout" @click="logout">
+      <NavIcon name="logout" />
+      <span>Tancar sessió</span>
+    </button>
   </nav>
 </template>
 
@@ -60,6 +73,7 @@ const route = useRoute()
   font-size: 1.1rem;
   color: var(--primary);
   padding: 0 0.5rem;
+  text-decoration: none;
 }
 
 .sidebar__items {
@@ -91,5 +105,26 @@ const route = useRoute()
 
 .sidebar__badge {
   margin-left: auto;
+}
+
+.sidebar__logout {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: auto;
+  border: none;
+  background: none;
+  padding: 0.7rem 0.75rem;
+  border-radius: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: color 0.2s ease;
+}
+
+.sidebar__logout:hover {
+  color: var(--error);
 }
 </style>
