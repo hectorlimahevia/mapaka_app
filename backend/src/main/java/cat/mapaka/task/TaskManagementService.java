@@ -1,0 +1,183 @@
+package cat.mapaka.task;
+
+import cat.mapaka.child.ChildProfile;
+import cat.mapaka.child.ChildProfileRepository;
+import cat.mapaka.common.DomainException;
+import cat.mapaka.family.Family;
+import cat.mapaka.user.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Alta, edició i baixa de tasques per al PARENT (Prompt 10) — el forat real que ni la
+ * maqueta ni el Prompt 9 originals cobrien: sense això no hi havia manera de donar d'alta
+ * cap tasca des de la interfície.
+ */
+@Service
+public class TaskManagementService {
+
+    private final TaskRepository taskRepository;
+    private final TaskRewardRepository taskRewardRepository;
+    private final TaskAssignmentRepository taskAssignmentRepository;
+    private final ChildProfileRepository childProfileRepository;
+
+    public TaskManagementService(
+            TaskRepository taskRepository,
+            TaskRewardRepository taskRewardRepository,
+            TaskAssignmentRepository taskAssignmentRepository,
+            ChildProfileRepository childProfileRepository) {
+        this.taskRepository = taskRepository;
+        this.taskRewardRepository = taskRewardRepository;
+        this.taskAssignmentRepository = taskAssignmentRepository;
+        this.childProfileRepository = childProfileRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskManagementResponse> list(UUID familyId, TaskType type, Boolean active, UUID childId) {
+        return taskRepository.findByFamilyId(familyId).stream()
+                .filter(t -> type == null || t.getTaskType() == type)
+                .filter(t -> active == null || t.isActive() == active)
+                .filter(t -> childId == null || taskAssignmentRepository.findByTaskId(t.getId()).stream()
+                        .anyMatch(a -> a.isActive() && a.getChild().getId().equals(childId)))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public TaskManagementResponse create(Family family, User createdBy, CreateTaskRequest request) {
+        requireValidReward(request.rewardMoney(), request.rewardSavings(), request.rewardScreenMinutes());
+        Set<ChildProfile> children = resolveChildren(family.getId(), request.childIds());
+
+        Task task = taskRepository.save(Task.builder()
+                .family(family)
+                .name(request.name())
+                .description(request.description())
+                .taskType(request.taskType())
+                .icon(request.icon())
+                .active(true)
+                .requiresApproval(request.requiresApproval())
+                .repeatable(request.recurrenceType() != RecurrenceType.NONE)
+                .recurrenceType(request.recurrenceType())
+                .createdBy(createdBy)
+                .build());
+
+        taskRewardRepository.save(TaskReward.builder()
+                .task(task)
+                .moneyAmount(request.rewardMoney())
+                .savingsAmount(request.rewardSavings())
+                .screenMinutes(request.rewardScreenMinutes())
+                .active(true)
+                .build());
+
+        for (ChildProfile child : children) {
+            taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(child).active(true).build());
+        }
+
+        return toResponse(task);
+    }
+
+    @Transactional
+    public TaskManagementResponse update(Task task, CreateTaskRequest request) {
+        requireValidReward(request.rewardMoney(), request.rewardSavings(), request.rewardScreenMinutes());
+        Set<ChildProfile> children = resolveChildren(task.getFamily().getId(), request.childIds());
+
+        task.setName(request.name());
+        task.setDescription(request.description());
+        task.setTaskType(request.taskType());
+        task.setIcon(request.icon());
+        task.setRequiresApproval(request.requiresApproval());
+        task.setRepeatable(request.recurrenceType() != RecurrenceType.NONE);
+        task.setRecurrenceType(request.recurrenceType());
+        taskRepository.save(task);
+
+        // Cada TaskCompletion ja guarda una còpia de la recompensa en completar-se
+        // (ApprovalService), així que actualitzar-la aquí no altera res del passat.
+        taskRewardRepository.findByTaskIdAndActiveTrue(task.getId()).ifPresentOrElse(
+                reward -> {
+                    reward.setMoneyAmount(request.rewardMoney());
+                    reward.setSavingsAmount(request.rewardSavings());
+                    reward.setScreenMinutes(request.rewardScreenMinutes());
+                    taskRewardRepository.save(reward);
+                },
+                () -> taskRewardRepository.save(TaskReward.builder()
+                        .task(task).moneyAmount(request.rewardMoney()).savingsAmount(request.rewardSavings())
+                        .screenMinutes(request.rewardScreenMinutes()).active(true).build()));
+
+        Set<UUID> keepChildIds = children.stream().map(ChildProfile::getId).collect(java.util.stream.Collectors.toSet());
+        List<TaskAssignment> current = taskAssignmentRepository.findByTaskId(task.getId());
+        for (TaskAssignment assignment : current) {
+            boolean shouldStayActive = keepChildIds.contains(assignment.getChild().getId());
+            if (assignment.isActive() != shouldStayActive) {
+                assignment.setActive(shouldStayActive);
+                taskAssignmentRepository.save(assignment);
+            }
+        }
+        Set<UUID> alreadyAssigned = current.stream().map(a -> a.getChild().getId()).collect(java.util.stream.Collectors.toSet());
+        for (ChildProfile child : children) {
+            if (!alreadyAssigned.contains(child.getId())) {
+                taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(child).active(true).build());
+            }
+        }
+
+        return toResponse(task);
+    }
+
+    /** Mai un DELETE físic si la tasca ja té completions associades — es dona de baixa
+     * (active=false), mateix criteri que ja s'aplica als fills. */
+    @Transactional
+    public void deactivate(Task task) {
+        task.setActive(false);
+        taskRepository.save(task);
+    }
+
+    private Set<ChildProfile> resolveChildren(UUID familyId, List<UUID> childIds) {
+        Set<ChildProfile> children = new HashSet<>();
+        for (UUID childId : childIds) {
+            ChildProfile child = childProfileRepository.findByIdFetchUserAndFamily(childId)
+                    .orElseThrow(() -> new DomainException("CHILD_NOT_FOUND", HttpStatus.NOT_FOUND, "Fill no trobat"));
+            if (!child.getUser().getFamily().getId().equals(familyId)) {
+                throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "No pots assignar un fill d'una altra família");
+            }
+            children.add(child);
+        }
+        return children;
+    }
+
+    private void requireValidReward(BigDecimal money, BigDecimal savings, int screenMinutes) {
+        boolean hasReward = money.compareTo(BigDecimal.ZERO) > 0
+                || savings.compareTo(BigDecimal.ZERO) > 0
+                || screenMinutes > 0;
+        if (!hasReward) {
+            throw new DomainException("INVALID_TASK_REWARD", HttpStatus.BAD_REQUEST,
+                    "La tasca ha de tenir com a mínim una recompensa (diners, estalvi o minuts)");
+        }
+    }
+
+    private TaskManagementResponse toResponse(Task task) {
+        TaskReward reward = taskRewardRepository.findByTaskIdAndActiveTrue(task.getId()).orElse(null);
+        List<TaskManagementResponse.AssignedChild> assigned = taskAssignmentRepository.findByTaskId(task.getId()).stream()
+                .filter(TaskAssignment::isActive)
+                .map(a -> new TaskManagementResponse.AssignedChild(a.getChild().getId(), a.getChild().getDisplayName()))
+                .toList();
+        return new TaskManagementResponse(
+                task.getId(),
+                task.getName(),
+                task.getDescription(),
+                task.getTaskType(),
+                task.getIcon(),
+                task.isRequiresApproval(),
+                task.isActive(),
+                task.getRecurrenceType(),
+                reward != null ? reward.getMoneyAmount() : BigDecimal.ZERO,
+                reward != null ? reward.getSavingsAmount() : BigDecimal.ZERO,
+                reward != null ? reward.getScreenMinutes() : 0,
+                assigned);
+    }
+}

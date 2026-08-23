@@ -1,6 +1,6 @@
 # Mapaka — Prompts per a Code
 
-Aquest document recull totes les decisions preses durant la fase de disseny (marca, color, tipografia, navegació, autenticació i registre, idioma, la funcionalitat NFC de temps de pantalla i l'estratègia de distribució multiplataforma) convertides en instruccions llestes perquè Code (l'agent de codi) implementi el projecte pas a pas.
+Aquest document recull totes les decisions preses durant la fase de disseny (marca, color, tipografia, navegació, autenticació i registre, idioma, gestió de tasques i regles de paga, la funcionalitat NFC de temps de pantalla i l'estratègia de distribució multiplataforma) convertides en instruccions llestes perquè Code (l'agent de codi) implementi el projecte pas a pas.
 
 ## Com fer servir aquest document
 
@@ -53,7 +53,7 @@ Fes servir aquest SVG tal qual (sense redibuixar-lo) per a: favicon i icones de 
 
 Regla no negociable: qualsevol xifra monetària o de minuts ha de portar `font-variant-numeric: tabular-nums`, i el pes tipogràfic dels imports destacats ha de ser 800/900 (Nunito Sans compensa amb pes el que li falta de "seriositat" respecte a una font més neutra).
 
-**Navegació:** patró adaptatiu pel mateix component d'AppShell, no dos components separats. Per sota de `768px`, qualsevol rol veu una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb badge de pendents), Fills, Configuració. Per sobre de `768px`, el rol PARENT canvia a panell lateral fix (Resum familiar, Aprovacions, Fills, Configuració); CHILD no té vista d'escriptori pròpia perquè no és el seu cas d'ús principal. Referència visual exacta: els tres frames de l'artefacte mapaka-maqueta-animada / `mapaka_mockup.html` — "Vista CHILD — mòbil", "Vista PARENT — mòbil" i "Vista PARENT — escriptori".
+**Navegació:** patró adaptatiu pel mateix component d'AppShell, no dos components separats. Per sota de `768px`, qualsevol rol veu una barra inferior d'ítems — CHILD: Inici, Tasques, Objectius, Pantalla (4). PARENT: Resum, Tasques, Aprovacions (amb badge de pendents), Fills, Configuració (5 — vegeu el Prompt 10, on s'afegeix "Tasques" per gestionar responsabilitats, extres i regles de paga, un forat real que la maqueta original no cobria). Per sobre de `768px`, el rol PARENT canvia a panell lateral fix amb els mateixos ítems; CHILD no té vista d'escriptori pròpia perquè no és el seu cas d'ús principal. Referència visual: els frames de `mapaka_mockup.html` — "Vista CHILD — mòbil", "Vista PARENT — mòbil" i "Vista PARENT — escriptori" — són la referència de color, tipografia i component de targeta/llista; el panell "Tasques" de PARENT no hi apareix (es va detectar el forat després de fer la maqueta) i s'ha de construir amb els mateixos components base del Prompt 2.
 
 **Idioma de la interfície:** multilingüe des del principi — català (idioma base i font de veritat de totes les traduccions), amb castellà i anglès disponibles i seleccionables. Cap text visible a la interfície es pot escriure literalment dins d'un component: sempre a través del sistema d'i18n del Prompt 5. Els prompts i comentaris de codi poden ser en castellà/anglès, però cap text d'usuari final fora dels fitxers de traducció.
 
@@ -184,7 +184,7 @@ Implementa el shell de navegació de Mapaka amb Vue Router:
 - Login amb PIN numèric de 4 dígits per a tots dos rols (vegeu "Autenticació" al context de disseny). Per a CHILD, reprodueix el patró "selecciona el teu perfil" de la secció 7.2 de Família+.pdf: primer es tria l'avatar/nom dins la família, després es demana el PIN — mai un camp d'usuari en text lliure. Per a PARENT, un únic camp de PIN n'hi ha prou perquè el correu/usuari ja identifica la família.
 - Pantalla de login amb l'animació d'entrada del logo descrita al context de disseny ("Muntatge en cascada").
 - Guàrdies de ruta per rol: un CHILD mai pot accedir a rutes de PARENT ni viceversa.
-- Component AppShell únic i reutilitzat pels dos rols (no dos components de navegació separats): per sota de 768px de viewport, renderitza sempre una barra inferior fixa de 4 ítems, amb la llista d'ítems (etiqueta, icona, ruta) depenent només del rol — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (amb comptador de pendents en un badge sobre la icona), Fills, Configuració. Per sobre de 768px, el rol PARENT canvia a un panell lateral fix amb els mateixos 4 ítems; el rol CHILD no té variant d'escriptori.
+- Component AppShell únic i reutilitzat pels dos rols (no dos components de navegació separats): per sota de 768px de viewport, renderitza sempre una barra inferior fixa, amb la llista d'ítems (etiqueta, icona, ruta) depenent només del rol i **sense assumir un nombre fix d'ítems** — CHILD en té 4 (Inici, Tasques, Objectius, Pantalla), PARENT en té 5 (Resum, Tasques, Aprovacions amb comptador de pendents en un badge sobre la icona, Fills, Configuració). L'amplada de l'indicador animat i de cada botó s'ha de calcular a partir de `items.length`, no d'una constant. Per sobre de 768px, el rol PARENT canvia a un panell lateral fix amb els mateixos ítems; el rol CHILD no té variant d'escriptori.
 - L'ítem actiu de la navegació ha de portar un indicador animat (transform + transition, no display toggling brusc) que es desplaça entre posicions, reproduint el comportament de l'artefacte mapaka-maqueta-animada — inclosa la variant "Vista PARENT — mòbil", que fa servir exactament el mateix patró de barra inferior que CHILD, només canviant els ítems.
 - Aplica l'atribut data-role a <html> just després de l'autenticació, perquè el sistema de disseny del Prompt 2 s'apliqui automàticament.
 ```
@@ -227,7 +227,7 @@ Implementa les 4 pantalles del rol CHILD, connectades als endpoints reals del ba
 
 - Inici: targeta de saldo disponible amb animació de count-up en carregar (usa requestAnimationFrame, no setInterval cru), xip d'estalvi, llista de moviments recents amb imports en tabular-nums i color segons signe (verd/vermell) més el signe +/- explícit com a reforç no dependent només del color.
 - Tasques: llista de tasques amb estat visual DISPONIBLE / MARCADA COM A FETA (pendent d'aprovació) / APROVADA / RECHAZADA, seguint el flux exacte de la secció 2.1 del document. Marcar una tasca com a feta crida l'endpoint corresponent i mai modifica el saldo directament.
-- Objectius: targetes d'objectius d'estalvi amb barra de progrés animada (width transition en entrar a la pantalla, no a la càrrega de l'app).
+- Objectius: targetes d'objectius d'estalvi amb barra de progrés animada (width transition en entrar a la pantalla, no a la càrrega de l'app), **més un botó "Nou objectiu"** (nom + import a assolir) que crida `POST /api/children/{childId}/savings-goals` — sense aquest botó la pantalla és només de lectura i el fill no té manera de crear-ne un.
 - Pantalla: mostra el saldo de minuts disponibles (anell SVG animat com a l'artefacte de referència) i un enllaç/explicació de com utilitzar l'objecte NFC físic per iniciar una sessió a la tauleta compartida.
 
 Reprodueix fidelment l'aparença de l'artefacte mapaka-maqueta-animada (colors, tipografia, espaiats, transicions) — no és un esborrany, és el disseny aprovat.
@@ -238,19 +238,39 @@ Reprodueix fidelment l'aparença de l'artefacte mapaka-maqueta-animada (colors, 
 ## Prompt 9 — Frontend: pantalles PARENT
 
 ```
-Implementa les pantalles del rol PARENT connectades al backend real:
+Implementa les pantalles del rol PARENT connectades al backend real. Nota: la gestió de tasques i de les regles de paga es implementa al Prompt 10, no aquí — aquest prompt deixa els punts d'entrada (botons/enllaços) preparats però el detall de "Tasques" ve després.
 
-- Resum familiar: graella de targetes per fill amb saldo i activitat recent, llista de moviments agregada de tota la família.
+- Resum familiar: graella de targetes per fill amb saldo i activitat recent, llista de moviments agregada de tota la família. Afegeix un botó "Generar paga del mes" que crida `POST /api/allowances/generate`; mostra el resultat en un estat de confirmació (`POST /api/allowances/{id}/confirm`) o cancel·lació (`POST /api/allowances/{id}/cancel`) abans de donar-lo per definitiu — no és un botó que executi i prou, és un flux de dos passos perquè un import equivocat no es pugui aplicar per error. Afegeix també un enllaç "Resums mensuals" que llista els tancaments (`GET /api/settlements`) amb detall en clicar (`GET /api/settlements/{id}`).
 - Aprovacions: llista de tasques/recompenses pendents amb accions Aprovar/Rebutjar. Aprovar crida l'endpoint que genera el MoneyTransaction/ScreenTimeTransaction corresponent; rebutjar només canvia l'estat, sense generar moviment. La fila desapareix amb una transició (opacity + max-height), no amb un salt brusc, i el comptador de pendents del menú lateral s'actualitza en temps real.
-- Fills: gestió de perfil, edat i regles de paga/pantalla per fill.
-- Configuració: regles generals (aprovació obligatòria, notificacions, permisos de transferència disponible→estalvi) tal com apareix a la secció 8 del document.
+- Fills: gestió de perfil i edat per fill, més:
+  - Regla de paga personalitzada per aquest fill (`POST`/`PATCH /api/allowance-rules` amb `child_id` establert) — import mensual i percentatge gasto/estalvi, amb la validació que han de sumar 100. Prevaleix sobre la regla general d'edat (secció 8.2 de Família+.pdf).
+  - Botó "Ajust manual" (bonificació o penalització puntual, sense passar per una tasca): import de diners i/o minuts de pantalla + un motiu de text lliure, crida `POST /api/children/{id}/money-adjustments` i/o `POST /api/children/{id}/screen-time/adjustments` (secció 17, `adjustment_type` BONUS/PENALTY/MANUAL).
+- Configuració: regles generals (aprovació obligatòria, notificacions, permisos de transferència disponible→estalvi) tal com apareix a la secció 8 del document, més un editor de **regles de paga generals per franja d'edat** (sense `child_id`): llista de franges (edat mínima, edat màxima, import mensual, % gasto/% estalvi) amb alta/edició/baixa via `POST`/`GET`/`PATCH`/`DELETE /api/allowance-rules`.
 
-Inclou aquí també la vista de "Aprovacions" els resultats de sessions NFC amb repartiment que hagin deixat algun fill en saldo negatiu, marcats visualment (no bloquegen res, és només informatiu per al pare/mare).
+Inclou aquí també a la vista de "Aprovacions" els resultats de sessions NFC amb repartiment que hagin deixat algun fill en saldo negatiu, marcats visualment (no bloquegen res, és només informatiu per al pare/mare).
 ```
 
 ---
 
-## Prompt 10 — Feature: sessió NFC compartida (tauleta)
+## Prompt 10 — Frontend i backend: gestió de tasques (PARENT)
+
+```
+Família+.pdf defineix tot el sistema de tasques (secció 12) i el seu CRUD (seccions 29-31), però ni la maqueta original ni el Prompt 9 van incloure mai una pantalla per crear-les — sense aquest prompt no hi ha manera d'introduir cap tasca, ni estàndard ni extra, des de la interfície. Implementa'l abans de continuar amb la sessió NFC o el desplegament.
+
+Backend (si encara no existeix del Prompt 4):
+- Confirma que estan implementats: POST/GET/PATCH/DELETE /api/tasks (amb filtres ?type=, ?active=, ?childId=), POST/GET/DELETE /api/tasks/{taskId}/assignments, i que cada tasca pot tenir una fila a task_rewards amb money_amount, savings_amount i screen_minutes simultanis (poden ser 0, però no els tres a la vegada).
+
+Frontend — nova pantalla "Tasques" per a PARENT (cinquè ítem de navegació, vegeu el context de disseny):
+- Llista de tasques existents, amb filtre visual per tipus: **Responsabilitat** (RESPONSIBILITY — hàbits, sense sorpresa, ex. "Fer el llit") i **Extra** (EXTRA — feina addicional puntual, ex. "Rentar el cotxe"). Cada fila mostra nom, tipus, recompensa (import/estalvi/minuts, el que tingui) i a quins fills està assignada.
+- Formulari "Nova tasca" / "Edita tasca": nom, descripció, tipus (Responsabilitat/Extra), icona, recompensa (tres camps opcionals: diners, estalvi, minuts de pantalla — com a mínim un ha de ser > 0), recurrència (Cap / Diària / Setmanal / Mensual / Personalitzada, secció 12.4), si requereix aprovació de l'adult (gairebé sempre sí, però el camp existeix a la taula), i selecció d'un o més fills als quals s'assigna.
+- Donar de baixa una tasca és `active = false`, mai un DELETE físic si ja té completions associades (mateix criteri que ja s'aplica a Fills a Família+.pdf).
+
+Reutilitza els components base del Prompt 2 (BaseButton, BaseCard, inputs) i el mateix estil de llista/formulari que la resta de pantalles PARENT — no hi ha maqueta prèvia d'aquesta pantalla concreta, així que la coherència visual ve de reutilitzar els components existents, no de copiar un disseny nou.
+```
+
+---
+
+## Prompt 11 — Feature: sessió NFC compartida (tauleta)
 
 ```
 Implementa la pantalla de "tauleta compartida" per a la sessió NFC de temps de pantalla, com una ruta pública dins de l'app (accessible via la URL gravada a l'etiqueta física, sense necessitar login individual del fill — identifica la família pel token de l'etiqueta):
@@ -267,7 +287,7 @@ Reprodueix l'aparença i les transicions del bloc "Tauleta compartida" de l'arte
 
 ---
 
-## Prompt 11 — Empaquetat Android amb Capacitor (APK d'instal·lació directa)
+## Prompt 12 — Empaquetat Android amb Capacitor (APK d'instal·lació directa)
 
 ```
 Afegeix Capacitor al projecte frontend existent, sense modificar el codi Vue 3 ja implementat:
@@ -282,7 +302,7 @@ No configuris res relacionat amb Google Play (aquest projecte no s'hi publicarà
 
 ---
 
-## Prompt 12 — Desplegament del backend a Render
+## Prompt 13 — Desplegament del backend a Render
 
 ```
 Prepara el backend Spring Boot per desplegar-se a Render (pla gratuït):
@@ -298,10 +318,10 @@ No configuris res relacionat amb Railway ni Fly.io — es van descartar per no s
 
 ---
 
-## Prompt 13 — Verificació
+## Prompt 14 — Verificació
 
 ```
-Revisa tot el que s'ha implementat als prompts 1-12 contra Família+.pdf i contra aquest document:
+Revisa tot el que s'ha implementat als prompts 1-13 contra Família+.pdf i contra aquest document:
 
 1. Cap acció que generi recompensa (diner o temps) és efectiva sense passar per un estat d'aprovació o pel repartiment explícit de la sessió NFC.
 2. Cap saldo es guarda com a valor fix — tot es calcula per suma de moviments (ledger), incloent el temps de pantalla assignat per sessions NFC.
@@ -313,6 +333,8 @@ Revisa tot el que s'ha implementat als prompts 1-12 contra Família+.pdf i contr
 8. El PIN (de qualsevol rol) i el codi de recuperació de família mai apareixen en clar en logs, respostes d'error ni al codi font — sempre hashejats. El codi de recuperació només es mostra un cop, a la resposta de POST /api/families/register.
 9. Escriu tests d'integració per al flux de registre (POST /api/families/register), l'alta d'un fill amb PIN, i el flux de recuperació (POST /api/auth/recover) incloent el cas del codi ja consumit.
 10. Cap endpoint del backend retorna mai un missatge d'error com a text literal — sempre un codi semàntic que el frontend tradueix.
+11. Un PARENT pot, sense sortir de la interfície: crear una tasca de tipus Responsabilitat i una d'Extra amb recompensa i assignar-les a un fill; definir una regla de paga general per franja d'edat i una de personalitzada per a un fill concret; generar la paga del mes i veure-la reflectida com a MoneyTransaction al moviment del fill; fer un ajust manual (bonificació/penalització) puntual. Si algun d'aquests passos no es pot fer sense escriure SQL a mà, el prompt corresponent no s'ha acabat.
+12. Un CHILD pot crear un nou objectiu d'estalvi des de la pantalla Objectius, no només veure els que ja existeixen.
 
 Informa de qualsevol incoherència trobada abans de continuar.
 ```

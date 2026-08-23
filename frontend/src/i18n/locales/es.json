@@ -87,12 +87,41 @@
     "rewardLabel": "Recompensa:",
     "statusPending": "Pendiente de aprobación",
     "statusApproved": "Aprobada",
-    "statusRejected": "Rechazada"
+    "statusRejected": "Rechazada",
+    "parentSubtitle": "Alta y edición de responsabilidades y extras",
+    "parentEmpty": "Todavía no hay ninguna tarea creada.",
+    "filterAll": "Todas",
+    "typeResponsibility": "Responsabilidad",
+    "typeExtra": "Extra",
+    "deactivate": "Dar de baja",
+    "noneAssigned": "Sin asignar",
+    "newTask": "Nueva tarea",
+    "nameLabel": "Nombre de la tarea",
+    "descriptionLabel": "Descripción",
+    "typeLabel": "Tipo",
+    "recurrenceLabel": "Recurrencia",
+    "recurrenceNONE": "Ninguna",
+    "recurrenceDAILY": "Diaria",
+    "recurrenceWEEKLY": "Semanal",
+    "recurrenceMONTHLY": "Mensual",
+    "recurrenceCUSTOM": "Personalizada",
+    "requiresApprovalLabel": "Requiere aprobación del adulto",
+    "rewardMoneyLabel": "Recompensa en dinero (€)",
+    "rewardSavingsLabel": "Recompensa en ahorro (€)",
+    "rewardMinutesLabel": "Recompensa en minutos de pantalla",
+    "assignLabel": "Asignar a:",
+    "missingName": "Falta un nombre para la tarea.",
+    "missingReward": "Falta al menos una recompensa (dinero, ahorro o minutos)."
   },
   "objectius": {
     "title": "Objetivos de ahorro",
     "subtitle": "Lo que ahorras hace avanzar tu objetivo",
-    "empty": "Todavía no tienes ningún objetivo de ahorro."
+    "empty": "Todavía no tienes ningún objetivo de ahorro.",
+    "addGoal": "Nuevo objetivo",
+    "adding": "Añadiendo…",
+    "nameLabel": "Nombre del objetivo",
+    "targetLabel": "Importe a alcanzar (€)",
+    "missingFields": "Falta un nombre y un importe superior a 0."
   },
   "pantalla": {
     "title": "Tiempo de pantalla",
@@ -108,7 +137,21 @@
     "noPendingApprovals": "Sin aprobaciones pendientes",
     "pendingApprovals": "{n} aprobación pendiente | {n} aprobaciones pendientes",
     "recentFamilyMovements": "Movimientos recientes de la familia",
-    "noMovements": "Todavía no hay ningún movimiento."
+    "noMovements": "Todavía no hay ningún movimiento.",
+    "generateAllowances": "Generar paga del mes",
+    "generating": "Generando…",
+    "settlementsLink": "Resúmenes mensuales →",
+    "pendingAllowancesTitle": "Paga generada, pendiente de confirmar",
+    "allowanceSplit": "gastar/ahorrar:",
+    "confirm": "Confirmar",
+    "settlementsTitle": "Resúmenes mensuales",
+    "settlementsSubtitle": "Cierres de paga de cada hijo, mes a mes",
+    "settlementsEmpty": "Todavía no hay ningún cierre mensual.",
+    "baseAllowance": "Paga base",
+    "extraEarnings": "Ganado con tareas",
+    "bonuses": "Bonificaciones",
+    "penalties": "Penalizaciones",
+    "savingsPortion": "Parte de ahorro"
   },
   "aprovacions": {
     "title": "Aprobaciones pendientes",
@@ -138,7 +181,18 @@
     "childNameLabel": "Nombre del hijo",
     "birthDateLabel": "Fecha de nacimiento",
     "adding": "Añadiendo…",
-    "missingChildFields": "Falta un nombre y una fecha de nacimiento."
+    "missingChildFields": "Falta un nombre y una fecha de nacimiento.",
+    "manualAdjustment": "Ajuste manual",
+    "adjustmentTypeLabel": "Tipo",
+    "adjustmentBonus": "Bonificación",
+    "adjustmentPenalty": "Penalización",
+    "adjustmentManual": "Manual",
+    "adjustmentAmountLabel": "Importe en dinero (€)",
+    "adjustmentSavingsLabel": "Importe en ahorro (€)",
+    "adjustmentMinutesLabel": "Minutos de pantalla",
+    "adjustmentReasonLabel": "Motivo",
+    "missingReason": "Hay que indicar un motivo.",
+    "missingAdjustmentValue": "Falta un importe de dinero, de ahorro o de minutos superior a 0."
   },
   "config": {
     "title": "Configuración",
@@ -157,7 +211,14 @@
     "adultNameLabel": "Nombre del adulto",
     "addAdult": "Añadir adulto",
     "adding": "Añadiendo…",
-    "missingName": "Falta un nombre."
+    "missingName": "Falta un nombre.",
+    "allowanceRulesTitle": "Reglas de paga generales",
+    "ageRange": "{min}-{max} años",
+    "minAgeLabel": "Edad mínima",
+    "maxAgeLabel": "Edad máxima",
+    "savingsPercentageLabel": "% para ahorrar",
+    "addAllowanceRule": "Añadir regla de paga",
+    "percentagesMustSumTo100": "El porcentaje de gastar y ahorrar debe sumar 100."
   },
   "nfc": {
     "tapPrompt": "Toca el objeto Mapaka",
@@ -206,6 +267,12 @@
     "SCREEN_TAG_NOT_FOUND": "Esta etiqueta no es una etiqueta Mapaka válida.",
     "SESSION_NOT_FOUND": "No se ha encontrado esta sesión.",
     "SESSION_STILL_ACTIVE": "Esta sesión todavía está en marcha.",
-    "SESSION_ALREADY_CLOSED": "Esta sesión ya está cerrada."
+    "SESSION_ALREADY_CLOSED": "Esta sesión ya está cerrada.",
+    "INVALID_TASK_REWARD": "La tarea debe tener al menos una recompensa.",
+    "ALLOWANCE_RULE_NOT_FOUND": "No se ha encontrado esta regla de paga.",
+    "ALLOWANCE_NOT_FOUND": "No se ha encontrado esta paga.",
+    "ALLOWANCE_ALREADY_RESOLVED": "Esta paga ya se ha confirmado o cancelado.",
+    "INVALID_ADJUSTMENT": "Hace falta un importe superior a 0.",
+    "SETTLEMENT_NOT_FOUND": "No se ha encontrado este cierre."
   }
 }

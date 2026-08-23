@@ -87,12 +87,41 @@
     "rewardLabel": "Reward:",
     "statusPending": "Pending approval",
     "statusApproved": "Approved",
-    "statusRejected": "Rejected"
+    "statusRejected": "Rejected",
+    "parentSubtitle": "Create and edit responsibilities and extras",
+    "parentEmpty": "No tasks created yet.",
+    "filterAll": "All",
+    "typeResponsibility": "Responsibility",
+    "typeExtra": "Extra",
+    "deactivate": "Deactivate",
+    "noneAssigned": "Not assigned",
+    "newTask": "New task",
+    "nameLabel": "Task name",
+    "descriptionLabel": "Description",
+    "typeLabel": "Type",
+    "recurrenceLabel": "Recurrence",
+    "recurrenceNONE": "None",
+    "recurrenceDAILY": "Daily",
+    "recurrenceWEEKLY": "Weekly",
+    "recurrenceMONTHLY": "Monthly",
+    "recurrenceCUSTOM": "Custom",
+    "requiresApprovalLabel": "Requires adult approval",
+    "rewardMoneyLabel": "Money reward (€)",
+    "rewardSavingsLabel": "Savings reward (€)",
+    "rewardMinutesLabel": "Screen time reward (minutes)",
+    "assignLabel": "Assign to:",
+    "missingName": "A task name is required.",
+    "missingReward": "At least one reward (money, savings or minutes) is required."
   },
   "objectius": {
     "title": "Savings goals",
     "subtitle": "What you save moves your goal forward",
-    "empty": "You don't have any savings goals yet."
+    "empty": "You don't have any savings goals yet.",
+    "addGoal": "New goal",
+    "adding": "Adding…",
+    "nameLabel": "Goal name",
+    "targetLabel": "Target amount (€)",
+    "missingFields": "A name and an amount greater than 0 are required."
   },
   "pantalla": {
     "title": "Screen time",
@@ -108,7 +137,21 @@
     "noPendingApprovals": "No pending approvals",
     "pendingApprovals": "{n} pending approval | {n} pending approvals",
     "recentFamilyMovements": "Recent family activity",
-    "noMovements": "No activity yet."
+    "noMovements": "No activity yet.",
+    "generateAllowances": "Generate this month's allowance",
+    "generating": "Generating…",
+    "settlementsLink": "Monthly summaries →",
+    "pendingAllowancesTitle": "Allowance generated, pending confirmation",
+    "allowanceSplit": "spend/save:",
+    "confirm": "Confirm",
+    "settlementsTitle": "Monthly summaries",
+    "settlementsSubtitle": "Each child's allowance closings, month by month",
+    "settlementsEmpty": "No monthly closing yet.",
+    "baseAllowance": "Base allowance",
+    "extraEarnings": "Earned from tasks",
+    "bonuses": "Bonuses",
+    "penalties": "Penalties",
+    "savingsPortion": "Savings portion"
   },
   "aprovacions": {
     "title": "Pending approvals",
@@ -138,7 +181,18 @@
     "childNameLabel": "Child's name",
     "birthDateLabel": "Date of birth",
     "adding": "Adding…",
-    "missingChildFields": "A name and a date of birth are required."
+    "missingChildFields": "A name and a date of birth are required.",
+    "manualAdjustment": "Manual adjustment",
+    "adjustmentTypeLabel": "Type",
+    "adjustmentBonus": "Bonus",
+    "adjustmentPenalty": "Penalty",
+    "adjustmentManual": "Manual",
+    "adjustmentAmountLabel": "Money amount (€)",
+    "adjustmentSavingsLabel": "Savings amount (€)",
+    "adjustmentMinutesLabel": "Screen minutes",
+    "adjustmentReasonLabel": "Reason",
+    "missingReason": "A reason is required.",
+    "missingAdjustmentValue": "A money, savings or minutes amount greater than 0 is required."
   },
   "config": {
     "title": "Settings",
@@ -157,7 +211,14 @@
     "adultNameLabel": "Adult's name",
     "addAdult": "Add adult",
     "adding": "Adding…",
-    "missingName": "A name is required."
+    "missingName": "A name is required.",
+    "allowanceRulesTitle": "General allowance rules",
+    "ageRange": "{min}-{max} years old",
+    "minAgeLabel": "Minimum age",
+    "maxAgeLabel": "Maximum age",
+    "savingsPercentageLabel": "% to save",
+    "addAllowanceRule": "Add allowance rule",
+    "percentagesMustSumTo100": "The spend and save percentages must add up to 100."
   },
   "nfc": {
     "tapPrompt": "Tap the Mapaka object",
@@ -206,6 +267,12 @@
     "SCREEN_TAG_NOT_FOUND": "This isn't a valid Mapaka tag.",
     "SESSION_NOT_FOUND": "This session couldn't be found.",
     "SESSION_STILL_ACTIVE": "This session is still running.",
-    "SESSION_ALREADY_CLOSED": "This session is already closed."
+    "SESSION_ALREADY_CLOSED": "This session is already closed.",
+    "INVALID_TASK_REWARD": "The task must have at least one reward.",
+    "ALLOWANCE_RULE_NOT_FOUND": "This allowance rule couldn't be found.",
+    "ALLOWANCE_NOT_FOUND": "This allowance couldn't be found.",
+    "ALLOWANCE_ALREADY_RESOLVED": "This allowance has already been confirmed or cancelled.",
+    "INVALID_ADJUSTMENT": "An amount greater than 0 is required.",
+    "SETTLEMENT_NOT_FOUND": "This closing couldn't be found."
   }
 }

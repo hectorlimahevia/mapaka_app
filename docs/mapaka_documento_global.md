@@ -26,7 +26,7 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 |---|---|
 | `Família+.pdf` | Especificación funcional y técnica original (84 páginas): visión de producto, roles, arquitectura de referencia, modelo de datos completo tabla por tabla, sistema de paga y de tiempo de pantalla. Sigue siendo la fuente de verdad para el modelo de datos y las reglas de negocio base — este documento global no la duplica, la resume y la conecta con todo lo decidido después. |
 | `mapaka_documento_global.md` | Este documento — la vista de conjunto. |
-| `mapaka_prompts_code.md` | 13 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, idioma/i18n, navegación y autenticación, registro de familia y recuperación de PIN, pantallas, feature NFC, empaquetado Android, despliegue, verificación). |
+| `mapaka_prompts_code.md` | 14 prompts secuenciales, listos para pegar en Code, que implementan el proyecto de principio a fin (bootstrap, sistema de diseño, base de datos, backend, idioma/i18n, navegación y autenticación, registro de familia y recuperación de PIN, pantallas, gestión de tareas y paga, feature NFC, empaquetado Android, despliegue, verificación). |
 | `mapaka-logo.svg` | El logo definitivo ("Cercles de família"), en SVG, listo para usar tal cual. |
 | `mapaka_mockup.html` | Maqueta HTML interactiva y animada con el diseño aprobado: navegación CHILD/PARENT (móvil y escritorio), y el flujo completo de sesión NFC en la tableta compartida. Publicada también como artefacto propio ("Mapaka Maqueta") — Code debe reproducir fielmente su aspecto, no reinterpretarlo. |
 | `mapaka_login_animacions.html` | Las 3 propuestas de animación de entrada del logo en el login; la elegida ("Muntatge en cascada") es la referencia de coreografía exacta para el Prompt 6. |
@@ -60,7 +60,7 @@ Principio de negocio no negociable, heredado del documento funcional original: *
 
 **Tipografía:** Baloo 2 (redondeada, juguetona) para titulares y botones; Nunito Sans (más neutra, con cifras tabulares) para cuerpo de texto y, sobre todo, para cualquier cantidad de dinero o minutos — la seriedad que le falta a una fuente redondeada se recupera con peso tipográfico alto (800/900) en los importes, no cambiando de fuente.
 
-**Navegación:** un único componente de AppShell adaptativo, no dos separados. Por debajo de 768px, cualquier rol ve una barra inferior de 4 ítems — CHILD: Inici, Tasques, Objectius, Pantalla; PARENT: Resum, Aprovacions (con contador de pendientes), Fills, Configuració. Por encima de 768px, el rol PARENT cambia a panel lateral fijo con los mismos 4 ítems; CHILD no tiene variante de escritorio. La vista "PARENT en móvil" reutiliza literalmente el mismo patrón de barra inferior que CHILD — solo cambian los ítems — para no duplicar trabajo de implementación ni introducir un tercer patrón de navegación.
+**Navegación:** un único componente de AppShell adaptativo, no dos separados. Por debajo de 768px, cualquier rol ve una barra inferior — CHILD con 4 ítems (Inici, Tasques, Objectius, Pantalla), PARENT con 5 (Resum, Tasques, Aprovacions con contador de pendientes, Fills, Configuració — "Tasques" se añadió después, ver sección 8). Por encima de 768px, el rol PARENT cambia a panel lateral fijo con los mismos ítems; CHILD no tiene variante de escritorio. La vista "PARENT en móvil" reutiliza literalmente el mismo patrón de barra inferior que CHILD — solo cambian los ítems — para no duplicar trabajo de implementación ni introducir un tercer patrón de navegación.
 
 **Idioma de la interfaz:** multilingüe desde el diseño — catalán como idioma base, con castellano e inglés seleccionables. Ver sección 5.
 
@@ -126,7 +126,21 @@ Es una única aplicación — no hay tres versiones distintas del código, solo 
 
 ---
 
-## 8. La funcionalidad de tiempo de pantalla por NFC
+## 8. Gestión de tareas y reglas de paga
+
+Se detectó un hueco real durante la implementación: ni la maqueta original ni el Prompt 9 (pantallas PARENT) incluían nunca una pantalla para dar de alta tareas ni reglas de paga — solo se podían consultar. `Família+.pdf` sí define todo el modelo (sección 12 para tareas, sección 8 para la paga) y sus endpoints CRUD, pero al simplificar la navegación PARENT a 4 secciones durante el diseño se perdió por el camino la pantalla que los usaba. Se corrigió así:
+
+- **Nueva sección "Tasques"** en la navegación PARENT (pasa de 4 a 5 ítems): alta y edición de tareas de dos tipos — **Responsabilitat** (hábitos, ej. "fer el llit") y **Extra** (trabajo puntual con recompensa, ej. "rentar el cotxe") — con su recompensa (dinero, ahorro y/o minutos de pantalla), recurrencia y a qué hijos se asigna.
+- **Reglas de paga**: se pueden definir de forma general por franja de edad (p. ej. "8-9 años → 10 €, 70 % gasto / 30 % ahorro") desde Configuració, o de forma personalizada para un hijo concreto desde Fills — la personalizada siempre prevalece sobre la general.
+- **Generar la paga del mes**: un botón en Resum familiar dispara la generación (con un paso de confirmación antes de darla por definitiva, para poder deshacer un import equivocado), y un enlace a "Resums mensuals" permite consultar los cierres de meses anteriores.
+- **Ajuste manual**: una bonificación o penalización puntual (dinero y/o minutos, con un motivo en texto libre) sin pasar por una tarea formal — pensado para reconocer algo puntual sin tener que crear una tarea para ello.
+- De paso se corrigió el mismo tipo de hueco en el hijo: la pantalla Objectius era solo de lectura y no tenía manera de crear un nuevo objetivo de ahorro.
+
+Detalle técnico completo en el Prompt 10 de `mapaka_prompts_code.md` (tareas) y en las ampliaciones del Prompt 9 (paga, resumen, ajustes).
+
+---
+
+## 9. La funcionalidad de tiempo de pantalla por NFC
 
 Un objeto físico impreso en 3D, compartido por la familia, con una etiqueta NFC embebida (tipo NTAG213, sin batería ni electrónica). El flujo:
 
@@ -139,7 +153,7 @@ Este flujo funciona igual en cualquier dispositivo (Android, iOS, escritorio) po
 
 ---
 
-## 9. Infraestructura y hosting (coste total: 0 €)
+## 10. Infraestructura y hosting (coste total: 0 €)
 
 | Pieza | Dónde vive | Por qué |
 |---|---|---|
@@ -149,8 +163,8 @@ Este flujo funciona igual en cualquier dispositivo (Android, iOS, escritorio) po
 
 ---
 
-## 10. Estado del proyecto y próximos pasos
+## 11. Estado del proyecto y próximos pasos
 
-Todo lo anterior está decidido y documentado. El siguiente paso es la implementación: abrir `mapaka_prompts_code.md` y ejecutar los 13 prompts en orden con Code, revisando el resultado de cada uno antes de pasar al siguiente. Ese documento contiene las instrucciones técnicas exactas; este documento es el que explica el porqué de cada una, para volver a él cuando haga falta recordar una decisión o poner a alguien nuevo en contexto.
+Todo lo anterior está decidido y documentado. El siguiente paso es la implementación: abrir `mapaka_prompts_code.md` y ejecutar los 14 prompts en orden con Code, revisando el resultado de cada uno antes de pasar al siguiente. Ese documento contiene las instrucciones técnicas exactas; este documento es el que explica el porqué de cada una, para volver a él cuando haga falta recordar una decisión o poner a alguien nuevo en contexto.
 
 Decisiones explícitamente pendientes o fuera de alcance por ahora: publicación en App Store / Google Play (descartada mientras no cambien las prioridades), monetización o modelo comercial (fuera de alcance actual).

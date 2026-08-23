@@ -87,12 +87,41 @@
     "rewardLabel": "Recompensa:",
     "statusPending": "Pendent d'aprovació",
     "statusApproved": "Aprovada",
-    "statusRejected": "Rebutjada"
+    "statusRejected": "Rebutjada",
+    "parentSubtitle": "Alta i edició de responsabilitats i extres",
+    "parentEmpty": "Encara no hi ha cap tasca creada.",
+    "filterAll": "Totes",
+    "typeResponsibility": "Responsabilitat",
+    "typeExtra": "Extra",
+    "deactivate": "Donar de baixa",
+    "noneAssigned": "Sense assignar",
+    "newTask": "Nova tasca",
+    "nameLabel": "Nom de la tasca",
+    "descriptionLabel": "Descripció",
+    "typeLabel": "Tipus",
+    "recurrenceLabel": "Recurrència",
+    "recurrenceNONE": "Cap",
+    "recurrenceDAILY": "Diària",
+    "recurrenceWEEKLY": "Setmanal",
+    "recurrenceMONTHLY": "Mensual",
+    "recurrenceCUSTOM": "Personalitzada",
+    "requiresApprovalLabel": "Requereix aprovació de l'adult",
+    "rewardMoneyLabel": "Recompensa en diners (€)",
+    "rewardSavingsLabel": "Recompensa en estalvi (€)",
+    "rewardMinutesLabel": "Recompensa en minuts de pantalla",
+    "assignLabel": "Assignar a:",
+    "missingName": "Cal un nom per a la tasca.",
+    "missingReward": "Cal com a mínim una recompensa (diners, estalvi o minuts)."
   },
   "objectius": {
     "title": "Objectius d'estalvi",
     "subtitle": "El que estalvies avança el teu objectiu",
-    "empty": "Encara no tens cap objectiu d'estalvi."
+    "empty": "Encara no tens cap objectiu d'estalvi.",
+    "addGoal": "Nou objectiu",
+    "adding": "Afegint…",
+    "nameLabel": "Nom de l'objectiu",
+    "targetLabel": "Import a assolir (€)",
+    "missingFields": "Cal un nom i un import superior a 0."
   },
   "pantalla": {
     "title": "Temps de pantalla",
@@ -108,7 +137,21 @@
     "noPendingApprovals": "Cap aprovació pendent",
     "pendingApprovals": "{n} aprovació pendent | {n} aprovacions pendents",
     "recentFamilyMovements": "Moviments recents de la família",
-    "noMovements": "Encara no hi ha cap moviment."
+    "noMovements": "Encara no hi ha cap moviment.",
+    "generateAllowances": "Generar paga del mes",
+    "generating": "Generant…",
+    "settlementsLink": "Resums mensuals →",
+    "pendingAllowancesTitle": "Paga generada, pendent de confirmar",
+    "allowanceSplit": "gastar/estalviar:",
+    "confirm": "Confirmar",
+    "settlementsTitle": "Resums mensuals",
+    "settlementsSubtitle": "Tancaments de paga de cada fill, mes a mes",
+    "settlementsEmpty": "Encara no hi ha cap tancament mensual.",
+    "baseAllowance": "Paga base",
+    "extraEarnings": "Guanyat amb tasques",
+    "bonuses": "Bonificacions",
+    "penalties": "Penalitzacions",
+    "savingsPortion": "Part d'estalvi"
   },
   "aprovacions": {
     "title": "Aprovacions pendents",
@@ -138,7 +181,18 @@
     "childNameLabel": "Nom del fill",
     "birthDateLabel": "Data de naixement",
     "adding": "Afegint…",
-    "missingChildFields": "Cal un nom i una data de naixement."
+    "missingChildFields": "Cal un nom i una data de naixement.",
+    "manualAdjustment": "Ajust manual",
+    "adjustmentTypeLabel": "Tipus",
+    "adjustmentBonus": "Bonificació",
+    "adjustmentPenalty": "Penalització",
+    "adjustmentManual": "Manual",
+    "adjustmentAmountLabel": "Import en diners (€)",
+    "adjustmentSavingsLabel": "Import en estalvi (€)",
+    "adjustmentMinutesLabel": "Minuts de pantalla",
+    "adjustmentReasonLabel": "Motiu",
+    "missingReason": "Cal indicar un motiu.",
+    "missingAdjustmentValue": "Cal un import de diners, d'estalvi o de minuts superior a 0."
   },
   "config": {
     "title": "Configuració",
@@ -157,7 +211,14 @@
     "adultNameLabel": "Nom de l'adult",
     "addAdult": "Afegir adult",
     "adding": "Afegint…",
-    "missingName": "Cal un nom."
+    "missingName": "Cal un nom.",
+    "allowanceRulesTitle": "Regles de paga generals",
+    "ageRange": "{min}-{max} anys",
+    "minAgeLabel": "Edat mínima",
+    "maxAgeLabel": "Edat màxima",
+    "savingsPercentageLabel": "% per estalviar",
+    "addAllowanceRule": "Afegir regla de paga",
+    "percentagesMustSumTo100": "El percentatge de gastar i estalviar ha de sumar 100."
   },
   "nfc": {
     "tapPrompt": "Toca l'objecte Mapaka",
@@ -206,6 +267,12 @@
     "SCREEN_TAG_NOT_FOUND": "Aquesta etiqueta no és una etiqueta Mapaka vàlida.",
     "SESSION_NOT_FOUND": "No s'ha trobat aquesta sessió.",
     "SESSION_STILL_ACTIVE": "Aquesta sessió encara està en marxa.",
-    "SESSION_ALREADY_CLOSED": "Aquesta sessió ja està tancada."
+    "SESSION_ALREADY_CLOSED": "Aquesta sessió ja està tancada.",
+    "INVALID_TASK_REWARD": "La tasca ha de tenir com a mínim una recompensa.",
+    "ALLOWANCE_RULE_NOT_FOUND": "No s'ha trobat aquesta regla de paga.",
+    "ALLOWANCE_NOT_FOUND": "No s'ha trobat aquesta paga.",
+    "ALLOWANCE_ALREADY_RESOLVED": "Aquesta paga ja s'ha confirmat o cancel·lat.",
+    "INVALID_ADJUSTMENT": "Cal un import superior a 0.",
+    "SETTLEMENT_NOT_FOUND": "No s'ha trobat aquest tancament."
   }
 }

@@ -55,10 +55,12 @@ const router = createRouter({
       children: [
         { path: '', redirect: { name: 'parent-resum' } },
         { path: 'resum', name: 'parent-resum', component: () => import('@/views/parent/ParentResumView.vue') },
+        { path: 'tasques', name: 'parent-tasques', component: () => import('@/views/parent/ParentTasquesView.vue') },
         { path: 'aprovacions', name: 'parent-aprovacions', component: () => import('@/views/parent/ParentAprovacionsView.vue') },
         { path: 'fills', name: 'parent-fills', component: () => import('@/views/parent/ParentFillsView.vue') },
         { path: 'configuracio', name: 'parent-configuracio', component: () => import('@/views/parent/ParentConfiguracioView.vue') },
         { path: 'etiquetes-nfc', name: 'parent-nfc-tags', component: () => import('@/views/parent/ParentNfcTagsView.vue') },
+        { path: 'resums-mensuals', name: 'parent-settlements', component: () => import('@/views/parent/ParentSettlementsView.vue') },
       ],
     },
     { path: '/', redirect: { name: 'login' } },

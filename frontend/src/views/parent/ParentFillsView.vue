@@ -19,6 +19,55 @@ const saving = ref(false)
 
 const form = reactive({ monthlyAmount: 0, spendingPercentage: 70, baseMinutes: 0 })
 
+const adjustingId = ref<string | null>(null)
+const savingAdjustment = ref(false)
+const adjustmentError = ref<string | null>(null)
+const adjustment = reactive({
+  type: 'BONUS' as 'BONUS' | 'PENALTY' | 'MANUAL',
+  amount: 0,
+  savingsAmount: 0,
+  minutes: 0,
+  reason: '',
+})
+
+function startAdjustment(child: ChildDetailResponse) {
+  adjustingId.value = child.childId
+  adjustmentError.value = null
+  Object.assign(adjustment, { type: 'BONUS', amount: 0, savingsAmount: 0, minutes: 0, reason: '' })
+}
+
+async function submitAdjustment(childId: string) {
+  adjustmentError.value = null
+  if (!adjustment.reason.trim()) {
+    adjustmentError.value = t('fills.missingReason')
+    return
+  }
+  if (adjustment.amount <= 0 && adjustment.savingsAmount <= 0 && adjustment.minutes <= 0) {
+    adjustmentError.value = t('fills.missingAdjustmentValue')
+    return
+  }
+  savingAdjustment.value = true
+  try {
+    const calls = []
+    if (adjustment.amount > 0 || adjustment.savingsAmount > 0) {
+      calls.push(api.post(`/api/children/${childId}/money-adjustments`, {
+        type: adjustment.type, amount: adjustment.amount, savingsAmount: adjustment.savingsAmount, reason: adjustment.reason,
+      }))
+    }
+    if (adjustment.minutes > 0) {
+      calls.push(api.post(`/api/children/${childId}/screen-time/adjustments`, {
+        type: adjustment.type, minutes: adjustment.minutes, reason: adjustment.reason,
+      }))
+    }
+    await Promise.all(calls)
+    adjustingId.value = null
+  } catch (err) {
+    adjustmentError.value = apiErrorMessage(err)
+  } finally {
+    savingAdjustment.value = false
+  }
+}
+
 const COLORS = ['#6C4DFF', '#FF5D8F', '#FFC93C', '#2ECC71', '#3AA0FF']
 const addingChild = ref(false)
 const savingChild = ref(false)
@@ -157,7 +206,10 @@ onMounted(load)
           <div class="child-card__name">{{ child.displayName }}</div>
           <div class="child-card__age">{{ t('fills.age', { n: child.age }) }}</div>
         </div>
-        <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
+        <div class="child-card__head-actions">
+          <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
+          <BaseButton v-if="adjustingId !== child.childId" variant="accent" @click="startAdjustment(child)">{{ t('fills.manualAdjustment') }}</BaseButton>
+        </div>
       </div>
 
       <div v-if="editingId !== child.childId" class="child-card__info">
@@ -186,6 +238,40 @@ onMounted(load)
         <div class="child-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? t('common.saving') : t('common.save') }}</BaseButton>
           <BaseButton type="button" variant="danger" :disabled="saving" @click="cancelEdit">{{ t('common.cancel') }}</BaseButton>
+        </div>
+      </form>
+
+      <form v-if="adjustingId === child.childId" class="child-card__form" @submit.prevent="submitAdjustment(child.childId)">
+        <label>
+          {{ t('fills.adjustmentTypeLabel') }}
+          <select v-model="adjustment.type">
+            <option value="BONUS">{{ t('fills.adjustmentBonus') }}</option>
+            <option value="PENALTY">{{ t('fills.adjustmentPenalty') }}</option>
+            <option value="MANUAL">{{ t('fills.adjustmentManual') }}</option>
+          </select>
+        </label>
+        <label>
+          {{ t('fills.adjustmentAmountLabel') }}
+          <input v-model.number="adjustment.amount" type="number" min="0" step="0.5" />
+        </label>
+        <label>
+          {{ t('fills.adjustmentSavingsLabel') }}
+          <input v-model.number="adjustment.savingsAmount" type="number" min="0" step="0.5" />
+        </label>
+        <label>
+          {{ t('fills.adjustmentMinutesLabel') }}
+          <input v-model.number="adjustment.minutes" type="number" min="0" step="5" />
+        </label>
+        <label>
+          {{ t('fills.adjustmentReasonLabel') }}
+          <input v-model="adjustment.reason" type="text" required />
+        </label>
+        <p v-if="adjustmentError" class="fills__error">{{ adjustmentError }}</p>
+        <div class="child-card__form-actions">
+          <BaseButton type="submit" variant="primary" :disabled="savingAdjustment">
+            {{ savingAdjustment ? t('common.saving') : t('common.save') }}
+          </BaseButton>
+          <BaseButton type="button" variant="danger" :disabled="savingAdjustment" @click="adjustingId = null">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -248,6 +334,11 @@ onMounted(load)
   align-items: center;
 }
 
+.child-card__head-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .child-card__name {
   font-family: var(--font-heading);
   font-weight: 700;
@@ -283,7 +374,8 @@ onMounted(load)
   font-size: 0.82rem;
 }
 
-.child-card__form input {
+.child-card__form input,
+.child-card__form select {
   font: inherit;
   padding: 0.5rem 0.7rem;
   border-radius: 10px;

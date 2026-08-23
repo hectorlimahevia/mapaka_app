@@ -22,6 +22,7 @@ const childItems = computed(() => [
 
 const parentItems = computed(() => [
   { name: 'parent-resum', label: t('nav.resum'), icon: 'family' as const },
+  { name: 'parent-tasques', label: t('nav.tasques'), icon: 'tasks' as const },
   { name: 'parent-aprovacions', label: t('nav.aprovacions'), icon: 'check' as const, badge: approvals.pendingCount },
   { name: 'parent-fills', label: t('nav.fills'), icon: 'child' as const },
   { name: 'parent-configuracio', label: t('nav.config'), icon: 'settings' as const },
@@ -29,6 +30,7 @@ const parentItems = computed(() => [
 
 const parentSidebarItems = computed(() => [
   { name: 'parent-resum', label: t('nav.resumFull'), icon: 'family' as const },
+  { name: 'parent-tasques', label: t('nav.tasques'), icon: 'tasks' as const },
   { name: 'parent-aprovacions', label: t('nav.aprovacionsFull'), icon: 'check' as const, badge: approvals.pendingCount },
   { name: 'parent-fills', label: t('nav.fills'), icon: 'child' as const },
   { name: 'parent-configuracio', label: t('nav.configFull'), icon: 'settings' as const },

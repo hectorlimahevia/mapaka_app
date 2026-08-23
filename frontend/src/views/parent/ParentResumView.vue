@@ -4,7 +4,10 @@ import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
 import type { ChildFamilySummary, FamilyMoneyTransactionResponse } from '@/types/parent'
+import type { MonthlyAllowanceResponse } from '@/types/parent'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -12,7 +15,11 @@ const children = ref<ChildFamilySummary[]>([])
 const movements = ref<FamilyMoneyTransactionResponse[]>([])
 const loading = ref(true)
 
-onMounted(async () => {
+const generating = ref(false)
+const pendingAllowances = ref<MonthlyAllowanceResponse[]>([])
+const resolvingAllowanceId = ref<string | null>(null)
+
+async function load() {
   const familyId = auth.familyId
   if (!familyId) return
   const [summaryRes, movementsRes] = await Promise.all([
@@ -22,7 +29,31 @@ onMounted(async () => {
   children.value = summaryRes.data
   movements.value = movementsRes.data.slice(0, 8)
   loading.value = false
-})
+}
+
+async function generateAllowances() {
+  generating.value = true
+  try {
+    const { data } = await api.post<MonthlyAllowanceResponse[]>('/api/allowances/generate')
+    pendingAllowances.value = data
+  } finally {
+    generating.value = false
+  }
+}
+
+async function resolveAllowance(allowance: MonthlyAllowanceResponse, action: 'confirm' | 'cancel') {
+  if (resolvingAllowanceId.value) return
+  resolvingAllowanceId.value = allowance.id
+  try {
+    await api.post(`/api/allowances/${allowance.id}/${action}`)
+    pendingAllowances.value = pendingAllowances.value.filter((a) => a.id !== allowance.id)
+    if (action === 'confirm') await load()
+  } finally {
+    resolvingAllowanceId.value = null
+  }
+}
+
+onMounted(load)
 </script>
 
 <template>
@@ -44,6 +75,36 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <div class="resum__actions">
+      <BaseButton variant="primary" :disabled="generating" @click="generateAllowances">
+        {{ generating ? t('resum.generating') : t('resum.generateAllowances') }}
+      </BaseButton>
+      <RouterLink :to="{ name: 'parent-settlements' }" class="resum__settlements-link">{{ t('resum.settlementsLink') }}</RouterLink>
+    </div>
+
+    <template v-if="pendingAllowances.length > 0">
+      <div class="section-label">{{ t('resum.pendingAllowancesTitle') }}</div>
+      <BaseCard v-for="allowance in pendingAllowances" :key="allowance.id" class="allowance-row">
+        <div>
+          <div class="allowance-row__name">{{ allowance.childDisplayName }}</div>
+          <div class="allowance-row__amount">
+            <AmountDisplay :value="allowance.grossAmount" unit="€" />
+            — {{ t('resum.allowanceSplit') }}
+            <AmountDisplay :value="allowance.spendingAmount" unit="€" /> /
+            <AmountDisplay :value="allowance.savingsAmount" unit="€" />
+          </div>
+        </div>
+        <div class="allowance-row__actions">
+          <BaseButton variant="primary" :disabled="!!resolvingAllowanceId" @click="resolveAllowance(allowance, 'confirm')">
+            {{ t('resum.confirm') }}
+          </BaseButton>
+          <BaseButton variant="danger" :disabled="!!resolvingAllowanceId" @click="resolveAllowance(allowance, 'cancel')">
+            {{ t('common.cancel') }}
+          </BaseButton>
+        </div>
+      </BaseCard>
+    </template>
 
     <div class="section-label">{{ t('resum.recentFamilyMovements') }}</div>
     <div v-if="!loading && movements.length === 0" class="resum__empty">{{ t('resum.noMovements') }}</div>
@@ -140,5 +201,46 @@ onMounted(async () => {
 
 .mrow__amt--neg {
   color: var(--error);
+}
+
+.resum__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.resum__settlements-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.allowance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.allowance-row__name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.allowance-row__amount {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.allowance-row__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 </style>
