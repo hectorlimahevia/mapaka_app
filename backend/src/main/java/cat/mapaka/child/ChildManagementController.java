@@ -55,6 +55,12 @@ public class ChildManagementController {
         childManagementService.updateAllowanceRule(child, request);
     }
 
+    @DeleteMapping("/api/children/{childId}/allowance-rule")
+    public void clearAllowance(@PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = requireChildInFamily(childId, user);
+        childManagementService.clearAllowanceRule(child);
+    }
+
     @PatchMapping("/api/children/{childId}/screen-time-rule")
     public void updateScreenTime(
             @PathVariable UUID childId,

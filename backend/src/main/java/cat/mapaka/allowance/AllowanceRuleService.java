@@ -1,5 +1,6 @@
 package cat.mapaka.allowance;
 
+import cat.mapaka.child.ChildProfile;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.family.Family;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /** Regles de paga generals per franja d'edat (sense child_id) — Prompt 9 ampliat,
  * secció 8 de mapaka_documento_global.md. Mateix criteri d'històric que les regles
@@ -73,6 +76,30 @@ public class AllowanceRuleService {
         rule.setActive(false);
         rule.setEffectiveTo(LocalDate.now().minusDays(1));
         allowanceRuleRepository.save(rule);
+    }
+
+    /** Percentatge de gastar vigent per a un fill: la seva regla personalitzada si en té,
+     * si no la regla general que correspongui per edat. Si no hi ha cap regla configurada,
+     * per defecte tot va a gastar (100%) — no bloqueja aprovar tasques ni ajustos en una
+     * família que encara no ha definit cap regla de paga. */
+    @Transactional(readOnly = true)
+    public BigDecimal resolveSpendingPercentage(ChildProfile child) {
+        return resolveEffectiveRule(child).map(AllowanceRule::getSpendingPercentage).orElse(new BigDecimal("100"));
+    }
+
+    /** Regla vigent per a un fill: la seva personalitzada si en té, si no la general que
+     * correspongui per edat (Fills, bloc de només lectura quan l'interruptor és desactivat). */
+    @Transactional(readOnly = true)
+    public Optional<AllowanceRule> resolveEffectiveRule(ChildProfile child) {
+        return allowanceRuleRepository.findByChildIdAndActiveTrue(child.getId())
+                .or(() -> resolveGeneralRule(child.getUser().getFamily().getId(), child.getAge()));
+    }
+
+    private Optional<AllowanceRule> resolveGeneralRule(UUID familyId, int age) {
+        return allowanceRuleRepository.findByFamilyIdAndChildIsNullAndActiveTrueOrderByMinAgeAsc(familyId).stream()
+                .filter(r -> r.getMinAge() == null || age >= r.getMinAge())
+                .filter(r -> r.getMaxAge() == null || age <= r.getMaxAge())
+                .findFirst();
     }
 
     private void validate(GeneralAllowanceRuleRequest request) {

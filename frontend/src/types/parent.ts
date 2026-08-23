@@ -26,7 +26,6 @@ export interface PendingApprovalResponse {
   childName: string
   taskName: string
   rewardMoney: number
-  rewardSavings: number
   rewardScreenMinutes: number
   completedAt: string
 }
@@ -49,6 +48,7 @@ export interface ChildDetailResponse {
   displayName: string
   avatar: string | null
   age: number
+  hasCustomAllowance: boolean
   allowanceMonthlyAmount: number | null
   allowanceSpendingPercentage: number | null
   allowanceSavingsPercentage: number | null
@@ -75,7 +75,6 @@ export interface TaskManagementResponse {
   active: boolean
   recurrenceType: RecurrenceType
   rewardMoney: number
-  rewardSavings: number
   rewardScreenMinutes: number
   assignedChildren: { childId: string; displayName: string }[]
 }
@@ -88,7 +87,6 @@ export interface TaskRequest {
   requiresApproval: boolean
   recurrenceType: RecurrenceType
   rewardMoney: number
-  rewardSavings: number
   rewardScreenMinutes: number
   childIds: string[]
 }
@@ -146,7 +144,6 @@ export type AdjustmentType = 'BONUS' | 'PENALTY' | 'MANUAL'
 export interface MoneyAdjustmentRequest {
   type: AdjustmentType
   amount: number
-  savingsAmount: number
   reason: string
 }
 

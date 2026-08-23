@@ -27,9 +27,6 @@ public class TaskReward {
     @Column(name = "money_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal moneyAmount;
 
-    @Column(name = "savings_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal savingsAmount;
-
     @Column(name = "screen_minutes", nullable = false)
     private int screenMinutes;
 

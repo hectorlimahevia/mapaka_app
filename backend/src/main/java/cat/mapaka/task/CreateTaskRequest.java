@@ -15,7 +15,6 @@ public record CreateTaskRequest(
         boolean requiresApproval,
         @NotNull RecurrenceType recurrenceType,
         @NotNull BigDecimal rewardMoney,
-        @NotNull BigDecimal rewardSavings,
         int rewardScreenMinutes,
         @NotNull List<UUID> childIds) {
 }

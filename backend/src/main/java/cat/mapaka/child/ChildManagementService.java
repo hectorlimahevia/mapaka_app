@@ -2,6 +2,7 @@ package cat.mapaka.child;
 
 import cat.mapaka.allowance.AllowanceRule;
 import cat.mapaka.allowance.AllowanceRuleRepository;
+import cat.mapaka.allowance.AllowanceRuleService;
 import cat.mapaka.allowance.AllowanceRuleUpdateRequest;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.family.Family;
@@ -31,6 +32,7 @@ public class ChildManagementService {
 
     private final ChildProfileRepository childProfileRepository;
     private final AllowanceRuleRepository allowanceRuleRepository;
+    private final AllowanceRuleService allowanceRuleService;
     private final ScreenTimeRuleRepository screenTimeRuleRepository;
     private final UserRepository userRepository;
     private final UsernameAllocator usernameAllocator;
@@ -39,12 +41,14 @@ public class ChildManagementService {
     public ChildManagementService(
             ChildProfileRepository childProfileRepository,
             AllowanceRuleRepository allowanceRuleRepository,
+            AllowanceRuleService allowanceRuleService,
             ScreenTimeRuleRepository screenTimeRuleRepository,
             UserRepository userRepository,
             UsernameAllocator usernameAllocator,
             PasswordEncoder passwordEncoder) {
         this.childProfileRepository = childProfileRepository;
         this.allowanceRuleRepository = allowanceRuleRepository;
+        this.allowanceRuleService = allowanceRuleService;
         this.screenTimeRuleRepository = screenTimeRuleRepository;
         this.userRepository = userRepository;
         this.usernameAllocator = usernameAllocator;
@@ -86,16 +90,18 @@ public class ChildManagementService {
     }
 
     private ChildDetailResponse toDetail(ChildProfile child) {
-        AllowanceRule rule = allowanceRuleRepository.findByChildIdAndActiveTrue(child.getId()).orElse(null);
+        boolean hasCustomAllowance = allowanceRuleRepository.findByChildIdAndActiveTrue(child.getId()).isPresent();
+        AllowanceRule effectiveRule = allowanceRuleService.resolveEffectiveRule(child).orElse(null);
         ScreenTimeRule screenRule = screenTimeRuleRepository.findByChildIdAndWeekdayIsNullAndActiveTrue(child.getId()).orElse(null);
         return new ChildDetailResponse(
                 child.getId(),
                 child.getDisplayName(),
                 child.getAvatar(),
                 child.getAge(),
-                rule != null ? rule.getMonthlyAmount() : null,
-                rule != null ? rule.getSpendingPercentage() : null,
-                rule != null ? rule.getSavingsPercentage() : null,
+                hasCustomAllowance,
+                effectiveRule != null ? effectiveRule.getMonthlyAmount() : null,
+                effectiveRule != null ? effectiveRule.getSpendingPercentage() : null,
+                effectiveRule != null ? effectiveRule.getSavingsPercentage() : null,
                 screenRule != null ? screenRule.getBaseMinutes() : null);
     }
 
@@ -122,6 +128,17 @@ public class ChildManagementService {
                 .effectiveFrom(LocalDate.now())
                 .active(true)
                 .build());
+    }
+
+    /** Desactiva l'interruptor "Paga personalitzada": el fill torna a dependre de la regla
+     * general per edat, sense esborrar l'històric de la seva regla anterior. */
+    @Transactional
+    public void clearAllowanceRule(ChildProfile child) {
+        allowanceRuleRepository.findByChildIdAndActiveTrue(child.getId()).ifPresent(previous -> {
+            previous.setActive(false);
+            previous.setEffectiveTo(LocalDate.now().minusDays(1));
+            allowanceRuleRepository.save(previous);
+        });
     }
 
     @Transactional

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    variant?: 'primary' | 'accent' | 'danger'
+    variant?: 'primary' | 'accent' | 'danger' | 'ghost'
     disabled?: boolean
   }>(),
   { variant: 'primary', disabled: false },
@@ -62,5 +62,17 @@ withDefaults(
 .base-button--danger {
   background: var(--error);
   box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--error) 60%, transparent);
+}
+
+.base-button--ghost {
+  background: none;
+  color: var(--muted);
+  border: 1.5px solid color-mix(in srgb, var(--text) 15%, transparent);
+  box-shadow: none;
+}
+
+.base-button--ghost:hover:not(:disabled) {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 30%, transparent);
 }
 </style>

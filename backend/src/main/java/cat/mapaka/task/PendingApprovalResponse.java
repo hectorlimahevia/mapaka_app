@@ -10,13 +10,12 @@ public record PendingApprovalResponse(
         String childName,
         String taskName,
         BigDecimal rewardMoney,
-        BigDecimal rewardSavings,
         int rewardScreenMinutes,
         Instant completedAt) {
 
     public static PendingApprovalResponse from(TaskCompletion c) {
         return new PendingApprovalResponse(
                 c.getId(), c.getChild().getId(), c.getChild().getDisplayName(), c.getTask().getName(),
-                c.getRewardMoney(), c.getRewardSavings(), c.getRewardScreenMinutes(), c.getCompletedAt());
+                c.getRewardMoney(), c.getRewardScreenMinutes(), c.getCompletedAt());
     }
 }

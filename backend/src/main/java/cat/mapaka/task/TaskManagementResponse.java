@@ -14,7 +14,6 @@ public record TaskManagementResponse(
         boolean active,
         RecurrenceType recurrenceType,
         BigDecimal rewardMoney,
-        BigDecimal rewardSavings,
         int rewardScreenMinutes,
         List<AssignedChild> assignedChildren) {
 

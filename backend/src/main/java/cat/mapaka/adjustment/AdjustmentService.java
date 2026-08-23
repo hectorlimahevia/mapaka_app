@@ -1,5 +1,7 @@
 package cat.mapaka.adjustment;
 
+import cat.mapaka.allowance.AllowanceRuleService;
+import cat.mapaka.allowance.MoneySplit;
 import cat.mapaka.child.ChildProfile;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
@@ -31,21 +33,27 @@ public class AdjustmentService {
     private final MoneyTransactionRepository moneyTransactionRepository;
     private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
     private final UserRepository userRepository;
+    private final AllowanceRuleService allowanceRuleService;
 
     public AdjustmentService(
             AdjustmentRepository adjustmentRepository,
             MoneyTransactionRepository moneyTransactionRepository,
             ScreenTimeTransactionRepository screenTimeTransactionRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            AllowanceRuleService allowanceRuleService) {
         this.adjustmentRepository = adjustmentRepository;
         this.moneyTransactionRepository = moneyTransactionRepository;
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
         this.userRepository = userRepository;
+        this.allowanceRuleService = allowanceRuleService;
     }
 
+    /** L'usuari introdueix un únic Valor — mai el reparteix ell mateix entre gastar i
+     * estalviar (Prompt 9 corregit): el reparto es calcula aquí amb el percentatge vigent
+     * del fill, igual que a l'aprovació d'una tasca (ApprovalService). */
     @Transactional
     public void applyMoney(ChildProfile child, MoneyAdjustmentRequest request, UUID actingUserId) {
-        if (request.amount().compareTo(BigDecimal.ZERO) <= 0 && request.savingsAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new DomainException("INVALID_ADJUSTMENT", HttpStatus.BAD_REQUEST, "Cal un import superior a 0");
         }
         User parent = userRepository.getReferenceById(actingUserId);
@@ -56,21 +64,23 @@ public class AdjustmentService {
             case MANUAL -> MoneySourceType.MANUAL_ADJUSTMENT;
         };
 
+        MoneySplit split = MoneySplit.of(request.amount(), allowanceRuleService.resolveSpendingPercentage(child));
+
         Adjustment adjustment = adjustmentRepository.save(Adjustment.builder()
                 .child(child).adjustmentType(request.type())
-                .moneyAmount(request.amount()).savingsAmount(request.savingsAmount()).screenMinutes(0)
+                .moneyAmount(split.spending()).savingsAmount(split.savings()).screenMinutes(0)
                 .reason(request.reason()).createdBy(parent).build());
 
-        if (request.amount().compareTo(BigDecimal.ZERO) > 0) {
+        if (split.spending().compareTo(BigDecimal.ZERO) > 0) {
             moneyTransactionRepository.save(MoneyTransaction.builder()
                     .child(child).walletType(WalletType.SPENDING).transactionType(txType)
-                    .amount(request.amount()).description(request.reason())
+                    .amount(split.spending()).description(request.reason())
                     .sourceType(sourceType).sourceId(adjustment.getId()).createdBy(parent).build());
         }
-        if (request.savingsAmount().compareTo(BigDecimal.ZERO) > 0) {
+        if (split.savings().compareTo(BigDecimal.ZERO) > 0) {
             moneyTransactionRepository.save(MoneyTransaction.builder()
                     .child(child).walletType(WalletType.SAVINGS).transactionType(txType)
-                    .amount(request.savingsAmount()).description(request.reason())
+                    .amount(split.savings()).description(request.reason())
                     .sourceType(sourceType).sourceId(adjustment.getId()).createdBy(parent).build());
         }
     }

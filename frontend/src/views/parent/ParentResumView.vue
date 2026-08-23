@@ -99,7 +99,7 @@ onMounted(load)
           <BaseButton variant="primary" :disabled="!!resolvingAllowanceId" @click="resolveAllowance(allowance, 'confirm')">
             {{ t('resum.confirm') }}
           </BaseButton>
-          <BaseButton variant="danger" :disabled="!!resolvingAllowanceId" @click="resolveAllowance(allowance, 'cancel')">
+          <BaseButton variant="ghost" :disabled="!!resolvingAllowanceId" @click="resolveAllowance(allowance, 'cancel')">
             {{ t('common.cancel') }}
           </BaseButton>
         </div>

@@ -101,7 +101,7 @@ onMounted(load)
           <BaseButton type="submit" variant="primary" :disabled="savingGoal">
             {{ savingGoal ? t('objectius.adding') : t('objectius.addGoal') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingGoal" @click="addingGoal = false">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingGoal" @click="addingGoal = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>

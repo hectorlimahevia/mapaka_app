@@ -6,21 +6,25 @@ import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import BaseSwitch from '@/components/base/BaseSwitch.vue'
+import FormRow from '@/components/base/FormRow.vue'
 import { apiErrorMessage } from '@/utils/apiError'
-import type { RecurrenceType, TaskManagementResponse, TaskRequest } from '@/types/parent'
-import type { ChildSummary } from '@/types/nfc'
+import { formatMoney } from '@/utils/money'
+import type { ChildDetailResponse, RecurrenceType, TaskManagementResponse, TaskRequest } from '@/types/parent'
 import type { TaskType } from '@/types/child'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 
 const tasks = ref<TaskManagementResponse[]>([])
-const children = ref<ChildSummary[]>([])
+const children = ref<ChildDetailResponse[]>([])
 const loading = ref(true)
 const typeFilter = ref<'ALL' | TaskType>('ALL')
 
 const editingId = ref<string | null>(null)
 const formOpen = ref(false)
+const activeStep = ref(0)
+const STEPS = ['tasques.stepBasic', 'tasques.stepReward', 'tasques.stepAssign'] as const
 const saving = ref(false)
 const formError = ref<string | null>(null)
 
@@ -34,7 +38,6 @@ const form = reactive<TaskRequest>({
   requiresApproval: true,
   recurrenceType: 'NONE',
   rewardMoney: 0,
-  rewardSavings: 0,
   rewardScreenMinutes: 0,
   childIds: [],
 })
@@ -43,12 +46,22 @@ const visibleTasks = computed(() =>
   typeFilter.value === 'ALL' ? tasks.value : tasks.value.filter((task) => task.taskType === typeFilter.value),
 )
 
+const assignedChildren = computed(() => children.value.filter((c) => form.childIds.includes(c.childId)))
+const previewPercentages = computed(() => [...new Set(assignedChildren.value.map((c) => c.allowanceSpendingPercentage ?? 100))])
+const previewSplit = computed(() => {
+  if (form.rewardMoney <= 0 || previewPercentages.value.length === 0) return null
+  const spendingPercentage = previewPercentages.value[0]!
+  const spend = Math.round(form.rewardMoney * spendingPercentage) / 100
+  const save = Math.round((form.rewardMoney - spend) * 100) / 100
+  return { spendingPercentage, savingsPercentage: 100 - spendingPercentage, spend, save }
+})
+
 async function load() {
   const familyId = auth.familyId
   if (!familyId) return
   const [tasksRes, childrenRes] = await Promise.all([
     api.get<TaskManagementResponse[]>('/api/tasks'),
-    api.get<ChildSummary[]>(`/api/families/${familyId}/children`),
+    api.get<ChildDetailResponse[]>(`/api/families/${familyId}/children/detail`),
   ])
   tasks.value = tasksRes.data
   children.value = childrenRes.data
@@ -58,7 +71,7 @@ async function load() {
 function resetForm() {
   Object.assign(form, {
     name: '', description: '', taskType: 'RESPONSIBILITY', icon: null, requiresApproval: true,
-    recurrenceType: 'NONE', rewardMoney: 0, rewardSavings: 0, rewardScreenMinutes: 0, childIds: [],
+    recurrenceType: 'NONE', rewardMoney: 0, rewardScreenMinutes: 0, childIds: [],
   })
 }
 
@@ -66,6 +79,7 @@ function startCreate() {
   editingId.value = null
   resetForm()
   formError.value = null
+  activeStep.value = 0
   formOpen.value = true
 }
 
@@ -74,10 +88,11 @@ function startEdit(task: TaskManagementResponse) {
   Object.assign(form, {
     name: task.name, description: task.description ?? '', taskType: task.taskType, icon: task.icon,
     requiresApproval: task.requiresApproval, recurrenceType: task.recurrenceType,
-    rewardMoney: task.rewardMoney, rewardSavings: task.rewardSavings, rewardScreenMinutes: task.rewardScreenMinutes,
+    rewardMoney: task.rewardMoney, rewardScreenMinutes: task.rewardScreenMinutes,
     childIds: task.assignedChildren.map((c) => c.childId),
   })
   formError.value = null
+  activeStep.value = 0
   formOpen.value = true
 }
 
@@ -91,10 +106,12 @@ async function submitForm() {
   formError.value = null
   if (!form.name.trim()) {
     formError.value = t('tasques.missingName')
+    activeStep.value = 0
     return
   }
-  if (form.rewardMoney <= 0 && form.rewardSavings <= 0 && form.rewardScreenMinutes <= 0) {
+  if (form.rewardMoney <= 0 && form.rewardScreenMinutes <= 0) {
     formError.value = t('tasques.missingReward')
+    activeStep.value = 1
     return
   }
   saving.value = true
@@ -147,7 +164,6 @@ onMounted(load)
       </div>
       <div class="task-card__reward">
         <AmountDisplay v-if="task.rewardMoney > 0" :value="task.rewardMoney" unit="€" />
-        <span v-if="task.rewardSavings > 0">+ <AmountDisplay :value="task.rewardSavings" unit="€ estalvi" /></span>
         <span v-if="task.rewardScreenMinutes > 0">+{{ task.rewardScreenMinutes }} {{ t('common.minutesAbbr') }}</span>
       </div>
       <div class="task-card__children">
@@ -156,65 +172,94 @@ onMounted(load)
     </BaseCard>
 
     <BaseCard v-if="formOpen" class="task-form-card">
+      <div class="step-tabs">
+        <div class="step-indicator" :style="{ transform: `translateX(${activeStep * 100}%)` }" />
+        <button
+          v-for="(step, index) in STEPS"
+          :key="step"
+          type="button"
+          class="step-tab"
+          :class="{ active: activeStep === index }"
+          @click="activeStep = index"
+        >
+          {{ index + 1 }}. {{ t(step) }}
+        </button>
+      </div>
+
       <form class="task-form" @submit.prevent="submitForm">
-        <label>
-          {{ t('tasques.nameLabel') }}
-          <input v-model="form.name" type="text" required autofocus />
-        </label>
-        <label>
-          {{ t('tasques.descriptionLabel') }}
-          <textarea v-model="form.description" rows="2" />
-        </label>
-        <label>
-          {{ t('tasques.typeLabel') }}
-          <select v-model="form.taskType">
-            <option value="RESPONSIBILITY">{{ t('tasques.typeResponsibility') }}</option>
-            <option value="EXTRA">{{ t('tasques.typeExtra') }}</option>
-          </select>
-        </label>
-        <label>
-          {{ t('tasques.recurrenceLabel') }}
-          <select v-model="form.recurrenceType">
-            <option v-for="r in RECURRENCES" :key="r" :value="r">{{ t(`tasques.recurrence${r}`) }}</option>
-          </select>
-        </label>
-        <label class="task-form__checkbox">
-          <input v-model="form.requiresApproval" type="checkbox" />
-          {{ t('tasques.requiresApprovalLabel') }}
-        </label>
-        <div class="task-form__reward-grid">
+        <div class="step-panel" :class="{ active: activeStep === 0 }">
           <label>
-            {{ t('tasques.rewardMoneyLabel') }}
-            <input v-model.number="form.rewardMoney" type="number" min="0" step="0.5" />
+            {{ t('tasques.nameLabel') }}
+            <input v-model="form.name" type="text" required autofocus />
           </label>
           <label>
-            {{ t('tasques.rewardSavingsLabel') }}
-            <input v-model.number="form.rewardSavings" type="number" min="0" step="0.5" />
+            {{ t('tasques.descriptionLabel') }}
+            <textarea v-model="form.description" rows="2" />
           </label>
-          <label>
-            {{ t('tasques.rewardMinutesLabel') }}
-            <input v-model.number="form.rewardScreenMinutes" type="number" min="0" step="5" />
-          </label>
+          <FormRow>
+            <label>
+              {{ t('tasques.typeLabel') }}
+              <select v-model="form.taskType">
+                <option value="RESPONSIBILITY">{{ t('tasques.typeResponsibility') }}</option>
+                <option value="EXTRA">{{ t('tasques.typeExtra') }}</option>
+              </select>
+            </label>
+            <label>
+              {{ t('tasques.recurrenceLabel') }}
+              <select v-model="form.recurrenceType">
+                <option v-for="r in RECURRENCES" :key="r" :value="r">{{ t(`tasques.recurrence${r}`) }}</option>
+              </select>
+            </label>
+          </FormRow>
         </div>
-        <div class="task-form__children">
+
+        <div class="step-panel" :class="{ active: activeStep === 1 }">
+          <FormRow>
+            <label>
+              {{ t('tasques.rewardMoneyLabel') }}
+              <input v-model.number="form.rewardMoney" type="number" min="0" step="0.5" />
+            </label>
+            <label>
+              {{ t('tasques.rewardMinutesLabel') }}
+              <input v-model.number="form.rewardScreenMinutes" type="number" min="0" step="5" />
+            </label>
+          </FormRow>
+          <div v-if="previewSplit" class="split-preview">
+            <span>
+              {{ t('tasques.splitPreviewIntro', { spending: previewSplit.spendingPercentage, savings: previewSplit.savingsPercentage }) }}
+              <template v-if="previewPercentages.length > 1"> {{ t('tasques.splitPreviewVaries') }}</template>
+            </span>
+            <span class="split-preview__values">{{ t('tasques.splitPreviewValues', { spend: formatMoney(previewSplit.spend), save: formatMoney(previewSplit.save) }) }}</span>
+          </div>
+          <p class="task-form__hint">{{ t('tasques.rewardHint') }}</p>
+          <div class="task-form__switch-row">
+            <span>{{ t('tasques.requiresApprovalLabel') }}</span>
+            <BaseSwitch v-model="form.requiresApproval" />
+          </div>
+        </div>
+
+        <div class="step-panel" :class="{ active: activeStep === 2 }">
           <span class="task-form__children-label">{{ t('tasques.assignLabel') }}</span>
-          <button
-            v-for="child in children"
-            :key="child.id"
-            type="button"
-            class="task-form__child-chip"
-            :class="{ active: form.childIds.includes(child.id) }"
-            @click="toggleChild(child.id)"
-          >
-            {{ child.displayName }}
-          </button>
+          <div class="task-form__children">
+            <button
+              v-for="child in children"
+              :key="child.childId"
+              type="button"
+              class="task-form__child-chip"
+              :class="{ active: form.childIds.includes(child.childId) }"
+              @click="toggleChild(child.childId)"
+            >
+              {{ child.displayName }}
+            </button>
+          </div>
         </div>
+
         <p v-if="formError" class="tasques-parent__error">{{ formError }}</p>
         <div class="task-form__actions">
+          <BaseButton type="button" variant="ghost" :disabled="saving" @click="formOpen = false">{{ t('common.cancel') }}</BaseButton>
           <BaseButton type="submit" variant="primary" :disabled="saving">
             {{ saving ? t('common.saving') : t('common.save') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="saving" @click="formOpen = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -331,6 +376,69 @@ onMounted(load)
   margin-top: 0.5rem;
 }
 
+.step-tabs {
+  position: relative;
+  display: flex;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 1.1rem;
+}
+
+.step-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  width: calc(33.333% - 3px);
+  background: white;
+  border-radius: 11px;
+  box-shadow: 0 2px 6px rgba(42, 33, 69, 0.12);
+  transition: transform 0.3s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.step-tab {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: none;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+}
+
+.step-tab.active {
+  color: var(--primary);
+}
+
+.step-panel {
+  display: none;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.step-panel.active {
+  display: flex;
+  animation: step-fade-in 0.25s ease;
+}
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .task-form {
   display: flex;
   flex-direction: column;
@@ -355,29 +463,50 @@ onMounted(load)
   resize: vertical;
 }
 
-.task-form__checkbox {
-  flex-direction: row;
+.task-form__switch-row {
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 700;
+  font-size: 0.82rem;
 }
 
-.task-form__reward-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.6rem;
+.split-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.76rem;
+  color: var(--primary);
+}
+
+.split-preview__values {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.task-form__hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: -0.4rem 0 0;
+}
+
+.task-form__children-label {
+  font-weight: 700;
+  font-size: 0.82rem;
 }
 
 .task-form__children {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  align-items: center;
-}
-
-.task-form__children-label {
-  font-weight: 700;
-  font-size: 0.82rem;
-  width: 100%;
+  margin-top: 0.5rem;
 }
 
 .task-form__child-chip {
@@ -401,5 +530,6 @@ onMounted(load)
 .task-form__actions {
   display: flex;
   gap: 0.5rem;
+  margin-top: 0.3rem;
 }
 </style>

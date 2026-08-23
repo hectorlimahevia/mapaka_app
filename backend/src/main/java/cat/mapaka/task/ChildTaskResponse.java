@@ -10,7 +10,6 @@ public record ChildTaskResponse(
         String icon,
         TaskType taskType,
         BigDecimal rewardMoney,
-        BigDecimal rewardSavings,
         int rewardScreenMinutes,
         ChildTaskStatus status) {
 }

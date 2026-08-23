@@ -65,7 +65,6 @@ public class TaskService {
                 .completedAt(Instant.now())
                 .status(TaskCompletionStatus.PENDING)
                 .rewardMoney(reward.getMoneyAmount())
-                .rewardSavings(reward.getSavingsAmount())
                 .rewardScreenMinutes(reward.getScreenMinutes())
                 .build());
     }
@@ -88,7 +87,6 @@ public class TaskService {
                 task.getIcon(),
                 task.getTaskType(),
                 reward != null ? reward.getMoneyAmount() : java.math.BigDecimal.ZERO,
-                reward != null ? reward.getSavingsAmount() : java.math.BigDecimal.ZERO,
                 reward != null ? reward.getScreenMinutes() : 0,
                 status);
     }

@@ -52,7 +52,7 @@ public class TaskManagementService {
 
     @Transactional
     public TaskManagementResponse create(Family family, User createdBy, CreateTaskRequest request) {
-        requireValidReward(request.rewardMoney(), request.rewardSavings(), request.rewardScreenMinutes());
+        requireValidReward(request.rewardMoney(), request.rewardScreenMinutes());
         Set<ChildProfile> children = resolveChildren(family.getId(), request.childIds());
 
         Task task = taskRepository.save(Task.builder()
@@ -71,7 +71,6 @@ public class TaskManagementService {
         taskRewardRepository.save(TaskReward.builder()
                 .task(task)
                 .moneyAmount(request.rewardMoney())
-                .savingsAmount(request.rewardSavings())
                 .screenMinutes(request.rewardScreenMinutes())
                 .active(true)
                 .build());
@@ -85,7 +84,7 @@ public class TaskManagementService {
 
     @Transactional
     public TaskManagementResponse update(Task task, CreateTaskRequest request) {
-        requireValidReward(request.rewardMoney(), request.rewardSavings(), request.rewardScreenMinutes());
+        requireValidReward(request.rewardMoney(), request.rewardScreenMinutes());
         Set<ChildProfile> children = resolveChildren(task.getFamily().getId(), request.childIds());
 
         task.setName(request.name());
@@ -102,12 +101,11 @@ public class TaskManagementService {
         taskRewardRepository.findByTaskIdAndActiveTrue(task.getId()).ifPresentOrElse(
                 reward -> {
                     reward.setMoneyAmount(request.rewardMoney());
-                    reward.setSavingsAmount(request.rewardSavings());
                     reward.setScreenMinutes(request.rewardScreenMinutes());
                     taskRewardRepository.save(reward);
                 },
                 () -> taskRewardRepository.save(TaskReward.builder()
-                        .task(task).moneyAmount(request.rewardMoney()).savingsAmount(request.rewardSavings())
+                        .task(task).moneyAmount(request.rewardMoney())
                         .screenMinutes(request.rewardScreenMinutes()).active(true).build()));
 
         Set<UUID> keepChildIds = children.stream().map(ChildProfile::getId).collect(java.util.stream.Collectors.toSet());
@@ -150,13 +148,11 @@ public class TaskManagementService {
         return children;
     }
 
-    private void requireValidReward(BigDecimal money, BigDecimal savings, int screenMinutes) {
-        boolean hasReward = money.compareTo(BigDecimal.ZERO) > 0
-                || savings.compareTo(BigDecimal.ZERO) > 0
-                || screenMinutes > 0;
+    private void requireValidReward(BigDecimal money, int screenMinutes) {
+        boolean hasReward = money.compareTo(BigDecimal.ZERO) > 0 || screenMinutes > 0;
         if (!hasReward) {
             throw new DomainException("INVALID_TASK_REWARD", HttpStatus.BAD_REQUEST,
-                    "La tasca ha de tenir com a mínim una recompensa (diners, estalvi o minuts)");
+                    "La tasca ha de tenir com a mínim una recompensa (diners o minuts)");
         }
     }
 
@@ -176,7 +172,6 @@ public class TaskManagementService {
                 task.isActive(),
                 task.getRecurrenceType(),
                 reward != null ? reward.getMoneyAmount() : BigDecimal.ZERO,
-                reward != null ? reward.getSavingsAmount() : BigDecimal.ZERO,
                 reward != null ? reward.getScreenMinutes() : 0,
                 assigned);
     }

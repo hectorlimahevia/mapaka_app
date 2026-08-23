@@ -59,9 +59,6 @@ public class TaskCompletion {
     @Column(name = "reward_money", nullable = false, precision = 10, scale = 2)
     private BigDecimal rewardMoney;
 
-    @Column(name = "reward_savings", nullable = false, precision = 10, scale = 2)
-    private BigDecimal rewardSavings;
-
     @Column(name = "reward_screen_minutes", nullable = false)
     private int rewardScreenMinutes;
 

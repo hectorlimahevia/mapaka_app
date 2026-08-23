@@ -115,19 +115,23 @@ class ParentScreensIntegrationTest {
         AuthenticatedUser parent = asParent(f);
         authenticateAs(parent);
 
+        // Regla pròpia 75%/25% perquè el repartiment es calculi a l'aprovació (no en crear la tasca).
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("75"), new BigDecimal("25")), parent);
+
         Task task = taskRepository.save(Task.builder()
                 .family(f.family).name("Rentar cotxe").taskType(TaskType.EXTRA)
                 .active(true).requiresApproval(true).repeatable(true)
                 .recurrenceType(RecurrenceType.WEEKLY).createdBy(f.parentUser).build());
         taskRewardRepository.save(TaskReward.builder()
-                .task(task).moneyAmount(new BigDecimal("3.00")).savingsAmount(new BigDecimal("1.00"))
+                .task(task).moneyAmount(new BigDecimal("4.00"))
                 .screenMinutes(15).active(true).build());
         taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(f.child).active(true).build());
 
         TaskCompletion completion = taskCompletionRepository.save(TaskCompletion.builder()
                 .task(task).child(f.child).completedAt(java.time.Instant.now())
                 .status(TaskCompletionStatus.PENDING)
-                .rewardMoney(new BigDecimal("3.00")).rewardSavings(new BigDecimal("1.00"))
+                .rewardMoney(new BigDecimal("4.00"))
                 .rewardScreenMinutes(15).build());
 
         List<PendingApprovalResponse> pending = pendingApprovalsController.pendingApprovals(f.family.getId(), parent);
@@ -151,7 +155,7 @@ class ParentScreensIntegrationTest {
         TaskCompletion second = taskCompletionRepository.save(TaskCompletion.builder()
                 .task(task).child(f.child).completedAt(java.time.Instant.now())
                 .status(TaskCompletionStatus.PENDING)
-                .rewardMoney(new BigDecimal("3.00")).rewardSavings(BigDecimal.ZERO)
+                .rewardMoney(new BigDecimal("3.00"))
                 .rewardScreenMinutes(0).build());
         approvalController.reject(second.getId(), parent);
 

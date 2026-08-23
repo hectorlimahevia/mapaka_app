@@ -8,6 +8,5 @@ import java.math.BigDecimal;
 public record MoneyAdjustmentRequest(
         @NotNull AdjustmentType type,
         @NotNull BigDecimal amount,
-        @NotNull BigDecimal savingsAmount,
         @NotBlank String reason) {
 }

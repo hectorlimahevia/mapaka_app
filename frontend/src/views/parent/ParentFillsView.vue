@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import BirthDateInput from '@/components/base/BirthDateInput.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
@@ -18,23 +19,22 @@ const loading = ref(true)
 const editingId = ref<string | null>(null)
 const saving = ref(false)
 
-const form = reactive({ monthlyAmount: 0, spendingPercentage: 70, baseMinutes: 0 })
+const form = reactive({ customAllowance: false, monthlyAmount: 0, spendingPercentage: 70, baseMinutes: 0 })
 
 const adjustingId = ref<string | null>(null)
 const savingAdjustment = ref(false)
 const adjustmentError = ref<string | null>(null)
 const adjustment = reactive({
   type: 'BONUS' as 'BONUS' | 'PENALTY' | 'MANUAL',
-  amount: 0,
-  savingsAmount: 0,
-  minutes: 0,
+  category: 'MONEY' as 'MONEY' | 'SCREEN_TIME',
+  value: 0,
   reason: '',
 })
 
 function startAdjustment(child: ChildDetailResponse) {
   adjustingId.value = child.childId
   adjustmentError.value = null
-  Object.assign(adjustment, { type: 'BONUS', amount: 0, savingsAmount: 0, minutes: 0, reason: '' })
+  Object.assign(adjustment, { type: 'BONUS', category: 'MONEY', value: 0, reason: '' })
 }
 
 async function submitAdjustment(childId: string) {
@@ -43,24 +43,21 @@ async function submitAdjustment(childId: string) {
     adjustmentError.value = t('fills.missingReason')
     return
   }
-  if (adjustment.amount <= 0 && adjustment.savingsAmount <= 0 && adjustment.minutes <= 0) {
+  if (adjustment.value <= 0) {
     adjustmentError.value = t('fills.missingAdjustmentValue')
     return
   }
   savingAdjustment.value = true
   try {
-    const calls = []
-    if (adjustment.amount > 0 || adjustment.savingsAmount > 0) {
-      calls.push(api.post(`/api/children/${childId}/money-adjustments`, {
-        type: adjustment.type, amount: adjustment.amount, savingsAmount: adjustment.savingsAmount, reason: adjustment.reason,
-      }))
+    if (adjustment.category === 'MONEY') {
+      await api.post(`/api/children/${childId}/money-adjustments`, {
+        type: adjustment.type, amount: adjustment.value, reason: adjustment.reason,
+      })
+    } else {
+      await api.post(`/api/children/${childId}/screen-time/adjustments`, {
+        type: adjustment.type, minutes: adjustment.value, reason: adjustment.reason,
+      })
     }
-    if (adjustment.minutes > 0) {
-      calls.push(api.post(`/api/children/${childId}/screen-time/adjustments`, {
-        type: adjustment.type, minutes: adjustment.minutes, reason: adjustment.reason,
-      }))
-    }
-    await Promise.all(calls)
     adjustingId.value = null
   } catch (err) {
     adjustmentError.value = apiErrorMessage(err)
@@ -124,6 +121,7 @@ async function load() {
 
 function startEdit(child: ChildDetailResponse) {
   editingId.value = child.childId
+  form.customAllowance = child.hasCustomAllowance
   form.monthlyAmount = child.allowanceMonthlyAmount ?? 0
   form.spendingPercentage = child.allowanceSpendingPercentage ?? 70
   form.baseMinutes = child.screenBaseMinutes ?? 0
@@ -136,14 +134,17 @@ function cancelEdit() {
 async function save(childId: string) {
   saving.value = true
   try {
-    await Promise.all([
-      api.patch(`/api/children/${childId}/allowance-rule`, {
+    const calls = [api.patch(`/api/children/${childId}/screen-time-rule`, { baseMinutes: form.baseMinutes })]
+    if (form.customAllowance) {
+      calls.push(api.patch(`/api/children/${childId}/allowance-rule`, {
         monthlyAmount: form.monthlyAmount,
         spendingPercentage: form.spendingPercentage,
         savingsPercentage: 100 - form.spendingPercentage,
-      }),
-      api.patch(`/api/children/${childId}/screen-time-rule`, { baseMinutes: form.baseMinutes }),
-    ])
+      }))
+    } else {
+      calls.push(api.delete(`/api/children/${childId}/allowance-rule`))
+    }
+    await Promise.all(calls)
     editingId.value = null
     await load()
   } finally {
@@ -195,7 +196,7 @@ onMounted(load)
           <BaseButton type="submit" variant="primary" :disabled="savingChild">
             {{ savingChild ? t('fills.adding') : t('fills.addChild') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingChild" @click="addingChild = false">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingChild" @click="addingChild = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -215,7 +216,8 @@ onMounted(load)
 
       <div v-if="editingId !== child.childId" class="child-card__info">
         <span v-if="child.allowanceMonthlyAmount !== null">
-          {{ t('fills.allowancePrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
+          {{ child.hasCustomAllowance ? t('fills.allowancePrefix') : t('fills.allowanceGeneralPrefix') }}
+          <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
           {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
         </span>
         <span v-else>{{ t('fills.noAllowance') }}</span>
@@ -224,21 +226,34 @@ onMounted(load)
       </div>
 
       <form v-else class="child-card__form" @submit.prevent="save(child.childId)">
-        <label>
-          {{ t('fills.monthlyAmountLabel') }}
-          <input v-model.number="form.monthlyAmount" type="number" min="0" step="0.5" required />
-        </label>
-        <label>
-          {{ t('fills.spendingPercentageLabel') }}
-          <input v-model.number="form.spendingPercentage" type="number" min="0" max="100" required />
-        </label>
+        <div class="child-card__switch-row">
+          <span>{{ t('fills.customAllowanceLabel') }}</span>
+          <BaseSwitch v-model="form.customAllowance" />
+        </div>
+        <template v-if="form.customAllowance">
+          <label>
+            {{ t('fills.monthlyAmountLabel') }}
+            <input v-model.number="form.monthlyAmount" type="number" min="0" step="0.5" required />
+          </label>
+          <label>
+            {{ t('fills.spendingPercentageLabel') }}
+            <input v-model.number="form.spendingPercentage" type="number" min="0" max="100" required />
+          </label>
+        </template>
+        <p v-else class="child-card__readonly-hint">
+          <template v-if="child.allowanceMonthlyAmount !== null">
+            {{ t('fills.allowanceGeneralPrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
+            {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
+          </template>
+          <template v-else>{{ t('fills.noAllowance') }}</template>
+        </p>
         <label>
           {{ t('fills.screenMinutesLabel') }}
           <input v-model.number="form.baseMinutes" type="number" min="0" required />
         </label>
         <div class="child-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? t('common.saving') : t('common.save') }}</BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="saving" @click="cancelEdit">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="saving" @click="cancelEdit">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
 
@@ -252,16 +267,15 @@ onMounted(load)
           </select>
         </label>
         <label>
-          {{ t('fills.adjustmentAmountLabel') }}
-          <input v-model.number="adjustment.amount" type="number" min="0" step="0.5" />
+          {{ t('fills.adjustmentCategoryLabel') }}
+          <select v-model="adjustment.category">
+            <option value="MONEY">{{ t('fills.adjustmentCategoryMoney') }}</option>
+            <option value="SCREEN_TIME">{{ t('fills.adjustmentCategoryScreenTime') }}</option>
+          </select>
         </label>
         <label>
-          {{ t('fills.adjustmentSavingsLabel') }}
-          <input v-model.number="adjustment.savingsAmount" type="number" min="0" step="0.5" />
-        </label>
-        <label>
-          {{ t('fills.adjustmentMinutesLabel') }}
-          <input v-model.number="adjustment.minutes" type="number" min="0" step="5" />
+          {{ adjustment.category === 'MONEY' ? t('fills.adjustmentValueMoneyLabel') : t('fills.adjustmentValueMinutesLabel') }}
+          <input v-model.number="adjustment.value" type="number" min="0" :step="adjustment.category === 'MONEY' ? 0.5 : 5" />
         </label>
         <label>
           {{ t('fills.adjustmentReasonLabel') }}
@@ -272,7 +286,7 @@ onMounted(load)
           <BaseButton type="submit" variant="primary" :disabled="savingAdjustment">
             {{ savingAdjustment ? t('common.saving') : t('common.save') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingAdjustment" @click="adjustingId = null">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingAdjustment" @click="adjustingId = null">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -386,5 +400,20 @@ onMounted(load)
 .child-card__form-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.child-card__switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.child-card__readonly-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
 }
 </style>

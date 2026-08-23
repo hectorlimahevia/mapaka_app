@@ -53,7 +53,6 @@ export interface ChildTaskResponse {
   icon: string | null
   taskType: TaskType
   rewardMoney: number
-  rewardSavings: number
   rewardScreenMinutes: number
   status: ChildTaskStatus
 }

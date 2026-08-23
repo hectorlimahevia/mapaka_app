@@ -187,7 +187,7 @@ class ChildScreensIntegrationTest {
                 .recurrenceType(RecurrenceType.WEEKLY).createdBy(child.getUser())
                 .build());
         taskRewardRepository.save(TaskReward.builder()
-                .task(task).moneyAmount(new BigDecimal("3.00")).savingsAmount(BigDecimal.ZERO)
+                .task(task).moneyAmount(new BigDecimal("3.00"))
                 .screenMinutes(15).active(true).build());
         taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(child).active(true).build());
 

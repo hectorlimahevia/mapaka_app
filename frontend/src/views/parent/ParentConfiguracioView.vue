@@ -5,6 +5,7 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
@@ -179,36 +180,15 @@ onMounted(load)
 
     <div class="settings-row">
       <span>{{ t('config.taskApprovalRequired') }}</span>
-      <button
-        type="button"
-        class="switch"
-        :class="{ 'switch--on': settings.taskApprovalRequired }"
-        role="switch"
-        :aria-checked="settings.taskApprovalRequired"
-        @click="toggle('taskApprovalRequired')"
-      />
+      <BaseSwitch :model-value="settings.taskApprovalRequired" @update:model-value="toggle('taskApprovalRequired')" />
     </div>
     <div class="settings-row">
       <span>{{ t('config.notifyPendingApprovals') }}</span>
-      <button
-        type="button"
-        class="switch"
-        :class="{ 'switch--on': settings.notifyPendingApprovalsEnabled }"
-        role="switch"
-        :aria-checked="settings.notifyPendingApprovalsEnabled"
-        @click="toggle('notifyPendingApprovalsEnabled')"
-      />
+      <BaseSwitch :model-value="settings.notifyPendingApprovalsEnabled" @update:model-value="toggle('notifyPendingApprovalsEnabled')" />
     </div>
     <div class="settings-row">
       <span>{{ t('config.allowSavingsTransfer') }}</span>
-      <button
-        type="button"
-        class="switch"
-        :class="{ 'switch--on': settings.allowSavingsTransfer }"
-        role="switch"
-        :aria-checked="settings.allowSavingsTransfer"
-        @click="toggle('allowSavingsTransfer')"
-      />
+      <BaseSwitch :model-value="settings.allowSavingsTransfer" @update:model-value="toggle('allowSavingsTransfer')" />
     </div>
 
     <RouterLink :to="{ name: 'parent-nfc-tags' }" class="config__nfc-link">
@@ -244,7 +224,7 @@ onMounted(load)
         <p v-if="ruleError" class="config__error">{{ ruleError }}</p>
         <div class="member-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="savingRule">{{ savingRule ? t('common.saving') : t('common.save') }}</BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingRule" @click="editingRuleId = null">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingRule" @click="editingRuleId = null">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -259,7 +239,7 @@ onMounted(load)
         <p v-if="ruleError" class="config__error">{{ ruleError }}</p>
         <div class="member-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="savingRule">{{ savingRule ? t('common.saving') : t('common.save') }}</BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingRule" @click="addingRule = false">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingRule" @click="addingRule = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -293,7 +273,7 @@ onMounted(load)
           <BaseButton type="submit" variant="primary" :disabled="savingReset">
             {{ savingReset ? t('common.saving') : t('common.save') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingReset" @click="resettingUserId = null">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingReset" @click="resettingUserId = null">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -317,7 +297,7 @@ onMounted(load)
           <BaseButton type="submit" variant="primary" :disabled="savingParent">
             {{ savingParent ? t('config.adding') : t('config.addAdult') }}
           </BaseButton>
-          <BaseButton type="button" variant="danger" :disabled="savingParent" @click="addingParent = false">{{ t('common.cancel') }}</BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingParent" @click="addingParent = false">{{ t('common.cancel') }}</BaseButton>
         </div>
       </form>
     </BaseCard>
@@ -347,38 +327,6 @@ onMounted(load)
   border-radius: 12px;
   margin-bottom: 0.6rem;
   font-size: 0.87rem;
-}
-
-.switch {
-  width: 38px;
-  height: 22px;
-  background: color-mix(in srgb, var(--text) 12%, transparent);
-  border-radius: 999px;
-  position: relative;
-  border: none;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.2s ease;
-}
-
-.switch::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  background: white;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-}
-
-.switch--on {
-  background: var(--primary);
-}
-
-.switch--on::after {
-  transform: translateX(16px);
 }
 
 .config__nfc-link {

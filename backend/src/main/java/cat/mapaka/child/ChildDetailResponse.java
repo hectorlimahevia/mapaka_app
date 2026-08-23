@@ -8,6 +8,7 @@ public record ChildDetailResponse(
         String displayName,
         String avatar,
         int age,
+        boolean hasCustomAllowance,
         BigDecimal allowanceMonthlyAmount,
         BigDecimal allowanceSpendingPercentage,
         BigDecimal allowanceSavingsPercentage,

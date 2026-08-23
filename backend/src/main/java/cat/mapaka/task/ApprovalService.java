@@ -1,5 +1,7 @@
 package cat.mapaka.task;
 
+import cat.mapaka.allowance.AllowanceRuleService;
+import cat.mapaka.allowance.MoneySplit;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
@@ -33,16 +35,19 @@ public class ApprovalService {
     private final MoneyTransactionRepository moneyTransactionRepository;
     private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
     private final UserRepository userRepository;
+    private final AllowanceRuleService allowanceRuleService;
 
     public ApprovalService(
             TaskCompletionRepository taskCompletionRepository,
             MoneyTransactionRepository moneyTransactionRepository,
             ScreenTimeTransactionRepository screenTimeTransactionRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            AllowanceRuleService allowanceRuleService) {
         this.taskCompletionRepository = taskCompletionRepository;
         this.moneyTransactionRepository = moneyTransactionRepository;
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
         this.userRepository = userRepository;
+        this.allowanceRuleService = allowanceRuleService;
     }
 
     @Transactional
@@ -58,18 +63,21 @@ public class ApprovalService {
         var child = completion.getChild();
 
         if (completion.getRewardMoney().compareTo(BigDecimal.ZERO) > 0) {
-            moneyTransactionRepository.save(MoneyTransaction.builder()
-                    .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
-                    .amount(completion.getRewardMoney()).description(completion.getTask().getName())
-                    .sourceType(MoneySourceType.TASK).sourceId(completion.getId())
-                    .createdBy(parent).build());
-        }
-        if (completion.getRewardSavings().compareTo(BigDecimal.ZERO) > 0) {
-            moneyTransactionRepository.save(MoneyTransaction.builder()
-                    .child(child).walletType(WalletType.SAVINGS).transactionType(TransactionType.CREDIT)
-                    .amount(completion.getRewardSavings()).description(completion.getTask().getName())
-                    .sourceType(MoneySourceType.TASK).sourceId(completion.getId())
-                    .createdBy(parent).build());
+            MoneySplit split = MoneySplit.of(completion.getRewardMoney(), allowanceRuleService.resolveSpendingPercentage(child));
+            if (split.spending().compareTo(BigDecimal.ZERO) > 0) {
+                moneyTransactionRepository.save(MoneyTransaction.builder()
+                        .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
+                        .amount(split.spending()).description(completion.getTask().getName())
+                        .sourceType(MoneySourceType.TASK).sourceId(completion.getId())
+                        .createdBy(parent).build());
+            }
+            if (split.savings().compareTo(BigDecimal.ZERO) > 0) {
+                moneyTransactionRepository.save(MoneyTransaction.builder()
+                        .child(child).walletType(WalletType.SAVINGS).transactionType(TransactionType.CREDIT)
+                        .amount(split.savings()).description(completion.getTask().getName())
+                        .sourceType(MoneySourceType.TASK).sourceId(completion.getId())
+                        .createdBy(parent).build());
+            }
         }
         if (completion.getRewardScreenMinutes() > 0) {
             ZoneId familyZone = ZoneId.of(child.getUser().getFamily().getTimezone());
