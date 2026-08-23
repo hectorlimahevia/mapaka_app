@@ -8,7 +8,10 @@
     "pinLabel": "PIN de 4 dígitos",
     "pinConfirmLabel": "Confirma el PIN",
     "pinInvalid": "El PIN debe tener exactamente 4 dígitos.",
-    "pinMismatch": "Los PIN no coinciden."
+    "pinMismatch": "Los PIN no coinciden.",
+    "dayPlaceholder": "DD",
+    "monthPlaceholder": "MM",
+    "yearPlaceholder": "AAAA"
   },
   "nav": {
     "inici": "Inicio",

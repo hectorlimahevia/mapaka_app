@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import MapakaLogo from '@/components/base/MapakaLogo.vue'
+import BirthDateInput from '@/components/base/BirthDateInput.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
 import type { FamilyRegisterResponse } from '@/types/auth'
@@ -160,7 +161,7 @@ async function finish() {
           </label>
           <label>
             {{ t('registre.birthDateLabel') }}
-            <input v-model="child.birthDate" type="date" />
+            <BirthDateInput v-model="child.birthDate" />
           </label>
           <label>
             {{ t('common.pinLabel') }}

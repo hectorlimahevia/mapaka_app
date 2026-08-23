@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import BirthDateInput from '@/components/base/BirthDateInput.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
 import type { ChildDetailResponse } from '@/types/parent'
@@ -168,7 +169,7 @@ onMounted(load)
         </label>
         <label>
           {{ t('fills.birthDateLabel') }}
-          <input v-model="newChild.birthDate" type="date" required />
+          <BirthDateInput v-model="newChild.birthDate" required />
         </label>
         <label>
           {{ t('common.pinLabel') }}
