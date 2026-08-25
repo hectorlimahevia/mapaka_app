@@ -62,6 +62,12 @@ public class TaskCompletion {
     @Column(name = "reward_screen_minutes", nullable = false)
     private int rewardScreenMinutes;
 
+    /** Totes les files creades juntes en una mateixa finalització col·laborativa comparteixen
+     * aquest valor (Prompt 15) — una finalització individual també en genera un, perquè
+     * l'aprovació sempre tracti un grup, mai un cas especial d'un sol element. */
+    @Column(name = "completion_group_id")
+    private UUID completionGroupId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

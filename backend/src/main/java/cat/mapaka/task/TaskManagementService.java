@@ -53,7 +53,10 @@ public class TaskManagementService {
     @Transactional
     public TaskManagementResponse create(Family family, User createdBy, CreateTaskRequest request) {
         requireValidReward(request.rewardMoney(), request.rewardScreenMinutes());
-        Set<ChildProfile> children = resolveChildren(family.getId(), request.childIds());
+        // Una tasca Extra no té assignació fixa — és visible per a tots els fills de la
+        // família (Prompt 15); els childIds que arribin per a una Extra s'ignoren.
+        Set<ChildProfile> children = request.taskType() == TaskType.EXTRA
+                ? Set.of() : resolveChildren(family.getId(), request.childIds());
 
         Task task = taskRepository.save(Task.builder()
                 .family(family)
@@ -65,6 +68,8 @@ public class TaskManagementService {
                 .requiresApproval(request.requiresApproval())
                 .repeatable(request.recurrenceType() != RecurrenceType.NONE)
                 .recurrenceType(request.recurrenceType())
+                .penaltyMoneyAmount(penaltyOrZero(request.penaltyMoneyAmount()))
+                .penaltyScreenMinutes(request.penaltyScreenMinutes() != null ? request.penaltyScreenMinutes() : 0)
                 .createdBy(createdBy)
                 .build());
 
@@ -85,7 +90,8 @@ public class TaskManagementService {
     @Transactional
     public TaskManagementResponse update(Task task, CreateTaskRequest request) {
         requireValidReward(request.rewardMoney(), request.rewardScreenMinutes());
-        Set<ChildProfile> children = resolveChildren(task.getFamily().getId(), request.childIds());
+        Set<ChildProfile> children = request.taskType() == TaskType.EXTRA
+                ? Set.of() : resolveChildren(task.getFamily().getId(), request.childIds());
 
         task.setName(request.name());
         task.setDescription(request.description());
@@ -94,6 +100,8 @@ public class TaskManagementService {
         task.setRequiresApproval(request.requiresApproval());
         task.setRepeatable(request.recurrenceType() != RecurrenceType.NONE);
         task.setRecurrenceType(request.recurrenceType());
+        task.setPenaltyMoneyAmount(penaltyOrZero(request.penaltyMoneyAmount()));
+        task.setPenaltyScreenMinutes(request.penaltyScreenMinutes() != null ? request.penaltyScreenMinutes() : 0);
         taskRepository.save(task);
 
         // Cada TaskCompletion ja guarda una còpia de la recompensa en completar-se
@@ -108,23 +116,37 @@ public class TaskManagementService {
                         .task(task).moneyAmount(request.rewardMoney())
                         .screenMinutes(request.rewardScreenMinutes()).active(true).build()));
 
-        Set<UUID> keepChildIds = children.stream().map(ChildProfile::getId).collect(java.util.stream.Collectors.toSet());
-        List<TaskAssignment> current = taskAssignmentRepository.findByTaskId(task.getId());
-        for (TaskAssignment assignment : current) {
-            boolean shouldStayActive = keepChildIds.contains(assignment.getChild().getId());
-            if (assignment.isActive() != shouldStayActive) {
-                assignment.setActive(shouldStayActive);
-                taskAssignmentRepository.save(assignment);
+        if (task.getTaskType() == TaskType.EXTRA) {
+            // Si una tasca passa a ser Extra en editar-la, es descarta qualsevol assignació prèvia.
+            for (TaskAssignment assignment : taskAssignmentRepository.findByTaskId(task.getId())) {
+                if (assignment.isActive()) {
+                    assignment.setActive(false);
+                    taskAssignmentRepository.save(assignment);
+                }
             }
-        }
-        Set<UUID> alreadyAssigned = current.stream().map(a -> a.getChild().getId()).collect(java.util.stream.Collectors.toSet());
-        for (ChildProfile child : children) {
-            if (!alreadyAssigned.contains(child.getId())) {
-                taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(child).active(true).build());
+        } else {
+            Set<UUID> keepChildIds = children.stream().map(ChildProfile::getId).collect(java.util.stream.Collectors.toSet());
+            List<TaskAssignment> current = taskAssignmentRepository.findByTaskId(task.getId());
+            for (TaskAssignment assignment : current) {
+                boolean shouldStayActive = keepChildIds.contains(assignment.getChild().getId());
+                if (assignment.isActive() != shouldStayActive) {
+                    assignment.setActive(shouldStayActive);
+                    taskAssignmentRepository.save(assignment);
+                }
+            }
+            Set<UUID> alreadyAssigned = current.stream().map(a -> a.getChild().getId()).collect(java.util.stream.Collectors.toSet());
+            for (ChildProfile child : children) {
+                if (!alreadyAssigned.contains(child.getId())) {
+                    taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(child).active(true).build());
+                }
             }
         }
 
         return toResponse(task);
+    }
+
+    private BigDecimal penaltyOrZero(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     /** Mai un DELETE físic si la tasca ja té completions associades — es dona de baixa
@@ -173,6 +195,8 @@ public class TaskManagementService {
                 task.getRecurrenceType(),
                 reward != null ? reward.getMoneyAmount() : BigDecimal.ZERO,
                 reward != null ? reward.getScreenMinutes() : 0,
+                task.getPenaltyMoneyAmount(),
+                task.getPenaltyScreenMinutes(),
                 assigned);
     }
 }

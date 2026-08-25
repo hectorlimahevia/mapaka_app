@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,15 +43,39 @@ public class TaskController {
         return taskService.getTasksFor(child);
     }
 
-    /** Nomes el propi fill autenticat pot marcar una tasca com a feta (mai un altre rol). */
+    /** Nomes el propi fill autenticat pot marcar una tasca com a feta (mai un altre rol).
+     * Una tasca Extra (sense assignació fixa) accepta col·laboradors; la resta els ignora. */
     @PreAuthorize("hasRole('CHILD')")
     @PostMapping("/api/tasks/{taskId}/complete")
-    public void complete(@PathVariable UUID taskId, @AuthenticationPrincipal AuthenticatedUser user) {
+    public void complete(
+            @PathVariable UUID taskId,
+            @RequestBody CompleteTaskRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
         ChildProfile child = childProfileRepository.findByIdFetchUserAndFamily(user.childId())
                 .orElseThrow(() -> new DomainException("CHILD_NOT_FOUND", HttpStatus.NOT_FOUND, "Fill no trobat"));
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new DomainException("TASK_NOT_FOUND", HttpStatus.NOT_FOUND, "Tasca no trobada"));
+        if (!task.getFamily().getId().equals(user.familyId())) {
+            throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "No pots completar una tasca d'una altra família");
+        }
+
+        ZoneId familyZone = ZoneId.of(child.getUser().getFamily().getTimezone());
+
+        if (task.getTaskType() == TaskType.EXTRA) {
+            List<UUID> collaboratorIds = request.collaboratorChildIds() != null ? request.collaboratorChildIds() : List.of();
+            List<ChildProfile> collaborators = new ArrayList<>();
+            for (UUID collaboratorId : collaboratorIds) {
+                ChildProfile collaborator = childProfileRepository.findByIdFetchUserAndFamily(collaboratorId)
+                        .orElseThrow(() -> new DomainException("CHILD_NOT_FOUND", HttpStatus.NOT_FOUND, "Fill no trobat"));
+                if (!collaborator.getUser().getFamily().getId().equals(user.familyId())) {
+                    throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "No pots afegir un fill d'una altra família");
+                }
+                collaborators.add(collaborator);
+            }
+            taskService.completeCollaborative(task, child, collaborators, familyZone);
+            return;
+        }
 
         boolean assigned = taskAssignmentRepository.findByTaskIdAndChildId(taskId, child.getId())
                 .map(TaskAssignment::isActive)
@@ -58,8 +83,6 @@ public class TaskController {
         if (!assigned) {
             throw new DomainException("TASK_NOT_ASSIGNED", HttpStatus.FORBIDDEN, "Aquesta tasca no està assignada a aquest fill");
         }
-
-        ZoneId familyZone = ZoneId.of(child.getUser().getFamily().getTimezone());
         taskService.completeTask(task, child, familyZone);
     }
 }

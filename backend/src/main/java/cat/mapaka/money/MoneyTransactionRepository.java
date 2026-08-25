@@ -30,6 +30,21 @@ public interface MoneyTransactionRepository extends JpaRepository<MoneyTransacti
         return balanceFor(childId, walletType, TransactionType.CREDIT);
     }
 
+    /** Progrés d'un objectiu concret (repartiment + donacions) — mai el total d'estalvi
+     * compartit del fill (Prompt 15: cada objectiu té el seu propi bucle GOAL). El
+     * walletType es passa com a paràmetre (mai un literal inline a la JPQL) perquè
+     * Hibernate el vinculi amb el tipus NAMED_ENUM correcte (wallet_type, no "wallettype"). */
+    @Query("""
+        SELECT COALESCE(SUM(CASE WHEN t.transactionType = :credit THEN t.amount ELSE -t.amount END), 0)
+        FROM MoneyTransaction t
+        WHERE t.walletType = :walletType AND t.sourceId = :goalId
+        """)
+    BigDecimal goalProgress(UUID goalId, WalletType walletType, TransactionType credit);
+
+    default BigDecimal goalProgress(UUID goalId) {
+        return goalProgress(goalId, WalletType.GOAL, TransactionType.CREDIT);
+    }
+
     /** Suma d'un tipus d'origen concret dins d'una finestra de temps — fa servir el tancament
      * mensual (settlement) per desglossar d'on ve el que s'ha pagat aquell mes. */
     @Query("""

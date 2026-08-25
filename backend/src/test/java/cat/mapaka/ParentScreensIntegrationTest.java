@@ -5,6 +5,11 @@ import cat.mapaka.child.*;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.family.*;
 import cat.mapaka.money.FamilyMoneyTransactionResponse;
+import cat.mapaka.money.MoneyTransactionRepository;
+import cat.mapaka.money.WalletType;
+import cat.mapaka.savings.SavingsGoal;
+import cat.mapaka.savings.SavingsGoalRepository;
+import cat.mapaka.savings.SavingsGoalStatus;
 import cat.mapaka.screentime.*;
 import cat.mapaka.security.AuthenticatedUser;
 import cat.mapaka.task.*;
@@ -68,6 +73,8 @@ class ParentScreensIntegrationTest {
     @Autowired ScreenTagRepository screenTagRepository;
     @Autowired ScreenSessionRepository screenSessionRepository;
     @Autowired ScreenSessionParticipantRepository screenSessionParticipantRepository;
+    @Autowired MoneyTransactionRepository moneyTransactionRepository;
+    @Autowired SavingsGoalRepository savingsGoalRepository;
 
     @Autowired FamilySummaryController familySummaryController;
     @Autowired PendingApprovalsController pendingApprovalsController;
@@ -75,6 +82,8 @@ class ParentScreensIntegrationTest {
     @Autowired FamilySettingsController familySettingsController;
     @Autowired ChildManagementController childManagementController;
     @Autowired ScreenTimeController screenTimeController;
+    @Autowired TaskController taskController;
+    @Autowired TaskManagementController taskManagementController;
 
     private void authenticateAs(AuthenticatedUser user) {
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
@@ -108,6 +117,21 @@ class ParentScreensIntegrationTest {
         return new AuthenticatedUser(f.parentUser.getId(), f.family.getId(), UserRole.PARENT, null);
     }
 
+    private ChildProfile seedSibling(Family family, String name) {
+        User siblingUser = userRepository.save(User.builder()
+                .family(family).username("kid" + UUID.randomUUID())
+                .passwordHash(new BCryptPasswordEncoder().encode("1234")).role(UserRole.CHILD).active(true)
+                .build());
+        return childProfileRepository.save(ChildProfile.builder()
+                .user(siblingUser).displayName(name).birthDate(LocalDate.of(2015, 1, 1))
+                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .build());
+    }
+
+    private AuthenticatedUser asChild(ChildProfile child) {
+        return new AuthenticatedUser(child.getUser().getId(), child.getUser().getFamily().getId(), UserRole.CHILD, child.getId());
+    }
+
     @Test
     @Transactional
     void approve_generatesMoneyAndScreenTimeTransactions_reject_generatesNone() {
@@ -122,7 +146,8 @@ class ParentScreensIntegrationTest {
         Task task = taskRepository.save(Task.builder()
                 .family(f.family).name("Rentar cotxe").taskType(TaskType.EXTRA)
                 .active(true).requiresApproval(true).repeatable(true)
-                .recurrenceType(RecurrenceType.WEEKLY).createdBy(f.parentUser).build());
+                .recurrenceType(RecurrenceType.WEEKLY).createdBy(f.parentUser)
+                .penaltyMoneyAmount(BigDecimal.ZERO).penaltyScreenMinutes(0).build());
         taskRewardRepository.save(TaskReward.builder()
                 .task(task).moneyAmount(new BigDecimal("4.00"))
                 .screenMinutes(15).active(true).build());
@@ -161,6 +186,59 @@ class ParentScreensIntegrationTest {
 
         List<FamilyMoneyTransactionResponse> movements = familySummaryController.movements(f.family.getId(), parent);
         assertThat(movements).hasSize(2); // spending + savings del primer, cap del rebutjat
+    }
+
+    @Test
+    @Transactional
+    void approve_withActiveGoal_splitsInThreeAndAutoCompletesGoal() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        // 80% gastar / 20% estalvi, i un objectiu que es queda un altre 20% del "per gastar".
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+        SavingsGoal goal = savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("2.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
+
+        Task task = taskRepository.save(Task.builder()
+                .family(f.family).name("Passejar el gos").taskType(TaskType.EXTRA)
+                .active(true).requiresApproval(true).repeatable(true)
+                .recurrenceType(RecurrenceType.WEEKLY).createdBy(f.parentUser)
+                .penaltyMoneyAmount(BigDecimal.ZERO).penaltyScreenMinutes(0).build());
+        taskRewardRepository.save(TaskReward.builder()
+                .task(task).moneyAmount(new BigDecimal("10.00")).screenMinutes(0).active(true).build());
+        taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(f.child).active(true).build());
+
+        TaskCompletion completion = taskCompletionRepository.save(TaskCompletion.builder()
+                .task(task).child(f.child).completedAt(java.time.Instant.now())
+                .status(TaskCompletionStatus.PENDING)
+                .rewardMoney(new BigDecimal("10.00")).rewardScreenMinutes(0).build());
+
+        approvalController.approve(completion.getId(), parent);
+
+        // 10€: 60% gastar (80-20 de l'objectiu) = 6€, 20% estalvi = 2€, 20% objectiu = 2€.
+        List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
+        assertThat(summary.get(0).spendingBalance()).isEqualByComparingTo("6.00");
+        assertThat(summary.get(0).savingsBalance()).isEqualByComparingTo("2.00");
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("2.00");
+
+        // L'objectiu (target 2.00) s'ha completat sol amb aquesta única aportació.
+        SavingsGoal reloaded = savingsGoalRepository.findById(goal.getId()).orElseThrow();
+        assertThat(reloaded.getStatus()).isEqualTo(SavingsGoalStatus.COMPLETED);
+
+        // Un cop completat, el seu 20% torna a "gastar" en el següent repartiment.
+        TaskCompletion second = taskCompletionRepository.save(TaskCompletion.builder()
+                .task(task).child(f.child).completedAt(java.time.Instant.now())
+                .status(TaskCompletionStatus.PENDING)
+                .rewardMoney(new BigDecimal("10.00")).rewardScreenMinutes(0).build());
+        approvalController.approve(second.getId(), parent);
+
+        List<ChildFamilySummary> summaryAfter = familySummaryController.summary(f.family.getId(), parent);
+        assertThat(summaryAfter.get(0).spendingBalance()).isEqualByComparingTo("14.00"); // 6 + 8 (80% de 10)
+        assertThat(summaryAfter.get(0).savingsBalance()).isEqualByComparingTo("4.00"); // 2 + 2 (20% de 10)
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("2.00"); // sense canvis
     }
 
     private AuthenticatedUser asChild(Fixture f) {
@@ -226,5 +304,81 @@ class ParentScreensIntegrationTest {
         List<NegativeBalanceSessionResponse> result = screenTimeController.negativeBalanceSessions(f.family.getId(), parent);
         assertThat(result).hasSize(1);
         assertThat(result.get(0).childName()).isEqualTo("Kid");
+    }
+
+    @Test
+    @Transactional
+    void extraTask_collaborationBlocksOthersAndSplitsRewardEvenlyOnGroupApproval() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        ChildProfile sibling = seedSibling(f.family, "Sibling");
+        ChildProfile outsider = seedSibling(f.family, "Outsider");
+
+        Task task = taskRepository.save(Task.builder()
+                .family(f.family).name("Rentar el cotxe").taskType(TaskType.EXTRA)
+                .active(true).requiresApproval(true).repeatable(true)
+                .recurrenceType(RecurrenceType.WEEKLY).createdBy(f.parentUser)
+                .penaltyMoneyAmount(BigDecimal.ZERO).penaltyScreenMinutes(0).build());
+        taskRewardRepository.save(TaskReward.builder()
+                .task(task).moneyAmount(new BigDecimal("10.00")).screenMinutes(20).active(true).build());
+
+        // f.child la reclama amb l'ajuda de sibling.
+        authenticateAs(asChild(f.child));
+        taskController.complete(task.getId(), new cat.mapaka.task.CompleteTaskRequest(List.of(sibling.getId())), asChild(f.child));
+
+        // outsider, que no hi participa, la veu com a ja reclamada — i no la pot marcar.
+        List<ChildTaskResponse> outsiderView = taskController.tasks(outsider.getId(), asChild(outsider));
+        assertThat(outsiderView.get(0).status()).isEqualTo(ChildTaskStatus.CLAIMED_BY_OTHERS);
+        assertThatThrownBy(() -> taskController.complete(
+                task.getId(), new cat.mapaka.task.CompleteTaskRequest(List.of()), asChild(outsider)))
+                .isInstanceOf(DomainException.class);
+
+        List<ChildTaskResponse> siblingView = taskController.tasks(sibling.getId(), asChild(sibling));
+        assertThat(siblingView.get(0).status()).isEqualTo(ChildTaskStatus.PENDING);
+        assertThat(siblingView.get(0).participantNames()).containsExactlyInAnyOrder("Kid", "Sibling");
+
+        authenticateAs(parent);
+        List<PendingApprovalResponse> pending = pendingApprovalsController.pendingApprovals(f.family.getId(), parent);
+        assertThat(pending).hasSize(2);
+        UUID groupId = pending.get(0).completionGroupId();
+        assertThat(pending).allMatch(p -> p.completionGroupId().equals(groupId));
+
+        approvalController.approveGroup(groupId, parent);
+
+        // 10€ i 20 min repartits a parts iguals entre els dos participants (5€ i 10 min cadascun).
+        List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
+        summary.forEach(s -> {
+            if (s.childId().equals(f.child.getId()) || s.childId().equals(sibling.getId())) {
+                assertThat(s.spendingBalance().add(s.savingsBalance())).isEqualByComparingTo("5.00");
+            }
+        });
+    }
+
+    @Test
+    @Transactional
+    void responsibilityTask_incompleteListsChildUntilPenaltyApplied() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        Task task = taskRepository.save(Task.builder()
+                .family(f.family).name("Fer el llit").taskType(TaskType.RESPONSIBILITY)
+                .active(true).requiresApproval(true).repeatable(true)
+                .recurrenceType(RecurrenceType.DAILY).createdBy(f.parentUser)
+                .penaltyMoneyAmount(new BigDecimal("1.00")).penaltyScreenMinutes(10).build());
+        taskRewardRepository.save(TaskReward.builder()
+                .task(task).moneyAmount(new BigDecimal("0.50")).screenMinutes(0).active(true).build());
+        taskAssignmentRepository.save(TaskAssignment.builder().task(task).child(f.child).active(true).build());
+
+        List<IncompleteTaskResponse> incomplete = taskManagementController.incomplete(null, parent);
+        assertThat(incomplete).hasSize(1);
+        assertThat(incomplete.get(0).childId()).isEqualTo(f.child.getId());
+
+        taskManagementController.applyPenalty(task.getId(), f.child.getId(), parent);
+
+        List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
+        // -1.00€ repartit gastar/estalvi segons el percentatge per defecte (100% gastar, sense regla).
+        assertThat(summary.get(0).spendingBalance().add(summary.get(0).savingsBalance())).isEqualByComparingTo("-1.00");
     }
 }

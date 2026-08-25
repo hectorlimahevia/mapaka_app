@@ -8,6 +8,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import BirthDateInput from '@/components/base/BirthDateInput.vue'
+import MinutesInput from '@/components/base/MinutesInput.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
 import type { ChildDetailResponse } from '@/types/parent'
@@ -249,7 +250,7 @@ onMounted(load)
         </p>
         <label>
           {{ t('fills.screenMinutesLabel') }}
-          <input v-model.number="form.baseMinutes" type="number" min="0" required />
+          <MinutesInput v-model="form.baseMinutes" />
         </label>
         <div class="child-card__form-actions">
           <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? t('common.saving') : t('common.save') }}</BaseButton>
@@ -273,9 +274,13 @@ onMounted(load)
             <option value="SCREEN_TIME">{{ t('fills.adjustmentCategoryScreenTime') }}</option>
           </select>
         </label>
-        <label>
-          {{ adjustment.category === 'MONEY' ? t('fills.adjustmentValueMoneyLabel') : t('fills.adjustmentValueMinutesLabel') }}
-          <input v-model.number="adjustment.value" type="number" min="0" :step="adjustment.category === 'MONEY' ? 0.5 : 5" />
+        <label v-if="adjustment.category === 'MONEY'">
+          {{ t('fills.adjustmentValueMoneyLabel') }}
+          <input v-model.number="adjustment.value" type="number" min="0" step="0.5" />
+        </label>
+        <label v-else>
+          {{ t('fills.adjustmentValueMinutesLabel') }}
+          <MinutesInput v-model="adjustment.value" />
         </label>
         <label>
           {{ t('fills.adjustmentReasonLabel') }}

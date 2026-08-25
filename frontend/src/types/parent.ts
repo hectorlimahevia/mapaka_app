@@ -22,6 +22,7 @@ export interface FamilyMoneyTransactionResponse {
 
 export interface PendingApprovalResponse {
   taskCompletionId: string
+  completionGroupId: string
   childId: string
   childName: string
   taskName: string
@@ -76,6 +77,8 @@ export interface TaskManagementResponse {
   recurrenceType: RecurrenceType
   rewardMoney: number
   rewardScreenMinutes: number
+  penaltyMoneyAmount: number
+  penaltyScreenMinutes: number
   assignedChildren: { childId: string; displayName: string }[]
 }
 
@@ -88,7 +91,18 @@ export interface TaskRequest {
   recurrenceType: RecurrenceType
   rewardMoney: number
   rewardScreenMinutes: number
+  penaltyMoneyAmount: number
+  penaltyScreenMinutes: number
   childIds: string[]
+}
+
+export interface IncompleteTaskResponse {
+  taskId: string
+  taskName: string
+  childId: string
+  childDisplayName: string
+  penaltyMoneyAmount: number
+  penaltyScreenMinutes: number
 }
 
 export interface AllowanceRuleResponse {

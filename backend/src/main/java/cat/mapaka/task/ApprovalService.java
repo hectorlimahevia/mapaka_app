@@ -1,13 +1,9 @@
 package cat.mapaka.task;
 
-import cat.mapaka.allowance.AllowanceRuleService;
-import cat.mapaka.allowance.MoneySplit;
+import cat.mapaka.allowance.MoneySplitCalculator;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
-import cat.mapaka.money.MoneyTransaction;
-import cat.mapaka.money.MoneyTransactionRepository;
-import cat.mapaka.money.WalletType;
 import cat.mapaka.screentime.ScreenSourceType;
 import cat.mapaka.screentime.ScreenTimeTransaction;
 import cat.mapaka.screentime.ScreenTimeTransactionRepository;
@@ -18,9 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -32,22 +30,19 @@ import java.util.UUID;
 public class ApprovalService {
 
     private final TaskCompletionRepository taskCompletionRepository;
-    private final MoneyTransactionRepository moneyTransactionRepository;
     private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
     private final UserRepository userRepository;
-    private final AllowanceRuleService allowanceRuleService;
+    private final MoneySplitCalculator moneySplitCalculator;
 
     public ApprovalService(
             TaskCompletionRepository taskCompletionRepository,
-            MoneyTransactionRepository moneyTransactionRepository,
             ScreenTimeTransactionRepository screenTimeTransactionRepository,
             UserRepository userRepository,
-            AllowanceRuleService allowanceRuleService) {
+            MoneySplitCalculator moneySplitCalculator) {
         this.taskCompletionRepository = taskCompletionRepository;
-        this.moneyTransactionRepository = moneyTransactionRepository;
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
         this.userRepository = userRepository;
-        this.allowanceRuleService = allowanceRuleService;
+        this.moneySplitCalculator = moneySplitCalculator;
     }
 
     @Transactional
@@ -62,23 +57,8 @@ public class ApprovalService {
 
         var child = completion.getChild();
 
-        if (completion.getRewardMoney().compareTo(BigDecimal.ZERO) > 0) {
-            MoneySplit split = MoneySplit.of(completion.getRewardMoney(), allowanceRuleService.resolveSpendingPercentage(child));
-            if (split.spending().compareTo(BigDecimal.ZERO) > 0) {
-                moneyTransactionRepository.save(MoneyTransaction.builder()
-                        .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
-                        .amount(split.spending()).description(completion.getTask().getName())
-                        .sourceType(MoneySourceType.TASK).sourceId(completion.getId())
-                        .createdBy(parent).build());
-            }
-            if (split.savings().compareTo(BigDecimal.ZERO) > 0) {
-                moneyTransactionRepository.save(MoneyTransaction.builder()
-                        .child(child).walletType(WalletType.SAVINGS).transactionType(TransactionType.CREDIT)
-                        .amount(split.savings()).description(completion.getTask().getName())
-                        .sourceType(MoneySourceType.TASK).sourceId(completion.getId())
-                        .createdBy(parent).build());
-            }
-        }
+        moneySplitCalculator.apply(child, completion.getRewardMoney(), TransactionType.CREDIT,
+                MoneySourceType.TASK, completion.getId(), completion.getTask().getName(), parent);
         if (completion.getRewardScreenMinutes() > 0) {
             ZoneId familyZone = ZoneId.of(child.getUser().getFamily().getTimezone());
             screenTimeTransactionRepository.save(ScreenTimeTransaction.builder()
@@ -96,6 +76,58 @@ public class ApprovalService {
         completion.setReviewedBy(userRepository.getReferenceById(rejectingUserId));
         completion.setReviewedAt(Instant.now());
         taskCompletionRepository.save(completion);
+    }
+
+    /** Aprova totes les files d'una finalització col·laborativa d'una tasca Extra (Prompt 15)
+     * en un sol acte: reparteix a parts iguals entre els participants la recompensa que ja
+     * es va desar a cada fila en completar-se (el mateix import total a totes), i després
+     * passa la part de cadascú pel seu propi repartiment gastar/estalvi/objectius. */
+    @Transactional
+    public void approveGroup(List<TaskCompletion> group, UUID approvingUserId) {
+        if (group.isEmpty()) {
+            return;
+        }
+        for (TaskCompletion completion : group) {
+            requirePending(completion);
+        }
+        User parent = userRepository.getReferenceById(approvingUserId);
+        Task task = group.get(0).getTask();
+        int participantCount = group.size();
+        BigDecimal totalMoney = group.get(0).getRewardMoney();
+        int totalMinutes = group.get(0).getRewardScreenMinutes();
+        BigDecimal perParticipantMoney = totalMoney.divide(BigDecimal.valueOf(participantCount), 2, RoundingMode.HALF_UP);
+        int perParticipantMinutes = totalMinutes / participantCount;
+
+        for (TaskCompletion completion : group) {
+            completion.setStatus(TaskCompletionStatus.APPROVED);
+            completion.setReviewedBy(parent);
+            completion.setReviewedAt(Instant.now());
+            taskCompletionRepository.save(completion);
+
+            var child = completion.getChild();
+            moneySplitCalculator.apply(child, perParticipantMoney, TransactionType.CREDIT,
+                    MoneySourceType.TASK, completion.getId(), task.getName(), parent);
+            if (perParticipantMinutes > 0) {
+                ZoneId familyZone = ZoneId.of(child.getUser().getFamily().getTimezone());
+                screenTimeTransactionRepository.save(ScreenTimeTransaction.builder()
+                        .child(child).transactionType(TransactionType.CREDIT).minutes(perParticipantMinutes)
+                        .description(task.getName()).sourceType(ScreenSourceType.TASK)
+                        .sourceId(completion.getId()).occurredOn(LocalDate.now(familyZone))
+                        .createdBy(parent).build());
+            }
+        }
+    }
+
+    @Transactional
+    public void rejectGroup(List<TaskCompletion> group, UUID rejectingUserId) {
+        User parent = userRepository.getReferenceById(rejectingUserId);
+        for (TaskCompletion completion : group) {
+            requirePending(completion);
+            completion.setStatus(TaskCompletionStatus.REJECTED);
+            completion.setReviewedBy(parent);
+            completion.setReviewedAt(Instant.now());
+            taskCompletionRepository.save(completion);
+        }
     }
 
     private void requirePending(TaskCompletion completion) {

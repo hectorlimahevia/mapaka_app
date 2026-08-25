@@ -59,6 +59,10 @@ public class ChildManagementService {
      * igual que un password) i el seu perfil en una única transacció. */
     @Transactional
     public ChildDetailResponse createChild(Family family, CreateChildRequest request) {
+        if (!ChildColorPalette.isValid(request.colorTheme())) {
+            throw new DomainException("INVALID_CHILD_COLOR", HttpStatus.BAD_REQUEST,
+                    "El color triat no forma part de la paleta permesa");
+        }
         User user = userRepository.save(User.builder()
                 .family(family)
                 .username(usernameAllocator.allocate(family.getId(), request.displayName()))

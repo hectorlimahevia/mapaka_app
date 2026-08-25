@@ -16,5 +16,9 @@ public record CreateTaskRequest(
         @NotNull RecurrenceType recurrenceType,
         @NotNull BigDecimal rewardMoney,
         int rewardScreenMinutes,
+        /** Només per a taskType = RESPONSIBILITY — omès o null equival a 0 (Prompt 15). */
+        BigDecimal penaltyMoneyAmount,
+        Integer penaltyScreenMinutes,
+        /** Ignorat per a taskType = EXTRA: no té assignació fixa, és visible per a tota la família. */
         @NotNull List<UUID> childIds) {
 }

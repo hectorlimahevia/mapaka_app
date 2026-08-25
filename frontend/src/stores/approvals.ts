@@ -16,8 +16,8 @@ export const useApprovalsStore = defineStore('approvals', () => {
     pendingCount.value = data.length
   }
 
-  function decrement() {
-    pendingCount.value = Math.max(0, pendingCount.value - 1)
+  function decrement(count = 1) {
+    pendingCount.value = Math.max(0, pendingCount.value - count)
   }
 
   return { pendingCount, refresh, decrement }

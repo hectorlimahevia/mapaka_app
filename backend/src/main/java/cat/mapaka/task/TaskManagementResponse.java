@@ -15,6 +15,8 @@ public record TaskManagementResponse(
         RecurrenceType recurrenceType,
         BigDecimal rewardMoney,
         int rewardScreenMinutes,
+        BigDecimal penaltyMoneyAmount,
+        int penaltyScreenMinutes,
         List<AssignedChild> assignedChildren) {
 
     public record AssignedChild(UUID childId, String displayName) {

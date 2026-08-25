@@ -1,14 +1,10 @@
 package cat.mapaka.adjustment;
 
-import cat.mapaka.allowance.AllowanceRuleService;
-import cat.mapaka.allowance.MoneySplit;
+import cat.mapaka.allowance.MoneySplitCalculator;
 import cat.mapaka.child.ChildProfile;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
-import cat.mapaka.money.MoneyTransaction;
-import cat.mapaka.money.MoneyTransactionRepository;
-import cat.mapaka.money.WalletType;
 import cat.mapaka.screentime.ScreenSourceType;
 import cat.mapaka.screentime.ScreenTimeTransaction;
 import cat.mapaka.screentime.ScreenTimeTransactionRepository;
@@ -30,22 +26,19 @@ import java.util.UUID;
 public class AdjustmentService {
 
     private final AdjustmentRepository adjustmentRepository;
-    private final MoneyTransactionRepository moneyTransactionRepository;
     private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
     private final UserRepository userRepository;
-    private final AllowanceRuleService allowanceRuleService;
+    private final MoneySplitCalculator moneySplitCalculator;
 
     public AdjustmentService(
             AdjustmentRepository adjustmentRepository,
-            MoneyTransactionRepository moneyTransactionRepository,
             ScreenTimeTransactionRepository screenTimeTransactionRepository,
             UserRepository userRepository,
-            AllowanceRuleService allowanceRuleService) {
+            MoneySplitCalculator moneySplitCalculator) {
         this.adjustmentRepository = adjustmentRepository;
-        this.moneyTransactionRepository = moneyTransactionRepository;
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
         this.userRepository = userRepository;
-        this.allowanceRuleService = allowanceRuleService;
+        this.moneySplitCalculator = moneySplitCalculator;
     }
 
     /** L'usuari introdueix un únic Valor — mai el reparteix ell mateix entre gastar i
@@ -64,25 +57,14 @@ public class AdjustmentService {
             case MANUAL -> MoneySourceType.MANUAL_ADJUSTMENT;
         };
 
-        MoneySplit split = MoneySplit.of(request.amount(), allowanceRuleService.resolveSpendingPercentage(child));
-
+        // El desglossament real (gastar/estalvi/objectius) viu als MoneyTransaction que
+        // crea el MoneySplitCalculator — aquí només queda l'import total com a auditoria.
         Adjustment adjustment = adjustmentRepository.save(Adjustment.builder()
                 .child(child).adjustmentType(request.type())
-                .moneyAmount(split.spending()).savingsAmount(split.savings()).screenMinutes(0)
+                .moneyAmount(request.amount()).savingsAmount(BigDecimal.ZERO).screenMinutes(0)
                 .reason(request.reason()).createdBy(parent).build());
 
-        if (split.spending().compareTo(BigDecimal.ZERO) > 0) {
-            moneyTransactionRepository.save(MoneyTransaction.builder()
-                    .child(child).walletType(WalletType.SPENDING).transactionType(txType)
-                    .amount(split.spending()).description(request.reason())
-                    .sourceType(sourceType).sourceId(adjustment.getId()).createdBy(parent).build());
-        }
-        if (split.savings().compareTo(BigDecimal.ZERO) > 0) {
-            moneyTransactionRepository.save(MoneyTransaction.builder()
-                    .child(child).walletType(WalletType.SAVINGS).transactionType(txType)
-                    .amount(split.savings()).description(request.reason())
-                    .sourceType(sourceType).sourceId(adjustment.getId()).createdBy(parent).build());
-        }
+        moneySplitCalculator.apply(child, request.amount(), txType, sourceType, adjustment.getId(), request.reason(), parent);
     }
 
     @Transactional

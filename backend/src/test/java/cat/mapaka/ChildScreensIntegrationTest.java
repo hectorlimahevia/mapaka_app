@@ -138,15 +138,21 @@ class ChildScreensIntegrationTest {
 
     @Test
     @Transactional
-    void savingsGoal_progressUsesSharedSavingsBalance() {
+    void savingsGoal_progressIsOwnGoalWalletNotSharedSavings() {
         ChildProfile child = seedChild();
-        savingsGoalRepository.save(SavingsGoal.builder()
-                .child(child).name("Bici").targetAmount(new BigDecimal("120.00")).status(SavingsGoalStatus.ACTIVE)
+        cat.mapaka.savings.SavingsGoal goal = savingsGoalRepository.save(cat.mapaka.savings.SavingsGoal.builder()
+                .child(child).name("Bici").targetAmount(new BigDecimal("120.00"))
+                .allocationPercentage(BigDecimal.ZERO).status(SavingsGoalStatus.ACTIVE)
                 .build());
+        moneyTransactionRepository.save(MoneyTransaction.builder()
+                .child(child).walletType(WalletType.GOAL).transactionType(TransactionType.CREDIT)
+                .amount(new BigDecimal("4.00")).sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(goal.getId())
+                .createdBy(child.getUser()).build());
 
         List<cat.mapaka.savings.SavingsGoalResponse> goals = savingsGoalController.goals(child.getId(), asChild(child));
         assertThat(goals).hasSize(1);
-        assertThat(goals.get(0).currentAmount()).isEqualByComparingTo("6.00");
+        // 4.00 (nomes les aportacions pròpies de l'objectiu), no els 6.00 d'estalvi general del fill.
+        assertThat(goals.get(0).currentAmount()).isEqualByComparingTo("4.00");
     }
 
     @Test
@@ -182,9 +188,10 @@ class ChildScreensIntegrationTest {
         Family family = child.getUser().getFamily();
 
         Task task = taskRepository.save(Task.builder()
-                .family(family).name("Rentar cotxe").taskType(TaskType.EXTRA)
+                .family(family).name("Rentar cotxe").taskType(TaskType.RESPONSIBILITY)
                 .active(true).requiresApproval(true).repeatable(true)
                 .recurrenceType(RecurrenceType.WEEKLY).createdBy(child.getUser())
+                .penaltyMoneyAmount(BigDecimal.ZERO).penaltyScreenMinutes(0)
                 .build());
         taskRewardRepository.save(TaskReward.builder()
                 .task(task).moneyAmount(new BigDecimal("3.00"))
@@ -195,13 +202,13 @@ class ChildScreensIntegrationTest {
         assertThat(before.get(0).status()).isEqualTo(ChildTaskStatus.AVAILABLE);
 
         authenticateAs(asChild(child));
-        taskController.complete(task.getId(), asChild(child));
+        taskController.complete(task.getId(), new cat.mapaka.task.CompleteTaskRequest(List.of()), asChild(child));
 
         List<ChildTaskResponse> after = taskController.tasks(child.getId(), asChild(child));
         assertThat(after.get(0).status()).isEqualTo(ChildTaskStatus.PENDING);
 
         try {
-            assertThatThrownBy(() -> taskController.complete(task.getId(), asChild(child)))
+            assertThatThrownBy(() -> taskController.complete(task.getId(), new cat.mapaka.task.CompleteTaskRequest(List.of()), asChild(child)))
                     .isInstanceOf(DomainException.class)
                     .hasMessageContaining("període");
         } finally {

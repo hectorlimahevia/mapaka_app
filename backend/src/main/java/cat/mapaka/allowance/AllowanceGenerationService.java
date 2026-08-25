@@ -5,7 +5,6 @@ import cat.mapaka.child.ChildProfileRepository;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
-import cat.mapaka.money.MoneyTransaction;
 import cat.mapaka.money.MoneyTransactionRepository;
 import cat.mapaka.money.WalletType;
 import cat.mapaka.settlement.MonthlySettlement;
@@ -41,6 +40,7 @@ public class AllowanceGenerationService {
     private final MoneyTransactionRepository moneyTransactionRepository;
     private final MonthlySettlementRepository monthlySettlementRepository;
     private final UserRepository userRepository;
+    private final MoneySplitCalculator moneySplitCalculator;
 
     public AllowanceGenerationService(
             ChildProfileRepository childProfileRepository,
@@ -48,13 +48,15 @@ public class AllowanceGenerationService {
             MonthlyAllowanceRepository monthlyAllowanceRepository,
             MoneyTransactionRepository moneyTransactionRepository,
             MonthlySettlementRepository monthlySettlementRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            MoneySplitCalculator moneySplitCalculator) {
         this.childProfileRepository = childProfileRepository;
         this.allowanceRuleRepository = allowanceRuleRepository;
         this.monthlyAllowanceRepository = monthlyAllowanceRepository;
         this.moneyTransactionRepository = moneyTransactionRepository;
         this.monthlySettlementRepository = monthlySettlementRepository;
         this.userRepository = userRepository;
+        this.moneySplitCalculator = moneySplitCalculator;
     }
 
     @Transactional
@@ -113,27 +115,19 @@ public class AllowanceGenerationService {
         User parent = userRepository.getReferenceById(actingUserId);
         ChildProfile child = allowance.getChild();
 
-        if (allowance.getSpendingAmount().compareTo(BigDecimal.ZERO) > 0) {
-            moneyTransactionRepository.save(MoneyTransaction.builder()
-                    .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
-                    .amount(allowance.getSpendingAmount()).description("Paga mensual")
-                    .sourceType(MoneySourceType.MONTHLY_ALLOWANCE).sourceId(allowance.getId())
-                    .createdBy(parent).build());
-        }
-        if (allowance.getSavingsAmount().compareTo(BigDecimal.ZERO) > 0) {
-            moneyTransactionRepository.save(MoneyTransaction.builder()
-                    .child(child).walletType(WalletType.SAVINGS).transactionType(TransactionType.CREDIT)
-                    .amount(allowance.getSavingsAmount()).description("Paga mensual")
-                    .sourceType(MoneySourceType.MONTHLY_ALLOWANCE).sourceId(allowance.getId())
-                    .createdBy(parent).build());
-        }
+        // El repartiment autoritatiu es calcula aquí, no es reutilitza l'estimació del
+        // DRAFT (generate()): el fill pot haver activat un objectiu entremig, i el
+        // repartiment real ha de reflectir els objectius actius en confirmar, no abans.
+        MoneySplitCalculator.SplitResult split = moneySplitCalculator.apply(
+                child, allowance.getGrossAmount(), TransactionType.CREDIT,
+                MoneySourceType.MONTHLY_ALLOWANCE, allowance.getId(), "Paga mensual", parent);
 
         allowance.setStatus(AllowanceStatus.CONFIRMED);
         allowance.setConfirmedAt(Instant.now());
         allowance.setConfirmedBy(parent);
         monthlyAllowanceRepository.save(allowance);
 
-        closeSettlement(allowance, parent);
+        closeSettlement(allowance, split, parent);
         return MonthlyAllowanceResponse.from(allowance);
     }
 
@@ -147,8 +141,10 @@ public class AllowanceGenerationService {
 
     /** El tancament mensual és el resum de la paga confirmada més el que s'ha guanyat/perdut
      * amb tasques i ajustos aquell mes — es tanca en confirmar la paga, no abans, perquè
-     * "extraEarnings"/"bonuses"/"penalties" reflecteixin un mes ja acabat de facto. */
-    private void closeSettlement(MonthlyAllowance allowance, User parent) {
+     * "extraEarnings"/"bonuses"/"penalties" reflecteixin un mes ja acabat de facto. Fa
+     * servir el repartiment real (`split`), no l'estimació guardada al DRAFT — pot diferir
+     * si el fill té algun objectiu actiu que es reparteix del "per gastar". */
+    private void closeSettlement(MonthlyAllowance allowance, MoneySplitCalculator.SplitResult split, User parent) {
         ChildProfile child = allowance.getChild();
         ZoneId zone = ZoneId.of(child.getUser().getFamily().getTimezone());
         YearMonth ym = YearMonth.of(allowance.getYear(), allowance.getMonth());
@@ -161,17 +157,17 @@ public class AllowanceGenerationService {
                 child.getId(), WalletType.SPENDING, MoneySourceType.BONUS, TransactionType.CREDIT, from, to);
         BigDecimal penalties = moneyTransactionRepository.sumBySource(
                 child.getId(), WalletType.SPENDING, MoneySourceType.PENALTY, TransactionType.DEBIT, from, to);
-        BigDecimal payable = allowance.getSpendingAmount().add(extraEarnings).add(bonuses).subtract(penalties);
+        BigDecimal payable = split.spendingAmount().add(extraEarnings).add(bonuses).subtract(penalties);
 
         MonthlySettlement settlement = monthlySettlementRepository
                 .findByChildIdAndYearAndMonth(child.getId(), allowance.getYear(), allowance.getMonth())
                 .orElseGet(() -> MonthlySettlement.builder().child(child).year(allowance.getYear()).month(allowance.getMonth()).build());
 
-        settlement.setBaseAllowance(allowance.getSpendingAmount());
+        settlement.setBaseAllowance(split.spendingAmount());
         settlement.setExtraEarnings(extraEarnings);
         settlement.setBonuses(bonuses);
         settlement.setPenalties(penalties);
-        settlement.setSavings(allowance.getSavingsAmount());
+        settlement.setSavings(split.savingsAmount());
         settlement.setPayableAmount(payable);
         settlement.setStatus(SettlementStatus.CLOSED);
         settlement.setClosedAt(Instant.now());

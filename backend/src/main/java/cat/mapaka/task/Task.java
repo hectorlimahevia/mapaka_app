@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -60,6 +61,14 @@ public class Task {
 
     @Column(name = "max_completions_per_period")
     private Integer maxCompletionsPerPeriod;
+
+    /** Només rellevants quan taskType = RESPONSIBILITY — s'apliquen manualment des de
+     * "Tasques incompletes", mai de forma automàtica (Prompt 15). */
+    @Column(name = "penalty_money_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal penaltyMoneyAmount;
+
+    @Column(name = "penalty_screen_minutes", nullable = false)
+    private int penaltyScreenMinutes;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)

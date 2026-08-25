@@ -44,7 +44,7 @@ export interface ScreenTimeStatusResponse {
 }
 
 export type TaskType = 'RESPONSIBILITY' | 'EXTRA'
-export type ChildTaskStatus = 'AVAILABLE' | 'PENDING' | 'APPROVED' | 'REJECTED'
+export type ChildTaskStatus = 'AVAILABLE' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CLAIMED_BY_OTHERS'
 
 export interface ChildTaskResponse {
   id: string
@@ -55,4 +55,5 @@ export interface ChildTaskResponse {
   rewardMoney: number
   rewardScreenMinutes: number
   status: ChildTaskStatus
+  participantNames: string[]
 }

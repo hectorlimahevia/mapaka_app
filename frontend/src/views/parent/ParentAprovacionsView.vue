@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -17,6 +17,24 @@ const negativeSessions = ref<NegativeBalanceSessionResponse[]>([])
 const loading = ref(true)
 const resolvingId = ref<string | null>(null)
 
+// Totes les finalitzacions comparteixen un completionGroupId (individual o col·laboratiu,
+// Prompt 15) — s'agrupen sempre en una sola fila i s'aproven/rebutgen amb l'endpoint de grup.
+const groups = computed(() => {
+  const byGroup = new Map<string, PendingApprovalResponse[]>()
+  for (const item of approvals.value) {
+    const list = byGroup.get(item.completionGroupId) ?? []
+    list.push(item)
+    byGroup.set(item.completionGroupId, list)
+  }
+  return [...byGroup.entries()].map(([completionGroupId, items]) => ({
+    completionGroupId,
+    taskName: items[0]!.taskName,
+    childNames: items.map((i) => i.childName),
+    rewardMoney: items[0]!.rewardMoney,
+    rewardScreenMinutes: items[0]!.rewardScreenMinutes,
+  }))
+})
+
 async function load() {
   const familyId = auth.familyId
   if (!familyId) return
@@ -29,13 +47,14 @@ async function load() {
   loading.value = false
 }
 
-async function resolve(item: PendingApprovalResponse, action: 'approve' | 'reject') {
+async function resolve(completionGroupId: string, action: 'approve' | 'reject') {
   if (resolvingId.value) return
-  resolvingId.value = item.taskCompletionId
+  resolvingId.value = completionGroupId
   try {
-    await api.post(`/api/task-completions/${item.taskCompletionId}/${action}`)
-    approvals.value = approvals.value.filter((a) => a.taskCompletionId !== item.taskCompletionId)
-    approvalsStore.decrement()
+    await api.post(`/api/task-completions/group/${completionGroupId}/${action}`)
+    const removed = approvals.value.filter((a) => a.completionGroupId === completionGroupId).length
+    approvals.value = approvals.value.filter((a) => a.completionGroupId !== completionGroupId)
+    approvalsStore.decrement(removed)
   } finally {
     resolvingId.value = null
   }
@@ -52,18 +71,19 @@ onMounted(load)
     <p v-if="!loading && approvals.length === 0" class="aprovacions__empty">{{ t('aprovacions.empty') }}</p>
 
     <TransitionGroup name="approval" tag="div">
-      <div v-for="item in approvals" :key="item.taskCompletionId" class="approval-row">
+      <div v-for="group in groups" :key="group.completionGroupId" class="approval-row">
         <div class="approval-row__info">
-          <div class="approval-row__title">{{ item.childName }} — {{ item.taskName }}</div>
+          <div class="approval-row__title">{{ group.childNames.join(' + ') }} — {{ group.taskName }}</div>
           <div class="approval-row__sub">
             {{ t('aprovacions.requestedReward') }}
-            <template v-if="item.rewardMoney > 0"><AmountDisplay :value="item.rewardMoney" unit="€" /></template>
-            <template v-if="item.rewardScreenMinutes > 0"> +{{ item.rewardScreenMinutes }} {{ t('common.minutesAbbr') }}</template>
+            <template v-if="group.rewardMoney > 0"><AmountDisplay :value="group.rewardMoney" unit="€" /></template>
+            <template v-if="group.rewardScreenMinutes > 0"> +{{ group.rewardScreenMinutes }} {{ t('common.minutesAbbr') }}</template>
+            <span v-if="group.childNames.length > 1" class="approval-row__collab">{{ t('aprovacions.collaborative') }}</span>
           </div>
         </div>
         <div class="approval-row__actions">
-          <BaseButton variant="primary" :disabled="!!resolvingId" @click="resolve(item, 'approve')">{{ t('aprovacions.approve') }}</BaseButton>
-          <BaseButton variant="danger" :disabled="!!resolvingId" @click="resolve(item, 'reject')">{{ t('aprovacions.reject') }}</BaseButton>
+          <BaseButton variant="primary" :disabled="!!resolvingId" @click="resolve(group.completionGroupId, 'approve')">{{ t('aprovacions.approve') }}</BaseButton>
+          <BaseButton variant="danger" :disabled="!!resolvingId" @click="resolve(group.completionGroupId, 'reject')">{{ t('aprovacions.reject') }}</BaseButton>
         </div>
       </div>
     </TransitionGroup>
@@ -122,6 +142,12 @@ onMounted(load)
   font-size: 0.76rem;
   color: var(--muted);
   margin-top: 0.15rem;
+}
+
+.approval-row__collab {
+  margin-left: 0.4rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .approval-row__actions {

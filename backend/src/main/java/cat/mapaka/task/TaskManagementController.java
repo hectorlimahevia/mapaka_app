@@ -1,5 +1,7 @@
 package cat.mapaka.task;
 
+import cat.mapaka.child.ChildAccessService;
+import cat.mapaka.child.ChildProfile;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.family.Family;
 import cat.mapaka.family.FamilyAccessService;
@@ -12,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,17 +23,23 @@ import java.util.UUID;
 public class TaskManagementController {
 
     private final TaskManagementService taskManagementService;
+    private final TaskPenaltyService taskPenaltyService;
     private final TaskRepository taskRepository;
+    private final ChildAccessService childAccessService;
     private final FamilyAccessService familyAccessService;
     private final UserRepository userRepository;
 
     public TaskManagementController(
             TaskManagementService taskManagementService,
+            TaskPenaltyService taskPenaltyService,
             TaskRepository taskRepository,
+            ChildAccessService childAccessService,
             FamilyAccessService familyAccessService,
             UserRepository userRepository) {
         this.taskManagementService = taskManagementService;
+        this.taskPenaltyService = taskPenaltyService;
         this.taskRepository = taskRepository;
+        this.childAccessService = childAccessService;
         this.familyAccessService = familyAccessService;
         this.userRepository = userRepository;
     }
@@ -63,6 +72,20 @@ public class TaskManagementController {
     public void deactivate(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
         Task task = requireTaskInFamily(id, user);
         taskManagementService.deactivate(task);
+    }
+
+    @GetMapping("/api/tasks/incomplete")
+    public List<IncompleteTaskResponse> incomplete(
+            @RequestParam(required = false) Instant asOf, @AuthenticationPrincipal AuthenticatedUser user) {
+        return taskPenaltyService.incomplete(user.familyId(), asOf != null ? asOf : Instant.now());
+    }
+
+    @PostMapping("/api/tasks/{taskId}/children/{childId}/apply-penalty")
+    public void applyPenalty(
+            @PathVariable UUID taskId, @PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
+        Task task = requireTaskInFamily(taskId, user);
+        ChildProfile child = childAccessService.requireAccess(childId, user);
+        taskPenaltyService.applyPenalty(task, child, user.userId());
     }
 
     private Task requireTaskInFamily(UUID taskId, AuthenticatedUser user) {

@@ -9,5 +9,8 @@ public enum MoneySourceType {
     SAVINGS_TRANSFER,
     MANUAL_ADJUSTMENT,
     SETTLEMENT,
-    REVERSAL
+    REVERSAL,
+    GOAL_CONTRIBUTION,
+    DONATION,
+    TASK_PENALTY
 }

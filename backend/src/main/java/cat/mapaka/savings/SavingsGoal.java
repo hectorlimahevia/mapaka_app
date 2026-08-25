@@ -35,6 +35,11 @@ public class SavingsGoal {
     @Column(name = "target_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal targetAmount;
 
+    /** Punts percentuals que es resten directament del "per gastar" del fill mentre
+     * l'objectiu estigui ACTIVE (Prompt 15) — mai del d'estalvi. */
+    @Column(name = "allocation_percentage", nullable = false, precision = 5, scale = 2)
+    private BigDecimal allocationPercentage;
+
     @Column(name = "image_url")
     private String imageUrl;
 

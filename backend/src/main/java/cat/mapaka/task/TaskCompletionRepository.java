@@ -30,4 +30,12 @@ public interface TaskCompletionRepository extends JpaRepository<TaskCompletion, 
         WHERE c.id = :id
         """)
     java.util.Optional<TaskCompletion> findByIdFetchChildAndTask(UUID id);
+
+    @Query("""
+        SELECT c FROM TaskCompletion c
+        JOIN FETCH c.child ch JOIN FETCH ch.user u JOIN FETCH u.family
+        JOIN FETCH c.task
+        WHERE c.completionGroupId = :completionGroupId
+        """)
+    List<TaskCompletion> findByCompletionGroupIdFetchChildAndTask(UUID completionGroupId);
 }
