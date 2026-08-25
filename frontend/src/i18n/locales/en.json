@@ -166,7 +166,12 @@
     "subtitle": "Choose a color and an icon",
     "colorTab": "Color",
     "iconTab": "Icon",
-    "colorHint": "White and very light tones can't be chosen, to keep the icon's contrast."
+    "colorHint": "White and very light tones can't be chosen, to keep the icon's contrast.",
+    "pinSection": "PIN",
+    "languageHint": "Choose the app language.",
+    "pinCurrentLabel": "Current PIN",
+    "pinNewLabel": "New PIN",
+    "pinUpdated": "PIN updated ✓"
   },
   "resum": {
     "title": "Family summary",
@@ -316,6 +321,14 @@
     "ALLOWANCE_NOT_FOUND": "This allowance couldn't be found.",
     "ALLOWANCE_ALREADY_RESOLVED": "This allowance has already been confirmed or cancelled.",
     "INVALID_ADJUSTMENT": "An amount greater than 0 is required.",
-    "SETTLEMENT_NOT_FOUND": "This closing couldn't be found."
+    "SETTLEMENT_NOT_FOUND": "This closing couldn't be found.",
+    "GOAL_PERCENTAGE_EXCEEDS_AVAILABLE": "The goal's percentage exceeds the available \"to spend\" margin.",
+    "SAVINGS_GOAL_NOT_FOUND": "This goal couldn't be found.",
+    "INVALID_CHILD_COLOR": "This color isn't part of the allowed palette.",
+    "INVALID_AVATAR_ICON": "This icon isn't part of the allowed set.",
+    "TASK_ALREADY_CLAIMED": "This task has already been claimed for this period.",
+    "INVALID_TASK_TYPE": "This action isn't valid for this task type.",
+    "INVALID_TASK_PENALTY": "This task has no penalty configured.",
+    "INVALID_CURRENT_PIN": "The current PIN isn't correct."
   }
 }

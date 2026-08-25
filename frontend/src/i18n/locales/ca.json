@@ -166,7 +166,12 @@
     "subtitle": "Tria un color i una icona",
     "colorTab": "Color",
     "iconTab": "Icona",
-    "colorHint": "El blanc i els tons molt clars no es poden triar, per mantenir el contrast de la icona."
+    "colorHint": "El blanc i els tons molt clars no es poden triar, per mantenir el contrast de la icona.",
+    "pinSection": "PIN",
+    "languageHint": "Tria l'idioma de l'aplicació.",
+    "pinCurrentLabel": "PIN actual",
+    "pinNewLabel": "PIN nou",
+    "pinUpdated": "PIN actualitzat ✓"
   },
   "resum": {
     "title": "Resum familiar",
@@ -316,6 +321,14 @@
     "ALLOWANCE_NOT_FOUND": "No s'ha trobat aquesta paga.",
     "ALLOWANCE_ALREADY_RESOLVED": "Aquesta paga ja s'ha confirmat o cancel·lat.",
     "INVALID_ADJUSTMENT": "Cal un import superior a 0.",
-    "SETTLEMENT_NOT_FOUND": "No s'ha trobat aquest tancament."
+    "SETTLEMENT_NOT_FOUND": "No s'ha trobat aquest tancament.",
+    "GOAL_PERCENTAGE_EXCEEDS_AVAILABLE": "El percentatge de l'objectiu supera el marge disponible de \"per gastar\".",
+    "SAVINGS_GOAL_NOT_FOUND": "No s'ha trobat aquest objectiu.",
+    "INVALID_CHILD_COLOR": "Aquest color no forma part de la paleta permesa.",
+    "INVALID_AVATAR_ICON": "Aquesta icona no forma part del conjunt permès.",
+    "TASK_ALREADY_CLAIMED": "Aquesta tasca ja ha estat reclamada per a aquest període.",
+    "INVALID_TASK_TYPE": "Aquesta acció no és vàlida per a aquest tipus de tasca.",
+    "INVALID_TASK_PENALTY": "Aquesta tasca no té cap penalització configurada.",
+    "INVALID_CURRENT_PIN": "El PIN actual no és correcte."
   }
 }

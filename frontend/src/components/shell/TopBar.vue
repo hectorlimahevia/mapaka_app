@@ -1,12 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import NavIcon from './NavIcon.vue'
+import ChildAvatar from '@/components/base/ChildAvatar.vue'
+import ChildAccountModal from '@/components/base/ChildAccountModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
+
+const showAccountModal = ref(false)
 
 async function goHome() {
   await router.push({ name: auth.role === 'PARENT' ? 'parent-resum' : 'child-inici' })
@@ -24,10 +29,26 @@ async function logout() {
       <img src="@/assets/mapaka-logo.svg" alt="" width="22" height="22" />
       <span>Mapaka</span>
     </button>
-    <button type="button" class="top-bar__logout" :aria-label="t('nav.logout')" @click="logout">
-      <NavIcon name="logout" />
-    </button>
+    <div class="top-bar__actions">
+      <button
+        v-if="auth.role === 'CHILD'"
+        type="button"
+        class="top-bar__avatar-btn"
+        :aria-label="t('avatar.title')"
+        @click="showAccountModal = true"
+      >
+        <ChildAvatar :color="auth.avatarColor" :icon="auth.avatarIcon" :name="auth.displayName ?? ''" size="small" />
+        <span class="top-bar__pencil-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
+        </span>
+      </button>
+      <button type="button" class="top-bar__logout" :aria-label="t('nav.logout')" @click="logout">
+        <NavIcon name="logout" />
+      </button>
+    </div>
   </header>
+
+  <ChildAccountModal v-if="showAccountModal" @close="showAccountModal = false" />
 </template>
 
 <style scoped>
@@ -57,6 +78,41 @@ async function logout() {
   font-weight: 800;
   font-size: 0.95rem;
   color: var(--primary);
+}
+
+.top-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.top-bar__avatar-btn {
+  position: relative;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.top-bar__pencil-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-bar__pencil-badge svg {
+  width: 8px;
+  height: 8px;
 }
 
 .top-bar__logout {

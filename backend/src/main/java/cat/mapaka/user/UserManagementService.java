@@ -33,6 +33,20 @@ public class UserManagementService {
         userRepository.save(target);
     }
 
+    /** Autoservei: qualsevol usuari (PARENT o CHILD) pot canviar el seu propi PIN si
+     * coneix l'actual — a diferència de resetPin(), aquí no cal ser PARENT perquè només
+     * afecta el propi compte i exigeix demostrar que ja el coneixes. */
+    @Transactional
+    public void changeOwnPin(UUID userId, String oldPin, String newPin) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new DomainException("USER_NOT_FOUND", HttpStatus.NOT_FOUND, "Usuari no trobat"));
+        if (!passwordEncoder.matches(oldPin, user.getPasswordHash())) {
+            throw new DomainException("INVALID_CURRENT_PIN", HttpStatus.BAD_REQUEST, "El PIN actual no és correcte");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPin));
+        userRepository.save(user);
+    }
+
     /** Cada usuari (PARENT o CHILD) només pot canviar el seu propi idioma (Prompt 5, i18n). */
     @Transactional
     public void updateLocale(UUID targetUserId, String locale, AuthenticatedUser actingUser) {

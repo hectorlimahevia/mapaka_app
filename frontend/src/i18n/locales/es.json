@@ -166,7 +166,12 @@
     "subtitle": "Elige un color y un icono",
     "colorTab": "Color",
     "iconTab": "Icono",
-    "colorHint": "El blanco y los tonos muy claros no se pueden elegir, para mantener el contraste del icono."
+    "colorHint": "El blanco y los tonos muy claros no se pueden elegir, para mantener el contraste del icono.",
+    "pinSection": "PIN",
+    "languageHint": "Elige el idioma de la aplicación.",
+    "pinCurrentLabel": "PIN actual",
+    "pinNewLabel": "PIN nuevo",
+    "pinUpdated": "PIN actualizado ✓"
   },
   "resum": {
     "title": "Resumen familiar",
@@ -316,6 +321,14 @@
     "ALLOWANCE_NOT_FOUND": "No se ha encontrado esta paga.",
     "ALLOWANCE_ALREADY_RESOLVED": "Esta paga ya se ha confirmado o cancelado.",
     "INVALID_ADJUSTMENT": "Hace falta un importe superior a 0.",
-    "SETTLEMENT_NOT_FOUND": "No se ha encontrado este cierre."
+    "SETTLEMENT_NOT_FOUND": "No se ha encontrado este cierre.",
+    "GOAL_PERCENTAGE_EXCEEDS_AVAILABLE": "El porcentaje del objetivo supera el margen disponible de \"para gastar\".",
+    "SAVINGS_GOAL_NOT_FOUND": "No se ha encontrado este objetivo.",
+    "INVALID_CHILD_COLOR": "Este color no forma parte de la paleta permitida.",
+    "INVALID_AVATAR_ICON": "Este icono no forma parte del conjunto permitido.",
+    "TASK_ALREADY_CLAIMED": "Esta tarea ya ha sido reclamada para este periodo.",
+    "INVALID_TASK_TYPE": "Esta acción no es válida para este tipo de tarea.",
+    "INVALID_TASK_PENALTY": "Esta tarea no tiene ninguna penalización configurada.",
+    "INVALID_CURRENT_PIN": "El PIN actual no es correcto."
   }
 }

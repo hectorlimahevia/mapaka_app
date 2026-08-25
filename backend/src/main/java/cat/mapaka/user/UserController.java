@@ -27,6 +27,14 @@ public class UserController {
         userManagementService.resetPin(id, request.newPin(), user);
     }
 
+    /** Autoservei (Prompt 15): qualsevol usuari autenticat pot canviar el seu propi PIN
+     * demostrant que coneix l'actual — substitueix la restricció de classe (només PARENT). */
+    @PatchMapping("/api/users/me/pin")
+    @PreAuthorize("isAuthenticated()")
+    public void changeOwnPin(@Valid @RequestBody ChangeOwnPinRequest request, @AuthenticationPrincipal AuthenticatedUser user) {
+        userManagementService.changeOwnPin(user.userId(), request.oldPin(), request.newPin());
+    }
+
     /** Qualsevol usuari autenticat (PARENT o CHILD) pot canviar el seu propi idioma —
      * substitueix la restricció de classe (només PARENT) per a aquest mètode. */
     @PatchMapping("/api/users/{id}/locale")

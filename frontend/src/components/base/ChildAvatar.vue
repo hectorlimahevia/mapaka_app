@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { AVATAR_ICON_PATHS } from '@/utils/avatarIcons'
+import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 
 const props = withDefaults(
   defineProps<{ color: string | null; icon: string | null; name: string; size?: 'small' | 'normal' }>(),
@@ -13,7 +13,7 @@ const iconPath = computed(() => (props.icon ? AVATAR_ICON_PATHS[props.icon] : nu
 
 <template>
   <div class="child-avatar" :class="`child-avatar--${size}`" :style="{ background: color ?? 'var(--primary)' }">
-    <svg v-if="iconPath" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg v-if="iconPath" :viewBox="AVATAR_ICON_VIEWBOX" fill="white">
       <path :d="iconPath" />
     </svg>
     <span v-else>{{ initial }}</span>
