@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Mapaka — Mockups ronda d'ajustes</title>
+<style>
+  :root{
+    --primary:#4B3AA6;
+    --secondary:#C9486B;
+    --accent:#D9A72E;
+    --bg:#F6F5F9;
+    --card:#FFFFFF;
+    --ink:#2A2540;
+    --muted:#7A7490;
+    --border:#E5E1EF;
+    --error:#D64545;
+    --success:#3A9A6A;
+    --child1:#3AA0D6;
+    --child2:#E08A3E;
+    --child3:#7BB84B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:32px 16px 80px;
+  }
+  h1{font-size:22px; margin:0 0 4px;}
+  .lead{color:var(--muted); margin:0 0 36px; max-width:760px;}
+  section{max-width:1040px; margin:0 auto 56px;}
+  .sec-title{font-size:17px; font-weight:700; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
+  .sec-sub{color:var(--muted); font-size:13.5px; margin:0 0 18px; max-width:680px;}
+  .options{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .option{flex:1 1 320px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; min-width:280px;}
+  .option-label{font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.04em; margin:0 0 10px;}
+  .phone{
+    width:100%; max-width:300px; margin:0 auto; background:#fff; border-radius:20px;
+    border:1px solid var(--border); overflow:hidden; box-shadow:0 4px 16px rgba(30,20,60,.06);
+  }
+  .phone-top{padding:14px 16px; background:var(--primary); color:#fff;}
+  .phone-body{padding:14px;}
+
+  /* ---------- 1. Alertes ---------- */
+  .topbar{display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#fff; border-radius:12px; border:1px solid var(--border);}
+  .bell-wrap{position:relative;}
+  .bell{width:38px; height:38px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; position:relative;}
+  .bell svg{width:18px;height:18px; stroke:var(--primary);}
+  .badge-dot{position:absolute; top:-2px; right:-2px; width:16px; height:16px; border-radius:50%; background:var(--error); color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid #fff;}
+  .dropdown{margin-top:10px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px; box-shadow:0 8px 20px rgba(30,20,60,.08);}
+  .alert-row{display:flex; gap:10px; padding:10px; border-radius:10px; background:#FBF6E9;}
+  .alert-row svg{width:18px; height:18px; stroke:var(--accent); flex-shrink:0; margin-top:1px;}
+  .alert-text b{display:block; font-size:13.5px;}
+  .alert-text span{font-size:12px; color:var(--muted);}
+  .banner{display:flex; align-items:center; gap:12px; background:#FBF6E9; border:1px solid #F0DFA8; border-radius:14px; padding:14px 16px;}
+  .banner svg{width:20px;height:20px; stroke:var(--accent); flex-shrink:0;}
+  .banner b{font-size:14px;}
+  .banner span{display:block; font-size:12.5px; color:var(--muted);}
+  .btn-mini{margin-left:auto; background:var(--primary); color:#fff; border:none; border-radius:20px; padding:8px 14px; font-size:12.5px; font-weight:600; white-space:nowrap; cursor:pointer;}
+
+  /* ---------- switches ---------- */
+  .switch{position:relative; width:42px; height:24px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:#D9D5E5; border-radius:24px; transition:.2s; cursor:pointer;}
+  .slider:before{content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;}
+  .switch input:checked + .slider{background:var(--primary);}
+  .switch input:checked + .slider:before{transform:translateX(18px);}
+
+  .field-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);}
+  .field-row:last-child{border-bottom:none;}
+  .field-label{font-size:13.5px; font-weight:600;}
+  .field-hint{font-size:11.5px; color:var(--muted); font-weight:400;}
+  input[type=number], input[type=text]{
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font-size:14px; background:#fff; color:var(--ink);
+  }
+  input:disabled{background:var(--bg); color:var(--muted);}
+  .reward-field{margin-top:8px;}
+  .chip-row{display:flex; gap:6px; margin-top:6px;}
+  .chip{border:1px solid var(--border); background:#fff; border-radius:20px; padding:4px 10px; font-size:11.5px; color:var(--primary); cursor:pointer;}
+  .helper-msg{font-size:12px; color:var(--muted); background:var(--bg); border-radius:8px; padding:8px 10px; margin-top:10px;}
+  .helper-msg.warn{color:#8a6b12; background:#FBF6E9;}
+
+  /* ---------- 3. pantalla fill ---------- */
+  .ring-wrap{display:flex; flex-direction:column; align-items:center; padding:20px 0;}
+  .ring{width:140px; height:140px; border-radius:50%; background:conic-gradient(var(--child1) 0 62%, #E7E4F0 0 100%); display:flex; align-items:center; justify-content:center; position:relative;}
+  .ring:after{content:""; position:absolute; width:104px; height:104px; border-radius:50%; background:#fff;}
+  .ring-num{position:relative; font-size:20px; font-weight:800; z-index:1;}
+  .ring-cap{position:relative; font-size:10px; color:var(--muted); z-index:1;}
+  .below-text{text-align:center; margin-top:12px;}
+  .below-text b{font-size:14px; display:block;}
+  .below-text span{font-size:12px; color:var(--muted);}
+  .stat-block{display:flex; align-items:center; gap:18px; padding:18px;}
+  .stat-list{flex:1;}
+  .stat-item{display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--border);}
+  .stat-item:last-child{border:none;}
+
+  /* ---------- 3.2/3.3 avatar ---------- */
+  .avatar{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; flex-shrink:0;}
+  .greet-row{display:flex; align-items:center; gap:12px;}
+  .greet-row b{font-size:15px; display:block;}
+  .greet-row span{font-size:12px; color:var(--muted);}
+  .navbar-demo{display:flex; justify-content:space-around; align-items:center; background:#fff; border-top:1px solid var(--border); padding:10px 8px; border-radius:0 0 20px 20px;}
+  .nav-item-demo{display:flex; flex-direction:column; align-items:center; gap:4px; font-size:10px; color:var(--muted); position:relative;}
+  .nav-icon-demo{width:22px; height:22px; stroke:var(--muted);}
+  .nav-avatar-wrap{position:relative;}
+  .pencil-badge{position:absolute; bottom:-2px; right:-2px; width:16px; height:16px; border-radius:50%; background:var(--primary); border:2px solid #fff; display:flex; align-items:center; justify-content:center;}
+  .pencil-badge svg{width:8px;height:8px; stroke:#fff;}
+  .nav-badge-num{position:absolute; top:-4px; right:8px; width:16px; height:16px; border-radius:50%; color:#fff; font-size:9.5px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid #fff;}
+
+  .modal-demo{background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px;}
+  .tabs-demo{display:flex; gap:6px; margin-bottom:14px;}
+  .tab-demo{flex:1; text-align:center; padding:8px; border-radius:10px; font-size:12.5px; font-weight:600; background:var(--bg); color:var(--muted);}
+  .tab-demo.active{background:var(--primary); color:#fff;}
+  .swatch-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:14px;}
+  .swatch{width:100%; aspect-ratio:1; border-radius:50%; border:2px solid transparent; cursor:pointer;}
+  .swatch.selected{border-color:var(--ink);}
+  .icon-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:8px;}
+  .icon-cell{aspect-ratio:1; border-radius:12px; background:var(--child1); display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  .icon-cell svg{width:16px;height:16px; stroke:#fff;}
+
+  /* ---------- 4. resum cards ---------- */
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px;}
+  .sum-card{background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px;}
+  .sum-card-head{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .sum-card-head b{font-size:14px;}
+  .sum-card-head span{font-size:11.5px; color:var(--muted);}
+  .stat-row3{display:flex; justify-content:space-between; text-align:center;}
+  .stat-row3 div{flex:1;}
+  .stat-row3 .num{font-size:15px; font-weight:800;}
+  .stat-row3 .lab{font-size:10.5px; color:var(--muted); margin-top:2px;}
+  .split-bar{height:10px; border-radius:6px; overflow:hidden; display:flex; margin-bottom:8px;}
+  .split-bar div{height:100%;}
+  .split-legend{display:flex; gap:14px; font-size:11px; flex-wrap:wrap;}
+  .split-legend span{display:flex; align-items:center; gap:5px; color:var(--muted);}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+  /* ---------- 5. moviments filter ---------- */
+  .filter-bar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .filter-chip{border:1px solid var(--border); background:#fff; border-radius:20px; padding:7px 14px; font-size:12.5px; color:var(--ink); cursor:pointer;}
+  .filter-chip.active{background:var(--primary); color:#fff; border-color:var(--primary);}
+  .child-chip-row{display:flex; gap:8px; margin-bottom:14px;}
+  .child-chip{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; border:2px solid transparent; cursor:pointer;}
+  .child-chip.active{border-color:var(--ink);}
+  .move-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;}
+  .move-row:last-child{border:none;}
+  .move-left{display:flex; align-items:center; gap:10px;}
+  .move-avatar{width:28px;height:28px;border-radius:50%; display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;}
+  .move-amt.pos{color:var(--success); font-weight:700;}
+  .move-amt.neg{color:var(--error); font-weight:700;}
+  .see-more{display:block; text-align:center; margin-top:12px; font-size:12.5px; color:var(--primary); font-weight:600; cursor:pointer;}
+
+  /* ---------- 6. donacions ---------- */
+  .goal-card{background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px;}
+  .goal-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .goal-top b{font-size:14px;}
+  .goal-bar-wrap{height:8px; background:var(--bg); border-radius:6px; overflow:hidden; margin-bottom:6px;}
+  .goal-bar{height:100%; background:var(--accent); border-radius:6px;}
+  .goal-nums{display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); margin-bottom:12px;}
+  .donate-btn{width:100%; background:var(--secondary); color:#fff; border:none; border-radius:20px; padding:10px; font-size:13px; font-weight:700; cursor:pointer;}
+  .ghost-btn{background:#fff; color:var(--ink); border:1px solid var(--border); border-radius:20px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .primary-btn{background:var(--primary); color:#fff; border:none; border-radius:20px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer;}
+  .form-field{margin-bottom:12px;}
+  .form-field label{font-size:12.5px; font-weight:600; display:block; margin-bottom:6px;}
+  .btn-row{display:flex; gap:10px; justify-content:flex-end; margin-top:14px;}
+
+  /* ---------- 7. objectiu form ---------- */
+  .split-preview{background:var(--bg); border-radius:12px; padding:14px; margin-top:6px;}
+  .split-preview-row{display:flex; justify-content:space-between; font-size:13px; padding:4px 0;}
+  .split-preview-row b{font-weight:700;}
+  .warn-text{font-size:11.5px; color:var(--error); margin-top:6px; display:none;}
+</style>
+</head>
+<body>
+
+<h1>Mapaka — Mockups: ronda d'ajustes sobre l'app real</h1>
+<p class="lead">Comparativa visual de les propostes de <code>mapaka_propuesta_v2.md</code>. Cada bloc mostra 2 opcions; les zones interactives (switches, chips, preview) es poden tocar.</p>
+
+<!-- 1. ALERTES -->
+<section>
+  <p class="sec-title">1 · Alertes al panell d'adults</p>
+  <p class="sec-sub">Recordatori automàtic per generar la paga del mes, calculat a partir de l'últim moviment (no es guarda com a estat).</p>
+  <div class="options">
+    <div class="option">
+      <p class="option-label">Opció A — Campaneta + desplegable</p>
+      <div class="topbar">
+        <b style="font-size:14px;">Resum familiar</b>
+        <div class="bell-wrap">
+          <div class="bell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 004 0"/></svg><span class="badge-dot">1</span></div>
+        </div>
+      </div>
+      <div class="dropdown">
+        <div class="alert-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 8v5M12 16h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+          <div class="alert-text"><b>Genera la paga d'agost</b><span>Encara no s'ha generat aquest mes</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="option">
+      <p class="option-label">Opció B — Banner fix a Resum</p>
+      <div class="banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 8v5M12 16h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        <div><b>Genera la paga d'agost</b><span>Encara no s'ha fet aquest mes</span></div>
+        <button class="btn-mini">Generar ara</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2.1 recompensa switches -->
+<section>
+  <p class="sec-title">2.1 · Tasques — indicar tipus de recompensa</p>
+  <p class="sec-sub">Cal deixar clar que la recompensa pot ser diners, temps de pantalla o totes dues.</p>
+  <div class="options">
+    <div class="option">
+      <p class="option-label">Opció 1 — Switch per tipus (recomanada)</p>
+      <div class="field-row">
+        <div>
+          <div class="field-label">Diners (€)</div>
+          <div class="field-hint">Import a repartir gastar/estalvi</div>
+        </div>
+        <label class="switch"><input type="checkbox" checked onchange="toggleField('moneyField', this.checked)"><span class="slider"></span></label>
+      </div>
+      <input id="moneyField" class="reward-field" type="number" value="3" min="0">
+      <div class="field-row" style="margin-top:6px;">
+        <div>
+          <div class="field-label">Temps de pantalla (min)</div>
+          <div class="field-hint">Minuts que s'acrediten</div>
+        </div>
+        <label class="switch"><input type="checkbox" onchange="toggleField('timeField', this.checked)"><span class="slider"></span></label>
+      </div>
+      <input id="timeField" class="reward-field" type="number" value="0" min="0" disabled>
+    </div>
+    <div class="option">
+      <p class="option-label">Opció 2 — Sense switch, només validació</p>
+      <div class="form-field">
+        <label>Diners (€)</label>
+        <input type="number" value="3" min="0">
+      </div>
+      <div class="form-field">
+        <label>Temps de pantalla (min)</label>
+        <input type="number" value="0" min="0">
+      </div>
+      <div class="helper-msg">Deixa a 0 el tipus de recompensa que no vulguis fer servir.</div>
+      <div class="helper-msg warn">⚠️ Cal indicar almenys un tipus de recompensa per desar.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 2.3 penalitzacio -->
+<section>
+  <p class="sec-title">2.3 · Responsabilitat — Penalització (mateix mecanisme, en negatiu)</p>
+  <div class="option" style="max-width:420px;">
+    <div class="field-row">
+      <div><div class="field-label">Penalització — Diners (€)</div></div>
+      <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+    </div>
+    <input class="reward-field" type="number" value="1" min="0">
+    <div class="field-row" style="margin-top:6px;">
+      <div><div class="field-label">Penalització — Temps de pantalla (min)</div></div>
+      <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+    </div>
+    <input class="reward-field" type="number" value="0" min="0" disabled>
+    <div class="helper-msg">S'aplica manualment des de "Tasques incompletes" — mai de forma automàtica.</div>
+  </div>
+</section>
+
+<!-- 2.4 selector minuts lliure -->
+<section>
+  <p class="sec-title">2.4 · Selector de minuts de pantalla — qualsevol número</p>
+  <div class="option" style="max-width:340px;">
+    <div class="form-field">
+      <label>Minuts de pantalla</label>
+      <input type="number" value="37" min="0" step="1">
+      <div class="chip-row">
+        <div class="chip">+15</div><div class="chip">+30</div><div class="chip">+60</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3.1 pantalla fill -->
+<section>
+  <p class="sec-title">3.1 · Sessió fill — Pantalla (text ja no se solapa)</p>
+  <div class="options">
+    <div class="option">
+      <p class="option-label">Opció A — Text sota l'anell</p>
+      <div class="phone"><div class="phone-body">
+        <div class="ring-wrap">
+          <div class="ring"><span class="ring-num">124</span></div>
+          <div class="below-text"><b>124 min disponibles</b><span>de 200 min aquest mes</span></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="option">
+      <p class="option-label">Opció B — Bloc d'estadístiques al costat</p>
+      <div class="phone"><div class="phone-body">
+        <div class="stat-block">
+          <div class="ring" style="width:90px;height:90px;"><span class="ring-num" style="font-size:14px;">62%</span></div>
+          <div class="stat-list">
+            <div class="stat-item"><span>Disponible</span><b>124 min</b></div>
+            <div class="stat-item"><span>Usat aquest mes</span><b>76 min</b></div>
+            <div class="stat-item"><span>Total mensual</span><b>200 min</b></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3.2/3.3 avatar -->
+<section>
+  <p class="sec-title">3.2–3.3 · Avatar amb inicial + edició a la barra de nav</p>
+  <div class="options">
+    <div class="option">
+      <p class="option-label">Capçalera + barra de nav</p>
+      <div class="phone">
+        <div class="phone-top">
+          <div class="greet-row">
+            <div class="avatar" style="background:var(--child1);">M</div>
+            <div><b>Hola, Martí!</b><span>Dimarts, 25 d'agost</span></div>
+          </div>
+        </div>
+        <div class="phone-body" style="text-align:center; color:var(--muted); font-size:12px; padding:30px 0;">contingut de la pantalla…</div>
+        <div class="navbar-demo">
+          <div class="nav-item-demo"><svg class="nav-icon-demo" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Inici</div>
+          <div class="nav-item-demo" style="position:relative;">
+            <svg class="nav-icon-demo" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+            <span class="nav-badge-num" style="background:var(--child1);">2</span>
+            Tasques
+          </div>
+          <div class="nav-item-demo"><svg class="nav-icon-demo" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>Objectius</div>
+          <div class="nav-item-demo">
+            <div class="nav-avatar-wrap">
+              <div class="avatar" style="width:26px;height:26px;font-size:11px;background:var(--child1);">M</div>
+              <div class="pencil-badge"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></div>
+            </div>
+            Perfil
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="option">
+      <p class="option-label">Modal de personalització — 1: grid mixt</p>
+      <div class="modal-demo">
+        <b style="font-size:14px;">Personalitza el teu avatar</b>
+        <p style="font-size:11.5px; color:var(--muted); margin:4px 0 12px;">Tria un color i una icona</p>
+        <div class="swatch-grid">
+          <div class="swatch selected" style="background:var(--child1);"></div>
+          <div class="swatch" style="background:var(--child2);"></div>
+          <div class="swatch" style="background:var(--child3);"></div>
+          <div class="swatch" style="background:var(--secondary);"></div>
+          <div class="swatch" style="background:var(--primary);"></div>
+          <div class="swatch" style="background:#5D5580;"></div>
+        </div>
+        <div class="icon-grid">
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2l2.9 6 6.6.6-5 4.4 1.5 6.5L12 16l-5.9 3.5L7.6 13l-5-4.4L9.1 8z"/></svg></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 12l8-8 8 8M8 12v8h8v-8"/></svg></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 018.5-2 4.5 4.5 0 018.5 2c0 5.5-7 10-7 10z"/></svg></div>
+        </div>
+        <div class="btn-row"><button class="ghost-btn">Cancel·la</button><button class="primary-btn">Desar</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="options" style="margin-top:16px;">
+    <div class="option">
+      <p class="option-label">Modal de personalització — 2: pestanyes separades</p>
+      <div class="modal-demo">
+        <div class="tabs-demo">
+          <div class="tab-demo active">Color</div>
+          <div class="tab-demo">Icona</div>
+        </div>
+        <div class="swatch-grid">
+          <div class="swatch selected" style="background:var(--child1);"></div>
+          <div class="swatch" style="background:var(--child2);"></div>
+          <div class="swatch" style="background:var(--child3);"></div>
+          <div class="swatch" style="background:var(--secondary);"></div>
+          <div class="swatch" style="background:var(--primary);"></div>
+          <div class="swatch" style="background:#5D5580;"></div>
+        </div>
+        <p style="font-size:11px; color:var(--muted); margin:8px 0 0;">El blanc i tons molt clars no es poden triar, per mantenir el contrast de la icona.</p>
+        <div class="btn-row"><button class="ghost-btn">Cancel·la</button><button class="primary-btn">Següent</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. resum cards -->
+<section>
+  <p class="sec-title">4.1 · Resum familiar — targetes amb total / gastar / estalvi</p>
+  <div class="options">
+    <div class="option">
+      <p class="option-label">Opció A — Fila de 3 mini-estadístiques</p>
+      <div class="sum-card">
+        <div class="sum-card-head"><div class="avatar" style="background:var(--child1);">M</div><div><b>Martí</b><span>12 anys</span></div></div>
+        <div class="stat-row3">
+          <div><div class="num">34,00 €</div><div class="lab">Total</div></div>
+          <div><div class="num" style="color:var(--secondary);">23,80 €</div><div class="lab">Per gastar</div></div>
+          <div><div class="num" style="color:var(--success);">10,20 €</div><div class="lab">Estalvi</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="option">
+      <p class="option-label">Opció B — Barra segmentada</p>
+      <div class="sum-card">
+        <div class="sum-card-head"><div class="avatar" style="background:var(--child1);">M</div><div><b>Martí</b><span>Total: 34,00 €</span></div></div>
+        <div class="split-bar">
+          <div style="width:60%; background:var(--secondary);"></div>
+          <div style="width:30%; background:var(--success);"></div>
+          <div style="width:10%; background:var(--accent);"></div>
+        </div>
+        <div class="split-legend">
+          <span><i class="dot" style="background:var(--secondary);"></i>Gastar 20,40€</span>
+          <span><i class="dot" style="background:var(--success);"></i>Estalvi 10,20€</span>
+          <span><i class="dot" style="background:var(--accent);"></i>Objectiu 3,40€</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4.2 moviments filter -->
+<section>
+  <p class="sec-title">4.2 · Moviments — filtres en lloc de scroll infinit</p>
+  <div class="option" style="max-width:520px;">
+    <div class="filter-bar">
+      <div class="filter-chip active">Aquesta setmana</div>
+      <div class="filter-chip">Aquest mes</div>
+      <div class="filter-chip">Personalitzat</div>
+    </div>
+    <div class="child-chip-row">
+      <div class="child-chip active" style="background:var(--primary);">Tots</div>
+      <div class="child-chip" style="background:var(--child1);">M</div>
+      <div class="child-chip" style="background:var(--child2);">L</div>
+    </div>
+    <div class="move-row">
+      <div class="move-left"><div class="move-avatar" style="background:var(--child1);">M</div><span>Paga d'agost</span></div>
+      <span class="move-amt pos">+10,00 €</span>
+    </div>
+    <div class="move-row">
+      <div class="move-left"><div class="move-avatar" style="background:var(--child2);">L</div><span>Tasca: fer el llit</span></div>
+      <span class="move-amt pos">+0,50 €</span>
+    </div>
+    <div class="move-row">
+      <div class="move-left"><div class="move-avatar" style="background:var(--child1);">M</div><span>Penalització: no complerta</span></div>
+      <span class="move-amt neg">-1,00 €</span>
+    </div>
+    <span class="see-more">Veure tots els moviments →</span>
+  </div>
+</section>
+
+<!-- 6. donacions -->
+<section>
+  <p class="sec-title">5.1 · Donacions a un objectiu</p>
+  <div class="options">
+    <div class="option">
+      <p class="option-label">Targeta d'objectiu amb botó Donar</p>
+      <div class="goal-card">
+        <div class="goal-top"><b>🎮 Consola nova</b><span style="font-size:11.5px; color:var(--muted);">45,00 € / 80,00 €</span></div>
+        <div class="goal-bar-wrap"><div class="goal-bar" style="width:56%;"></div></div>
+        <div class="goal-nums"><span>56% assolit</span><span>35,00 € restants</span></div>
+        <button class="donate-btn">🎁 Donar a aquest objectiu</button>
+      </div>
+    </div>
+    <div class="option">
+      <p class="option-label">Formulari de donació (modal)</p>
+      <div class="modal-demo">
+        <b style="font-size:14px;">Donar a "Consola nova"</b>
+        <div class="form-field" style="margin-top:12px;">
+          <label>Import (€)</label>
+          <input type="number" value="10" min="1">
+        </div>
+        <div class="form-field">
+          <label>Nom del donant (opcional)</label>
+          <input type="text" placeholder="Ex: Iaia Rosa">
+        </div>
+        <div class="form-field">
+          <label>Missatge (opcional)</label>
+          <input type="text" placeholder="Ex: Per la teva bona nota!">
+        </div>
+        <div class="btn-row"><button class="ghost-btn">Cancel·la</button><button class="primary-btn">Confirmar donació</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. objectiu creation with % -->
+<section>
+  <p class="sec-title">5.2 · Crear objectiu — import + percentatge (repartiment automàtic)</p>
+  <div class="option" style="max-width:420px;">
+    <div class="form-field">
+      <label>Nom de l'objectiu</label>
+      <input type="text" value="Consola nova">
+    </div>
+    <div class="form-field">
+      <label>Import a assolir (€)</label>
+      <input type="number" value="80" min="1">
+    </div>
+    <div class="form-field">
+      <label>Percentatge destinat (punts sobre el "per gastar")</label>
+      <input id="goalPct" type="number" value="10" min="0" max="70" oninput="updateGoalSplit(this.value)">
+    </div>
+    <div class="split-preview">
+      <div class="split-preview-row"><span>Per gastar (abans 70%)</span><b id="gpSpend">60%</b></div>
+      <div class="split-preview-row"><span>Estalvi</span><b>30%</b></div>
+      <div class="split-preview-row"><span>Aquest objectiu</span><b id="gpGoal" style="color:var(--accent);">10%</b></div>
+    </div>
+    <div class="warn-text" id="goalWarn">⚠️ El percentatge supera el marge disponible de "per gastar".</div>
+  </div>
+</section>
+
+<script>
+function toggleField(id, on){
+  document.getElementById(id).disabled = !on;
+  if(!on) document.getElementById(id).value = 0;
+}
+function updateGoalSplit(val){
+  const pct = Math.max(0, Math.min(70, parseFloat(val)||0));
+  const spend = 70 - pct;
+  document.getElementById('gpSpend').textContent = spend + '%';
+  document.getElementById('gpGoal').textContent = pct + '%';
+  document.getElementById('goalWarn').style.display = pct > 70 ? 'block' : 'none';
+}
+</script>
+</body>
+</html>
