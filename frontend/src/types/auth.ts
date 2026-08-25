@@ -8,6 +8,8 @@ export interface AuthResponse {
   childId: string | null
   displayName: string | null
   locale: string
+  avatarColor: string | null
+  avatarIcon: string | null
 }
 
 /** PIN d'entrada — igual per a PARENT i CHILD des del Prompt 6 (família + perfil + PIN). */

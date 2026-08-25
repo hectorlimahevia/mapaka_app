@@ -155,10 +155,18 @@
   },
   "pantalla": {
     "title": "Screen time",
-    "subtitle": "Minutes available today",
+    "subtitle": "Minutes available this month",
     "minutesUnit": "min",
-    "assignedCaption": "of {n} min assigned today",
+    "availableMinutes": "{n} min available",
+    "assignedCaption": "of {n} min this month",
     "nfcHint": "📱 To play with the shared screen, tap the Mapaka object against the family tablet to start a play session — nothing to do here."
+  },
+  "avatar": {
+    "title": "Customize your avatar",
+    "subtitle": "Choose a color and an icon",
+    "colorTab": "Color",
+    "iconTab": "Icon",
+    "colorHint": "White and very light tones can't be chosen, to keep the icon's contrast."
   },
   "resum": {
     "title": "Family summary",
@@ -204,12 +212,12 @@
     "allowanceGeneralPrefix": "Applies the general rule:",
     "allowanceDetail": "({spending}% spend · {savings}% save)",
     "noAllowance": "No allowance set up",
-    "screenTimeLabel": "Screen: {minutes} min/month",
+    "screenTimeLabel": "Screen: {minutes} min/week",
     "noScreenTime": "No screen time set up",
     "customAllowanceLabel": "Custom allowance for this child",
     "monthlyAmountLabel": "Monthly allowance (€)",
     "spendingPercentageLabel": "% to spend (the rest goes to savings)",
-    "screenMinutesLabel": "Screen minutes per month",
+    "screenMinutesLabel": "Screen minutes per week",
     "addChild": "Add child",
     "childNameLabel": "Child's name",
     "birthDateLabel": "Date of birth",

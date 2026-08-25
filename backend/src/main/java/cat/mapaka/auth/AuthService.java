@@ -67,13 +67,13 @@ public class AuthService {
         AuthenticatedUser principal = toAuthenticatedUser(user);
         String accessToken = jwtService.generateAccessToken(principal);
         String refreshToken = jwtService.generateRefreshToken(principal.userId());
-        String displayName = principal.childId() == null ? null
-                : childProfileRepository.findById(principal.childId())
-                        .map(cat.mapaka.child.ChildProfile::getDisplayName)
-                        .orElse(null);
+        cat.mapaka.child.ChildProfile childProfile = principal.childId() == null ? null
+                : childProfileRepository.findById(principal.childId()).orElse(null);
         AuthResponse response = new AuthResponse(
                 accessToken, principal.userId(), principal.familyId(), principal.role(), principal.childId(),
-                displayName, user.getLocale());
+                childProfile != null ? childProfile.getDisplayName() : null, user.getLocale(),
+                childProfile != null ? childProfile.getColorTheme() : null,
+                childProfile != null ? childProfile.getAvatarIcon() : null);
         return new LoginResult(response, refreshToken);
     }
 

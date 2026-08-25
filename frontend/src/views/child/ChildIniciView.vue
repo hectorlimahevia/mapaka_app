@@ -5,6 +5,8 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useCountUp } from '@/composables/useCountUp'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
+import AvatarEditorModal from '@/components/base/AvatarEditorModal.vue'
+import ChildAvatar from '@/components/base/ChildAvatar.vue'
 import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 import type { ChildTaskResponse, MoneyTransactionResponse, WalletResponse } from '@/types/child'
 
@@ -16,6 +18,7 @@ const savingsBalance = ref(0)
 const transactions = ref<MoneyTransactionResponse[]>([])
 const pendingTaskCount = ref(0)
 const loading = ref(true)
+const editingAvatar = ref(false)
 
 onMounted(async () => {
   const childId = auth.childId
@@ -38,9 +41,19 @@ onMounted(async () => {
 <template>
   <div class="inici">
     <div class="inici__head">
-      <h1 class="inici__greeting">{{ t('inici.greeting', { name: auth.displayName }) }}</h1>
+      <div class="inici__identity">
+        <button type="button" class="inici__avatar-btn" @click="editingAvatar = true">
+          <ChildAvatar :color="auth.avatarColor" :icon="auth.avatarIcon" :name="auth.displayName ?? ''" />
+          <span class="inici__pencil-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
+          </span>
+        </button>
+        <h1 class="inici__greeting">{{ t('inici.greeting', { name: auth.displayName }) }}</h1>
+      </div>
       <LanguageSwitcher />
     </div>
+
+    <AvatarEditorModal v-if="editingAvatar" @close="editingAvatar = false" />
     <p class="inici__sub">
       <template v-if="pendingTaskCount > 0">
         {{ t('inici.pendingTasks', { n: pendingTaskCount }, pendingTaskCount) }}
@@ -80,6 +93,40 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.15rem;
+}
+
+.inici__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.inici__avatar-btn {
+  position: relative;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.inici__pencil-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inici__pencil-badge svg {
+  width: 10px;
+  height: 10px;
 }
 
 .inici__greeting {

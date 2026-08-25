@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import type { SavingsGoalResponse } from '@/types/child'
 
@@ -68,7 +69,7 @@ onMounted(load)
 
 <template>
   <div class="objectius">
-    <h1>{{ t('objectius.title') }}</h1>
+    <ChildScreenHeader :title="t('objectius.title')" />
     <p class="objectius__sub">{{ t('objectius.subtitle') }}</p>
 
     <p v-if="!loading && goals.length === 0" class="objectius__empty">{{ t('objectius.empty') }}</p>

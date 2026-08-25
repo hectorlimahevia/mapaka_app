@@ -9,6 +9,7 @@ import BaseCard from '@/components/base/BaseCard.vue'
 import MapakaLogo from '@/components/base/MapakaLogo.vue'
 import BirthDateInput from '@/components/base/BirthDateInput.vue'
 import { apiErrorMessage } from '@/utils/apiError'
+import { CHILD_COLORS } from '@/utils/childColors'
 import { i18n } from '@/i18n'
 import type { FamilyRegisterResponse } from '@/types/auth'
 
@@ -27,7 +28,7 @@ const recoveryCode = ref('')
 const codeCopied = ref(false)
 const savedConfirmed = ref(false)
 
-const COLORS = ['#6C4DFF', '#FF5D8F', '#FFC93C', '#2ECC71', '#3AA0FF']
+const COLORS = CHILD_COLORS
 const child = reactive({ displayName: '', birthDate: '', colorTheme: COLORS[0], pin: '', pinConfirm: '' })
 const addedChildren = ref<string[]>([])
 const savingChild = ref(false)

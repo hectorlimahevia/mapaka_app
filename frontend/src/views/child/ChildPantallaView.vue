@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import type { ScreenTimeStatusResponse } from '@/types/child'
 
 const { t } = useI18n()
@@ -29,36 +30,41 @@ onMounted(async () => {
 
 <template>
   <div class="pantalla">
-    <h1>{{ t('pantalla.title') }}</h1>
+    <ChildScreenHeader :title="t('pantalla.title')" />
     <p class="pantalla__sub">{{ t('pantalla.subtitle') }}</p>
 
     <div class="ring-wrap">
-      <svg width="180" height="180" viewBox="0 0 180 180">
-        <circle cx="90" cy="90" r="78" fill="none" stroke="color-mix(in srgb, var(--primary) 12%, transparent)" stroke-width="14" />
-        <circle
-          cx="90"
-          cy="90"
-          r="78"
-          fill="none"
-          stroke="url(#gradRing)"
-          stroke-width="14"
-          stroke-linecap="round"
-          :stroke-dasharray="CIRCUMFERENCE"
-          :stroke-dashoffset="dashOffset"
-          transform="rotate(-90 90 90)"
-          class="ring-wrap__circle"
-        />
-        <defs>
-          <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="var(--primary)" />
-            <stop offset="100%" stop-color="var(--secondary)" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div class="ring-wrap__value" :class="{ 'ring-wrap__value--negative': status.availableMinutes < 0 }">
-        {{ status.availableMinutes }} {{ t('pantalla.minutesUnit') }}
+      <div class="ring-wrap__circle-box">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="78" fill="none" stroke="color-mix(in srgb, var(--primary) 12%, transparent)" stroke-width="14" />
+          <circle
+            cx="90"
+            cy="90"
+            r="78"
+            fill="none"
+            stroke="url(#gradRing)"
+            stroke-width="14"
+            stroke-linecap="round"
+            :stroke-dasharray="CIRCUMFERENCE"
+            :stroke-dashoffset="dashOffset"
+            transform="rotate(-90 90 90)"
+            class="ring-wrap__circle"
+          />
+          <defs>
+            <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--primary)" />
+              <stop offset="100%" stop-color="var(--secondary)" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="ring-wrap__value" :class="{ 'ring-wrap__value--negative': status.availableMinutes < 0 }">
+          {{ status.availableMinutes }}
+        </div>
       </div>
-      <div class="ring-wrap__caption">{{ t('pantalla.assignedCaption', { n: status.baseMinutes }) }}</div>
+      <div class="ring-wrap__below">
+        <b>{{ t('pantalla.availableMinutes', { n: status.availableMinutes }) }}</b>
+        <span>{{ t('pantalla.assignedCaption', { n: status.baseMinutes }) }}</span>
+      </div>
     </div>
 
     <div class="nfc-hint">
@@ -87,26 +93,45 @@ onMounted(async () => {
   margin: 1rem 0 0.5rem;
 }
 
+.ring-wrap__circle-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .ring-wrap__circle {
   transition: stroke-dashoffset 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .ring-wrap__value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-body);
   font-weight: 900;
   font-size: 1.6rem;
   font-variant-numeric: tabular-nums;
-  margin-top: -6.5rem;
 }
 
 .ring-wrap__value--negative {
   color: var(--error);
 }
 
-.ring-wrap__caption {
+.ring-wrap__below {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.ring-wrap__below span {
   font-size: 0.74rem;
   color: var(--muted);
-  margin-top: 1.9rem;
 }
 
 .nfc-hint {

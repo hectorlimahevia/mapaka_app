@@ -9,6 +9,7 @@ import BaseCard from '@/components/base/BaseCard.vue'
 import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import BirthDateInput from '@/components/base/BirthDateInput.vue'
 import MinutesInput from '@/components/base/MinutesInput.vue'
+import { CHILD_COLORS } from '@/utils/childColors'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
 import type { ChildDetailResponse } from '@/types/parent'
@@ -67,7 +68,7 @@ async function submitAdjustment(childId: string) {
   }
 }
 
-const COLORS = ['#6C4DFF', '#FF5D8F', '#FFC93C', '#2ECC71', '#3AA0FF']
+const COLORS = CHILD_COLORS
 const addingChild = ref(false)
 const savingChild = ref(false)
 const addChildError = ref<string | null>(null)
@@ -125,7 +126,9 @@ function startEdit(child: ChildDetailResponse) {
   form.customAllowance = child.hasCustomAllowance
   form.monthlyAmount = child.allowanceMonthlyAmount ?? 0
   form.spendingPercentage = child.allowanceSpendingPercentage ?? 70
-  form.baseMinutes = child.screenBaseMinutes ?? 0
+  // El pare veu i edita els minuts per setmana; per sota es continua generant un cop al
+  // mes (screen_minutes_monthly), sense cap canvi de calendari (Prompt 15, conversió ×4).
+  form.baseMinutes = Math.round((child.screenBaseMinutes ?? 0) / 4)
 }
 
 function cancelEdit() {
@@ -135,7 +138,7 @@ function cancelEdit() {
 async function save(childId: string) {
   saving.value = true
   try {
-    const calls = [api.patch(`/api/children/${childId}/screen-time-rule`, { baseMinutes: form.baseMinutes })]
+    const calls = [api.patch(`/api/children/${childId}/screen-time-rule`, { baseMinutes: form.baseMinutes * 4 })]
     if (form.customAllowance) {
       calls.push(api.patch(`/api/children/${childId}/allowance-rule`, {
         monthlyAmount: form.monthlyAmount,
@@ -222,7 +225,7 @@ onMounted(load)
           {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
         </span>
         <span v-else>{{ t('fills.noAllowance') }}</span>
-        <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: child.screenBaseMinutes }) }}</span>
+        <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: Math.round(child.screenBaseMinutes / 4) }) }}</span>
         <span v-else>{{ t('fills.noScreenTime') }}</span>
       </div>
 

@@ -21,14 +21,17 @@ import java.util.UUID;
 public class ChildManagementController {
 
     private final FamilyAccessService familyAccessService;
+    private final ChildAccessService childAccessService;
     private final ChildProfileRepository childProfileRepository;
     private final ChildManagementService childManagementService;
 
     public ChildManagementController(
             FamilyAccessService familyAccessService,
+            ChildAccessService childAccessService,
             ChildProfileRepository childProfileRepository,
             ChildManagementService childManagementService) {
         this.familyAccessService = familyAccessService;
+        this.childAccessService = childAccessService;
         this.childProfileRepository = childProfileRepository;
         this.childManagementService = childManagementService;
     }
@@ -68,6 +71,16 @@ public class ChildManagementController {
             @AuthenticationPrincipal AuthenticatedUser user) {
         ChildProfile child = requireChildInFamily(childId, user);
         childManagementService.updateScreenTimeRule(child, request);
+    }
+
+    @PreAuthorize("hasAnyRole('PARENT','CHILD')")
+    @PatchMapping("/api/children/{childId}/avatar")
+    public void updateAvatar(
+            @PathVariable UUID childId,
+            @RequestBody UpdateAvatarRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = childAccessService.requireAccess(childId, user);
+        childManagementService.updateAvatar(child, request);
     }
 
     private ChildProfile requireChildInFamily(UUID childId, AuthenticatedUser user) {

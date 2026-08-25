@@ -155,10 +155,18 @@
   },
   "pantalla": {
     "title": "Temps de pantalla",
-    "subtitle": "Minuts disponibles avui",
+    "subtitle": "Minuts disponibles aquest mes",
     "minutesUnit": "min",
-    "assignedCaption": "de {n} min assignats avui",
+    "availableMinutes": "{n} min disponibles",
+    "assignedCaption": "de {n} min aquest mes",
     "nfcHint": "📱 Per jugar amb la pantalla compartida, toca l'objecte Mapaka contra la tauleta de la família per començar un temps de joc — no cal fer res aquí."
+  },
+  "avatar": {
+    "title": "Personalitza el teu avatar",
+    "subtitle": "Tria un color i una icona",
+    "colorTab": "Color",
+    "iconTab": "Icona",
+    "colorHint": "El blanc i els tons molt clars no es poden triar, per mantenir el contrast de la icona."
   },
   "resum": {
     "title": "Resum familiar",
@@ -204,12 +212,12 @@
     "allowanceGeneralPrefix": "Aplica la regla general:",
     "allowanceDetail": "({spending}% gastar · {savings}% estalviar)",
     "noAllowance": "Sense paga configurada",
-    "screenTimeLabel": "Pantalla: {minutes} min/mes",
+    "screenTimeLabel": "Pantalla: {minutes} min/setmana",
     "noScreenTime": "Sense temps de pantalla configurat",
     "customAllowanceLabel": "Paga personalitzada per a aquest fill",
     "monthlyAmountLabel": "Paga mensual (€)",
     "spendingPercentageLabel": "% per gastar (la resta va a estalvi)",
-    "screenMinutesLabel": "Minuts de pantalla per mes",
+    "screenMinutesLabel": "Minuts de pantalla per setmana",
     "addChild": "Afegir fill",
     "childNameLabel": "Nom del fill",
     "birthDateLabel": "Data de naixement",

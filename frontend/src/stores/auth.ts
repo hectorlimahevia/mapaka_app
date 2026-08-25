@@ -14,6 +14,8 @@ export const useAuthStore = defineStore('auth', () => {
   const role = ref<UserRole | null>(null)
   const childId = ref<string | null>(null)
   const displayName = ref<string | null>(null)
+  const avatarColor = ref<string | null>(null)
+  const avatarIcon = ref<string | null>(null)
   const initialized = ref(false)
 
   const isAuthenticated = computed(() => accessToken.value !== null)
@@ -27,8 +29,17 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = data.role
     childId.value = data.childId
     displayName.value = data.displayName
+    avatarColor.value = data.avatarColor
+    avatarIcon.value = data.avatarIcon
     roleStore.setRole(data.role)
     await setAppLocale(data.locale as AppLocale)
+  }
+
+  /** Després de PATCH /api/children/{id}/avatar, per veure el canvi a l'instant sense
+   *  haver de tornar a fer login (Prompt 15). */
+  function setAvatar(color: string, icon: string | null) {
+    avatarColor.value = color
+    avatarIcon.value = icon
   }
 
   function clearSession() {
@@ -38,6 +49,8 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = null
     childId.value = null
     displayName.value = null
+    avatarColor.value = null
+    avatarIcon.value = null
     roleStore.setRole(null)
   }
 
@@ -86,6 +99,8 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     childId,
     displayName,
+    avatarColor,
+    avatarIcon,
     initialized,
     isAuthenticated,
     login,
@@ -94,5 +109,6 @@ export const useAuthStore = defineStore('auth', () => {
     tryRestoreSession,
     clearSession,
     logout,
+    setAvatar,
   }
 })

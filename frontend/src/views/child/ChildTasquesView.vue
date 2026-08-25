@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
+import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import type { ChildTaskResponse } from '@/types/child'
 import type { ChildSummary } from '@/types/nfc'
@@ -127,7 +128,7 @@ onMounted(() => {
 
 <template>
   <div class="tasques">
-    <h1>{{ t('tasques.title') }}</h1>
+    <ChildScreenHeader :title="t('tasques.title')" />
     <p class="tasques__sub">{{ t('tasques.subtitle') }}</p>
 
     <p v-if="!loading && tasks.length === 0" class="tasques__empty">{{ t('tasques.empty') }}</p>

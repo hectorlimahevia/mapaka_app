@@ -41,6 +41,10 @@ public class ChildProfile {
     @Column(name = "color_theme", length = 20)
     private String colorTheme;
 
+    /** NULL vol dir "mostra la inicial del nom" (Prompt 15) — icona d'un set tancat predefinit. */
+    @Column(name = "avatar_icon", length = 50)
+    private String avatarIcon;
+
     @Column(name = "allowance_enabled", nullable = false)
     private boolean allowanceEnabled;
 

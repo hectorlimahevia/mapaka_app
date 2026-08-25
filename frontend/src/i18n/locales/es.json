@@ -155,10 +155,18 @@
   },
   "pantalla": {
     "title": "Tiempo de pantalla",
-    "subtitle": "Minutos disponibles hoy",
+    "subtitle": "Minutos disponibles este mes",
     "minutesUnit": "min",
-    "assignedCaption": "de {n} min asignados hoy",
+    "availableMinutes": "{n} min disponibles",
+    "assignedCaption": "de {n} min este mes",
     "nfcHint": "📱 Para jugar con la pantalla compartida, toca el objeto Mapaka contra la tableta de la familia para empezar un tiempo de juego — no hace falta hacer nada aquí."
+  },
+  "avatar": {
+    "title": "Personaliza tu avatar",
+    "subtitle": "Elige un color y un icono",
+    "colorTab": "Color",
+    "iconTab": "Icono",
+    "colorHint": "El blanco y los tonos muy claros no se pueden elegir, para mantener el contraste del icono."
   },
   "resum": {
     "title": "Resumen familiar",
@@ -204,12 +212,12 @@
     "allowanceGeneralPrefix": "Aplica la regla general:",
     "allowanceDetail": "({spending}% gastar · {savings}% ahorrar)",
     "noAllowance": "Sin paga configurada",
-    "screenTimeLabel": "Pantalla: {minutes} min/mes",
+    "screenTimeLabel": "Pantalla: {minutes} min/semana",
     "noScreenTime": "Sin tiempo de pantalla configurado",
     "customAllowanceLabel": "Paga personalizada para este hijo",
     "monthlyAmountLabel": "Paga mensual (€)",
     "spendingPercentageLabel": "% para gastar (el resto va a ahorro)",
-    "screenMinutesLabel": "Minutos de pantalla al mes",
+    "screenMinutesLabel": "Minutos de pantalla por semana",
     "addChild": "Añadir hijo",
     "childNameLabel": "Nombre del hijo",
     "birthDateLabel": "Fecha de nacimiento",

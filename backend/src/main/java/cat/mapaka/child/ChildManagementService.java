@@ -101,12 +101,31 @@ public class ChildManagementService {
                 child.getId(),
                 child.getDisplayName(),
                 child.getAvatar(),
+                child.getColorTheme(),
+                child.getAvatarIcon(),
                 child.getAge(),
                 hasCustomAllowance,
                 effectiveRule != null ? effectiveRule.getMonthlyAmount() : null,
                 effectiveRule != null ? effectiveRule.getSpendingPercentage() : null,
                 effectiveRule != null ? effectiveRule.getSavingsPercentage() : null,
                 screenRule != null ? screenRule.getBaseMinutes() : null);
+    }
+
+    /** El propi fill (o un PARENT de la seva família) pot personalitzar color i icona
+     * (Prompt 15) — mai un to blanc ni molt clar, perquè la icona blanca hi tingui contrast. */
+    @Transactional
+    public void updateAvatar(ChildProfile child, UpdateAvatarRequest request) {
+        if (!ChildColorPalette.isValid(request.color())) {
+            throw new DomainException("INVALID_CHILD_COLOR", HttpStatus.BAD_REQUEST,
+                    "El color triat no forma part de la paleta permesa");
+        }
+        if (!AvatarIconSet.isValid(request.icon())) {
+            throw new DomainException("INVALID_AVATAR_ICON", HttpStatus.BAD_REQUEST,
+                    "La icona triada no forma part del conjunt permès");
+        }
+        child.setColorTheme(request.color());
+        child.setAvatarIcon(request.icon());
+        childProfileRepository.save(child);
     }
 
     @Transactional

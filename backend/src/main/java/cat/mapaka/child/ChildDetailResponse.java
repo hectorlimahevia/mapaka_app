@@ -7,6 +7,8 @@ public record ChildDetailResponse(
         UUID childId,
         String displayName,
         String avatar,
+        String avatarColor,
+        String avatarIcon,
         int age,
         boolean hasCustomAllowance,
         BigDecimal allowanceMonthlyAmount,

@@ -400,6 +400,14 @@ A la capçalera del panell PARENT (Resum familiar), afegeix una campaneta amb un
 
 **6.3 Minuts de pantalla setmanals (conversió automàtica, Opció 1 confirmada).** Al formulari de Fills (Prompt 9), el camp canvia d'etiqueta a "Minuts de pantalla per setmana". El valor que veu i edita el pare és `screen_minutes_monthly ÷ 4` (arrodonit); en desar, es torna a multiplicar per 4 i es guarda a `screen_minutes_monthly` de sempre — cap canvi de backend ni de calendari de generació, només la unitat que veu el pare.
 
+**Implementació (Fase C) — decisions no explícites aquí:**
+- `avatarColor`/`avatarIcon` viatgen dins la mateixa resposta de `POST /api/auth/login` i `POST /api/auth/refresh` (camps nous a `AuthResponse`) — evita una crida addicional només per pintar l'avatar just després d'entrar. `useAuthStore.setAvatar(...)` actualitza l'store a l'instant en desar des del modal, sense esperar un refresh de sessió.
+- L'editor d'avatar es va penjar de la mateixa capçalera d'Inici que ja fa servir el selector d'idioma (mai una barra de nav de 5 ítems ni una pantalla "Perfil" nova) — coherent amb el precedent ja establert al Prompt 5: com que CHILD no té pantalla de Configuració pròpia, les icones d'utilitat hi viuen a Inici.
+- Nou component compartit `ChildScreenHeader` (avatar + títol) reutilitzat a Tasques/Objectius/Pantalla per no repetir el mateix marcatge tres vegades.
+- L'arreglo del solapament (6.1) substitueix el hack de `margin-top` negatiu per un contenidor `position: relative` amb el número centrat via `position: absolute` — elimina la causa real del solapament, no només el símptoma en una resolució concreta.
+- La conversió setmanal (6.3) s'aplica també al bloc de només lectura de Fills, no només al formulari d'edició — mostrar "200 min/mes" a un lloc i "50 min/setmana" a un altre hauria estat inconsistent per al mateix ajust.
+- Es va unificar la paleta de colors duplicada (Registre i Fills tenien cadascun el seu propi array de 5 colors, subconjunt incomplet dels 9 que ja validava el backend des de la Fase A) en una única constant `CHILD_COLORS` compartida.
+
 ### 7. Frontend — Resum familiar (amplia el Prompt 9)
 
 **7.1 Targeta híbrida (confirmada).** Substitueix la targeta de cada fill/adult per: una fila de 3 mini-estadístiques (Total, Per gastar, Estalvi) i, a sota, una barra segmentada proporcional amb la mateixa informació més, si en té, el tram de cada objectiu actiu (`allocation_percentage`), amb la seva llegenda de colors a sota.
