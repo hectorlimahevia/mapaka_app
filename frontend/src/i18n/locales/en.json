@@ -168,7 +168,6 @@
     "iconTab": "Icon",
     "colorHint": "White and very light tones can't be chosen, to keep the icon's contrast.",
     "pinSection": "PIN",
-    "languageHint": "Choose the app language.",
     "pinCurrentLabel": "Current PIN",
     "pinNewLabel": "New PIN",
     "pinUpdated": "PIN updated ✓"

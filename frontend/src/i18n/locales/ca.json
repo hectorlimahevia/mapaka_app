@@ -168,7 +168,6 @@
     "iconTab": "Icona",
     "colorHint": "El blanc i els tons molt clars no es poden triar, per mantenir el contrast de la icona.",
     "pinSection": "PIN",
-    "languageHint": "Tria l'idioma de l'aplicació.",
     "pinCurrentLabel": "PIN actual",
     "pinNewLabel": "PIN nou",
     "pinUpdated": "PIN actualitzat ✓"

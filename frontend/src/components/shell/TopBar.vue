@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import NavIcon from './NavIcon.vue'
 import ChildAvatar from '@/components/base/ChildAvatar.vue'
 import ChildAccountModal from '@/components/base/ChildAccountModal.vue'
+import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -30,6 +31,7 @@ async function logout() {
       <span>Mapaka</span>
     </button>
     <div class="top-bar__actions">
+      <LanguageSwitcher v-if="auth.role === 'CHILD'" />
       <button
         v-if="auth.role === 'CHILD'"
         type="button"

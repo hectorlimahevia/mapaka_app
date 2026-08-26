@@ -168,7 +168,6 @@
     "iconTab": "Icono",
     "colorHint": "El blanco y los tonos muy claros no se pueden elegir, para mantener el contraste del icono.",
     "pinSection": "PIN",
-    "languageHint": "Elige el idioma de la aplicación.",
     "pinCurrentLabel": "PIN actual",
     "pinNewLabel": "PIN nuevo",
     "pinUpdated": "PIN actualizado ✓"

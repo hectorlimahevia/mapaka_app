@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 import { apiErrorMessage } from '@/utils/apiError'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ChildAvatar from '@/components/base/ChildAvatar.vue'
-import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 import { AVATAR_ICONS } from '@/utils/avatarIcons'
 import { CHILD_COLORS } from '@/utils/childColors'
 
@@ -14,7 +13,7 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const emit = defineEmits<{ close: [] }>()
 
-const section = ref<'avatar' | 'language' | 'pin'>('avatar')
+const section = ref<'avatar' | 'pin'>('avatar')
 const avatarTab = ref<'color' | 'icon'>('color')
 const selectedColor = ref(auth.avatarColor ?? CHILD_COLORS[0]!)
 const selectedIcon = ref<string | null>(auth.avatarIcon)
@@ -73,7 +72,6 @@ async function savePin() {
 
       <div class="account-modal__sections">
         <button type="button" class="account-modal__section" :class="{ active: section === 'avatar' }" @click="section = 'avatar'">{{ t('avatar.title') }}</button>
-        <button type="button" class="account-modal__section" :class="{ active: section === 'language' }" @click="section = 'language'">{{ t('common.language') }}</button>
         <button type="button" class="account-modal__section" :class="{ active: section === 'pin' }" @click="section = 'pin'">{{ t('avatar.pinSection') }}</button>
       </div>
 
@@ -121,16 +119,6 @@ async function savePin() {
         <div class="account-modal__actions">
           <BaseButton type="button" variant="ghost" :disabled="savingAvatar" @click="emit('close')">{{ t('common.cancel') }}</BaseButton>
           <BaseButton type="button" variant="primary" :disabled="savingAvatar" @click="saveAvatar">{{ savingAvatar ? t('common.saving') : t('common.save') }}</BaseButton>
-        </div>
-      </template>
-
-      <template v-else-if="section === 'language'">
-        <p class="account-modal__subtitle">{{ t('avatar.languageHint') }}</p>
-        <div class="account-modal__language">
-          <LanguageSwitcher />
-        </div>
-        <div class="account-modal__actions">
-          <BaseButton type="button" variant="primary" @click="emit('close')">{{ t('common.close') }}</BaseButton>
         </div>
       </template>
 
@@ -296,17 +284,10 @@ async function savePin() {
   border-color: var(--text);
 }
 
-.account-modal__hint,
-.account-modal__languageHint {
+.account-modal__hint {
   font-size: 0.7rem;
   color: var(--muted);
   margin: 0.5rem 0 0;
-}
-
-.account-modal__language {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 0.5rem;
 }
 
 .account-modal__pin-form {
