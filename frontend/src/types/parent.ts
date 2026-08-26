@@ -1,9 +1,16 @@
 import type { MoneySourceType, TaskType, TransactionType, WalletType } from './child'
 
 export interface GoalAllocationSummary {
+  goalId: string
   name: string
   allocationPercentage: number
   currentAmount: number
+}
+
+export interface CreateDonationRequest {
+  amount: number
+  donorName: string | null
+  message: string | null
 }
 
 export interface ChildFamilySummary {

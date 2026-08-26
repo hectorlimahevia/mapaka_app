@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -8,18 +8,35 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import { apiErrorMessage } from '@/utils/apiError'
-import type { SavingsGoalResponse } from '@/types/child'
+import type { SavingsGoalResponse, WalletResponse } from '@/types/child'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const goals = ref<SavingsGoalResponse[]>([])
+const spendingPercentage = ref(0)
+const allocatedGoalPercentage = ref(0)
 const loading = ref(true)
 const animated = ref(false)
 
+const editingGoalId = ref<string | null>(null)
 const addingGoal = ref(false)
 const savingGoal = ref(false)
 const addGoalError = ref<string | null>(null)
-const newGoal = reactive({ name: '', targetAmount: 0 })
+const newGoal = reactive({ name: '', targetAmount: 0, allocationPercentage: 0 })
+
+// Marge disponible = percentatge de gastar vigent menys el que ja ocupen ELS ALTRES
+// objectius actius (exclou el que s'està editant, perquè pugui conservar el seu propi
+// tram) — mateixa regla que valida el backend (Prompt 15, secció 8.1).
+const othersAllocatedPercentage = computed(() => {
+  if (!editingGoalId.value) return allocatedGoalPercentage.value
+  const editing = goals.value.find((g) => g.id === editingGoalId.value)
+  return allocatedGoalPercentage.value - (editing?.allocationPercentage ?? 0)
+})
+const availableMargin = computed(() => Math.max(0, spendingPercentage.value - othersAllocatedPercentage.value))
+const effectiveSpendAfterGoal = computed(() =>
+  Math.max(0, spendingPercentage.value - othersAllocatedPercentage.value - newGoal.allocationPercentage),
+)
+const percentageExceedsAvailable = computed(() => newGoal.allocationPercentage > availableMargin.value)
 
 function percentOf(goal: SavingsGoalResponse) {
   if (goal.targetAmount <= 0) return 0
@@ -29,17 +46,33 @@ function percentOf(goal: SavingsGoalResponse) {
 async function load() {
   const childId = auth.childId
   if (!childId) return
-  const { data } = await api.get<SavingsGoalResponse[]>(`/api/children/${childId}/savings-goals`)
-  goals.value = data
+  const [goalsRes, walletRes] = await Promise.all([
+    api.get<SavingsGoalResponse[]>(`/api/children/${childId}/savings-goals`),
+    api.get<WalletResponse>(`/api/children/${childId}/wallet`),
+  ])
+  goals.value = goalsRes.data
+  spendingPercentage.value = walletRes.data.spendingPercentage
+  allocatedGoalPercentage.value = walletRes.data.allocatedGoalPercentage
   loading.value = false
   requestAnimationFrame(() => requestAnimationFrame(() => (animated.value = true)))
 }
 
 function startAddGoal() {
+  editingGoalId.value = null
   addingGoal.value = true
   addGoalError.value = null
   newGoal.name = ''
   newGoal.targetAmount = 0
+  newGoal.allocationPercentage = 0
+}
+
+function startEditGoal(goal: SavingsGoalResponse) {
+  editingGoalId.value = goal.id
+  addingGoal.value = true
+  addGoalError.value = null
+  newGoal.name = goal.name
+  newGoal.targetAmount = goal.targetAmount
+  newGoal.allocationPercentage = goal.allocationPercentage
 }
 
 async function submitAddGoal() {
@@ -51,10 +84,16 @@ async function submitAddGoal() {
   }
   savingGoal.value = true
   try {
-    await api.post(`/api/children/${childId}/savings-goals`, {
+    const payload = {
       name: newGoal.name,
       targetAmount: newGoal.targetAmount,
-    })
+      allocationPercentage: newGoal.allocationPercentage,
+    }
+    if (editingGoalId.value) {
+      await api.patch(`/api/children/${childId}/savings-goals/${editingGoalId.value}`, payload)
+    } else {
+      await api.post(`/api/children/${childId}/savings-goals`, payload)
+    }
     addingGoal.value = false
     await load()
   } catch (err) {
@@ -85,6 +124,9 @@ onMounted(load)
       <div class="goal-card__bar-bg">
         <div class="goal-card__bar-fill" :style="{ width: (animated ? percentOf(goal) : 0) + '%' }" />
       </div>
+      <button v-if="goal.status === 'ACTIVE'" type="button" class="goal-card__edit" @click="startEditGoal(goal)">
+        {{ t('objectius.edit') }}
+      </button>
     </div>
 
     <BaseCard v-if="addingGoal" class="goal-form-card">
@@ -97,10 +139,29 @@ onMounted(load)
           {{ t('objectius.targetLabel') }}
           <input v-model.number="newGoal.targetAmount" type="number" min="0.01" step="0.01" required />
         </label>
+        <label>
+          {{ t('objectius.percentageLabel') }}
+          <input v-model.number="newGoal.allocationPercentage" type="number" min="0" max="100" step="1" />
+        </label>
+        <div class="split-preview">
+          <div class="split-preview__row">
+            <span>{{ t('objectius.splitSpendLabel', { n: spendingPercentage }) }}</span>
+            <b>{{ effectiveSpendAfterGoal }}%</b>
+          </div>
+          <div class="split-preview__row">
+            <span>{{ t('objectius.splitSaveLabel') }}</span>
+            <b>{{ 100 - spendingPercentage }}%</b>
+          </div>
+          <div class="split-preview__row">
+            <span>{{ t('objectius.splitGoalLabel') }}</span>
+            <b class="split-preview__goal">{{ newGoal.allocationPercentage }}%</b>
+          </div>
+        </div>
+        <p v-if="percentageExceedsAvailable" class="objectius__warning">{{ t('objectius.percentageWarning') }}</p>
         <p v-if="addGoalError" class="objectius__error">{{ addGoalError }}</p>
         <div class="goal-form__actions">
           <BaseButton type="submit" variant="primary" :disabled="savingGoal">
-            {{ savingGoal ? t('objectius.adding') : t('objectius.addGoal') }}
+            {{ savingGoal ? t('objectius.adding') : editingGoalId ? t('common.save') : t('objectius.addGoal') }}
           </BaseButton>
           <BaseButton type="button" variant="ghost" :disabled="savingGoal" @click="addingGoal = false">{{ t('common.cancel') }}</BaseButton>
         </div>
@@ -166,6 +227,42 @@ onMounted(load)
   background: linear-gradient(90deg, var(--primary), var(--secondary));
   border-radius: 999px;
   transition: width 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.goal-card__edit {
+  border: none;
+  background: none;
+  padding: 0.5rem 0 0;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.split-preview {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.split-preview__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.split-preview__goal {
+  color: var(--primary);
+}
+
+.objectius__warning {
+  color: var(--warning);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin: 0;
 }
 
 .objectius__add {

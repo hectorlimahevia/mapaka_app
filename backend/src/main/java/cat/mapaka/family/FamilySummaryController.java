@@ -7,7 +7,6 @@ import cat.mapaka.money.MoneyTransactionRepository;
 import cat.mapaka.money.WalletType;
 import cat.mapaka.savings.SavingsGoal;
 import cat.mapaka.savings.SavingsGoalRepository;
-import cat.mapaka.savings.SavingsGoalStatus;
 import cat.mapaka.security.AuthenticatedUser;
 import cat.mapaka.task.TaskCompletionRepository;
 import cat.mapaka.task.TaskCompletionStatus;
@@ -86,13 +85,16 @@ public class FamilySummaryController {
         var savings = moneyTransactionRepository.balanceFor(child.getId(), WalletType.SAVINGS);
         long pending = taskCompletionRepository.countByChildIdAndStatus(child.getId(), TaskCompletionStatus.PENDING);
 
-        List<SavingsGoal> activeGoals = savingsGoalRepository.findByChildIdAndStatus(child.getId(), SavingsGoalStatus.ACTIVE);
+        // Tots els objectius, no només els ACTIVE: un cop COMPLETED l'import continua sent
+        // diner real del fill (no torna mai a gastar/estalvi) — excloure'l del "Total" el faria
+        // desaparèixer de la targeta en completar-se un objectiu, cosa que no té sentit.
+        List<SavingsGoal> allGoals = savingsGoalRepository.findByChildId(child.getId());
         BigDecimal goalsTotal = BigDecimal.ZERO;
         List<GoalAllocationSummary> goals = new java.util.ArrayList<>();
-        for (SavingsGoal goal : activeGoals) {
+        for (SavingsGoal goal : allGoals) {
             BigDecimal current = moneyTransactionRepository.goalProgress(goal.getId());
             goalsTotal = goalsTotal.add(current);
-            goals.add(new GoalAllocationSummary(goal.getName(), goal.getAllocationPercentage(), current));
+            goals.add(new GoalAllocationSummary(goal.getId(), goal.getName(), goal.getAllocationPercentage(), current));
         }
         BigDecimal total = spending.add(savings).add(goalsTotal);
 

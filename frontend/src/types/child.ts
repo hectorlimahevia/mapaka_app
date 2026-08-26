@@ -10,11 +10,16 @@ export type MoneySourceType =
   | 'MANUAL_ADJUSTMENT'
   | 'SETTLEMENT'
   | 'REVERSAL'
+  | 'GOAL_CONTRIBUTION'
+  | 'DONATION'
+  | 'TASK_PENALTY'
 
 export interface WalletResponse {
   spendingBalance: number
   savingsBalance: number
   total: number
+  spendingPercentage: number
+  allocatedGoalPercentage: number
 }
 
 export interface MoneyTransactionResponse {
@@ -33,6 +38,7 @@ export interface SavingsGoalResponse {
   id: string
   name: string
   targetAmount: number
+  allocationPercentage: number
   currentAmount: number
   imageUrl: string | null
   status: SavingsGoalStatus

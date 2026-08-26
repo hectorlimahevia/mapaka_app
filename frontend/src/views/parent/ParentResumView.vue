@@ -8,6 +8,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import ChildAvatar from '@/components/base/ChildAvatar.vue'
 import { formatDate } from '@/utils/date'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { AppLocale } from '@/i18n'
 import type { AllowanceStatusResponse, ChildFamilySummary, FamilyMoneyTransactionResponse } from '@/types/parent'
 import type { MonthlyAllowanceResponse } from '@/types/parent'
@@ -115,6 +116,48 @@ function goalColor(index: number) {
   return GOAL_COLORS[index % GOAL_COLORS.length]
 }
 
+const donatingGoal = ref<{ goalId: string; name: string } | null>(null)
+const donationAmount = ref(0)
+const donationDonorName = ref('')
+const donationMessage = ref('')
+const donatingSaving = ref(false)
+const donationError = ref<string | null>(null)
+
+function openDonate(goalId: string, name: string) {
+  donatingGoal.value = { goalId, name }
+  donationAmount.value = 0
+  donationDonorName.value = ''
+  donationMessage.value = ''
+  donationError.value = null
+}
+
+function closeDonate() {
+  donatingGoal.value = null
+}
+
+async function submitDonation() {
+  if (!donatingGoal.value) return
+  donationError.value = null
+  if (donationAmount.value <= 0) {
+    donationError.value = t('resum.donationMissingAmount')
+    return
+  }
+  donatingSaving.value = true
+  try {
+    await api.post(`/api/savings-goals/${donatingGoal.value.goalId}/donations`, {
+      amount: donationAmount.value,
+      donorName: donationDonorName.value || null,
+      message: donationMessage.value || null,
+    })
+    donatingGoal.value = null
+    await Promise.all([loadSummary(), loadMovements()])
+  } catch (err) {
+    donationError.value = apiErrorMessage(err)
+  } finally {
+    donatingSaving.value = false
+  }
+}
+
 const groupedMovements = computed(() => {
   const shown = period.value === 'week' ? movements.value.slice(0, 10) : movements.value
   const groups: { dateKey: string; label: string; items: FamilyMoneyTransactionResponse[] }[] = []
@@ -180,7 +223,7 @@ onMounted(load)
           />
           <span
             v-for="(goal, i) in child.goals"
-            :key="goal.name"
+            :key="goal.goalId"
             class="kid-card__bar-seg"
             :style="{ width: segmentPercent(goal.currentAmount, child.totalBalance) + '%', background: goalColor(i) }"
           />
@@ -193,8 +236,9 @@ onMounted(load)
           <span class="kid-card__legend-item">
             <span class="kid-card__dot" style="background: var(--success)" />{{ t('resum.statSavings') }}
           </span>
-          <span v-for="(goal, i) in child.goals" :key="goal.name" class="kid-card__legend-item">
+          <span v-for="(goal, i) in child.goals" :key="goal.goalId" class="kid-card__legend-item">
             <span class="kid-card__dot" :style="{ background: goalColor(i) }" />{{ goal.name }}
+            <button type="button" class="kid-card__donate-btn" @click="openDonate(goal.goalId, goal.name)">🎁</button>
           </span>
         </div>
 
@@ -292,6 +336,33 @@ onMounted(load)
         </span>
       </div>
     </template>
+
+    <div v-if="donatingGoal" class="donate-overlay" @click.self="closeDonate">
+      <div class="donate-modal">
+        <h2 class="donate-modal__title">{{ t('resum.donateTitle', { name: donatingGoal.name }) }}</h2>
+        <form class="donate-form" @submit.prevent="submitDonation">
+          <label>
+            {{ t('resum.donationAmountLabel') }}
+            <input v-model.number="donationAmount" type="number" min="0.01" step="0.01" required autofocus />
+          </label>
+          <label>
+            {{ t('resum.donorNameLabel') }}
+            <input v-model="donationDonorName" type="text" />
+          </label>
+          <label>
+            {{ t('resum.donationMessageLabel') }}
+            <input v-model="donationMessage" type="text" />
+          </label>
+          <p v-if="donationError" class="donate-form__error">{{ donationError }}</p>
+          <div class="donate-form__actions">
+            <BaseButton type="button" variant="ghost" :disabled="donatingSaving" @click="closeDonate">{{ t('common.cancel') }}</BaseButton>
+            <BaseButton type="submit" variant="primary" :disabled="donatingSaving">
+              {{ donatingSaving ? t('common.saving') : t('resum.donationSubmit') }}
+            </BaseButton>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -406,6 +477,16 @@ onMounted(load)
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.kid-card__donate-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 0.1rem;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .kid-card__sub {
@@ -579,5 +660,67 @@ onMounted(load)
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+.donate-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--text) 55%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 50;
+}
+
+.donate-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 1.75rem 1.5rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.donate-modal__title {
+  font-size: 1.05rem;
+  margin: 0 0 1rem;
+}
+
+.donate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.donate-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.donate-form input {
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+.donate-form__error {
+  color: var(--error);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.donate-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.donate-form__actions :deep(.base-button) {
+  flex: 1;
 }
 </style>

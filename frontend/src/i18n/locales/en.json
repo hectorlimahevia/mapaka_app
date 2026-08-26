@@ -148,10 +148,17 @@
     "subtitle": "What you save moves your goal forward",
     "empty": "You don't have any savings goals yet.",
     "addGoal": "New goal",
+    "editGoal": "Edit goal",
+    "edit": "Edit",
     "adding": "Adding…",
     "nameLabel": "Goal name",
     "targetLabel": "Target amount (€)",
-    "missingFields": "A name and an amount greater than 0 are required."
+    "percentageLabel": "Percentage allocated (points from \"spending\")",
+    "missingFields": "A name and an amount greater than 0 are required.",
+    "splitSpendLabel": "Spending (was {n}%)",
+    "splitSaveLabel": "Savings",
+    "splitGoalLabel": "This goal",
+    "percentageWarning": "⚠️ The percentage exceeds the available margin of \"spending\"."
   },
   "pantalla": {
     "title": "Screen time",
@@ -207,7 +214,14 @@
     "filterAll": "All",
     "allMovementsTitle": "All movements",
     "prevPage": "← Previous",
-    "nextPage": "Next →"
+    "nextPage": "Next →",
+    "donateButton": "🎁 Donate",
+    "donateTitle": "Donate to \"{name}\"",
+    "donationAmountLabel": "Amount (€)",
+    "donorNameLabel": "Donor name (optional)",
+    "donationMessageLabel": "Message (optional)",
+    "donationSubmit": "Confirm donation",
+    "donationMissingAmount": "An amount greater than 0 is required."
   },
   "aprovacions": {
     "title": "Pending approvals",

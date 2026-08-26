@@ -148,10 +148,17 @@
     "subtitle": "El que estalvies avança el teu objectiu",
     "empty": "Encara no tens cap objectiu d'estalvi.",
     "addGoal": "Nou objectiu",
+    "editGoal": "Edita l'objectiu",
+    "edit": "Edita",
     "adding": "Afegint…",
     "nameLabel": "Nom de l'objectiu",
     "targetLabel": "Import a assolir (€)",
-    "missingFields": "Cal un nom i un import superior a 0."
+    "percentageLabel": "Percentatge destinat (punts sobre el \"per gastar\")",
+    "missingFields": "Cal un nom i un import superior a 0.",
+    "splitSpendLabel": "Per gastar (abans {n}%)",
+    "splitSaveLabel": "Estalvi",
+    "splitGoalLabel": "Aquest objectiu",
+    "percentageWarning": "⚠️ El percentatge supera el marge disponible de \"per gastar\"."
   },
   "pantalla": {
     "title": "Temps de pantalla",
@@ -207,7 +214,14 @@
     "filterAll": "Tots",
     "allMovementsTitle": "Tots els moviments",
     "prevPage": "← Anterior",
-    "nextPage": "Següent →"
+    "nextPage": "Següent →",
+    "donateButton": "🎁 Donar",
+    "donateTitle": "Donar a \"{name}\"",
+    "donationAmountLabel": "Import (€)",
+    "donorNameLabel": "Nom del donant (opcional)",
+    "donationMessageLabel": "Missatge (opcional)",
+    "donationSubmit": "Confirmar donació",
+    "donationMissingAmount": "Cal un import superior a 0."
   },
   "aprovacions": {
     "title": "Aprovacions pendents",
