@@ -10,6 +10,10 @@ public interface MonthlyAllowanceRepository extends JpaRepository<MonthlyAllowan
 
     Optional<MonthlyAllowance> findByChildIdAndYearAndMonth(UUID childId, int year, int month);
 
+    /** Camp per a la campaneta d'alertes de Resum familiar (Prompt 15, checklist 18):
+     * "ja generat aquest mes" es dedueix directament d'aquí, sense cap taula/camp nou. */
+    boolean existsByChild_User_Family_IdAndYearAndMonth(UUID familyId, int year, int month);
+
     /** Evita LazyInitializationException quan cal comparar allowance.child.user.family.id
      * fora de transacció (controller). */
     @Query("SELECT a FROM MonthlyAllowance a JOIN FETCH a.child c JOIN FETCH c.user u JOIN FETCH u.family WHERE a.id = :id")

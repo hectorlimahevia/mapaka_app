@@ -3,6 +3,7 @@ import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useApprovalsStore } from '@/stores/approvals'
+import { useChildTasksStore } from '@/stores/childTasks'
 import { useViewport } from '@/composables/useViewport'
 import BottomNav from './BottomNav.vue'
 import SidebarNav from './SidebarNav.vue'
@@ -11,11 +12,18 @@ import TopBar from './TopBar.vue'
 const { t } = useI18n()
 const auth = useAuthStore()
 const approvals = useApprovalsStore()
+const childTasks = useChildTasksStore()
 const { isMobile } = useViewport()
 
 const childItems = computed(() => [
   { name: 'child-inici', label: t('nav.inici'), icon: 'home' as const },
-  { name: 'child-tasques', label: t('nav.tasques'), icon: 'tasks' as const },
+  {
+    name: 'child-tasques',
+    label: t('nav.tasques'),
+    icon: 'tasks' as const,
+    badge: childTasks.availableCount,
+    badgeColor: auth.avatarColor,
+  },
   { name: 'child-objectius', label: t('nav.objectius'), icon: 'target' as const },
   { name: 'child-pantalla', label: t('nav.pantalla'), icon: 'device' as const },
 ])
@@ -42,8 +50,18 @@ const parentSidebarItems = computed(() => [
 const showSidebar = computed(() => auth.role === 'PARENT' && !isMobile.value)
 const bottomNavItems = computed(() => (auth.role === 'PARENT' ? parentItems.value : childItems.value))
 
-watch(() => auth.role, (role) => { if (role === 'PARENT') approvals.refresh() }, { immediate: true })
-onMounted(() => { if (auth.role === 'PARENT') approvals.refresh() })
+watch(
+  () => auth.role,
+  (role) => {
+    if (role === 'PARENT') approvals.refresh()
+    if (role === 'CHILD') childTasks.refresh()
+  },
+  { immediate: true },
+)
+onMounted(() => {
+  if (auth.role === 'PARENT') approvals.refresh()
+  if (auth.role === 'CHILD') childTasks.refresh()
+})
 </script>
 
 <template>

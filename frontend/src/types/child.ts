@@ -1,4 +1,4 @@
-export type WalletType = 'SPENDING' | 'SAVINGS'
+export type WalletType = 'SPENDING' | 'SAVINGS' | 'GOAL'
 export type TransactionType = 'CREDIT' | 'DEBIT'
 export type MoneySourceType =
   | 'MONTHLY_ALLOWANCE'

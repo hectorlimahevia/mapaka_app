@@ -1,6 +1,7 @@
 package cat.mapaka.money;
 
 import cat.mapaka.common.TransactionType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -18,6 +19,20 @@ public interface MoneyTransactionRepository extends JpaRepository<MoneyTransacti
         WHERE t.child.user.family.id = :familyId ORDER BY t.createdAt DESC
         """)
     List<MoneyTransaction> findByFamilyIdOrderByCreatedAtDesc(UUID familyId);
+
+    /** `childId` opcional; `from`/`to` sempre concrets — el controller hi substitueix
+     * EPOCH/un futur llunyà quan el filtre de període no s'aplica, per evitar
+     * l'ambigüitat de tipus que dona Postgres amb un `Instant` nul dins d'un "IS NULL
+     * OR" (Prompt 15, Resum familiar 7.2). El `Pageable` és qui limita l'historial
+     * complet quan es demana des de la pantalla paginada. */
+    @Query("""
+        SELECT t FROM MoneyTransaction t JOIN FETCH t.child
+        WHERE t.child.user.family.id = :familyId
+        AND (:childId IS NULL OR t.child.id = :childId)
+        AND t.createdAt >= :from AND t.createdAt < :to
+        ORDER BY t.createdAt DESC
+        """)
+    List<MoneyTransaction> findByFamilyIdFiltered(UUID familyId, UUID childId, Instant from, Instant to, Pageable pageable);
 
     @Query("""
         SELECT COALESCE(SUM(CASE WHEN t.transactionType = :credit THEN t.amount ELSE -t.amount END), 0)

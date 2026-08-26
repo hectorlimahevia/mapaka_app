@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useChildTasksStore } from '@/stores/childTasks'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
@@ -11,6 +12,7 @@ import type { ChildSummary } from '@/types/nfc'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const childTasks = useChildTasksStore()
 const tasks = ref<ChildTaskResponse[]>([])
 const siblings = ref<ChildSummary[]>([])
 const loading = ref(true)
@@ -77,6 +79,7 @@ async function markDoneDirect(task: ChildTaskResponse, collaboratorChildIds: str
   try {
     await api.post(`/api/tasks/${task.id}/complete`, { collaboratorChildIds })
     await loadTasks()
+    await childTasks.refresh()
   } finally {
     completingId.value = null
   }
@@ -104,6 +107,7 @@ async function collabConfirm() {
     await api.post(`/api/tasks/${collabTask.value.id}/complete`, { collaboratorChildIds: collabSelected.value })
     collabDone.value = true
     await loadTasks()
+    await childTasks.refresh()
   } finally {
     submittingCollab.value = false
   }

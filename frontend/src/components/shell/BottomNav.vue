@@ -7,7 +7,7 @@ import BadgeCounter from '@/components/base/BadgeCounter.vue'
 type IconName = 'home' | 'tasks' | 'target' | 'device' | 'family' | 'check' | 'child' | 'settings'
 
 const props = defineProps<{
-  items: { name: string; label: string; icon: IconName; badge?: number }[]
+  items: { name: string; label: string; icon: IconName; badge?: number; badgeColor?: string | null }[]
 }>()
 
 const route = useRoute()
@@ -29,7 +29,7 @@ const activeIndex = computed(() => {
     >
       <span class="bottom-nav__icon">
         <NavIcon :name="item.icon" />
-        <BadgeCounter v-if="item.badge" :count="item.badge" class="bottom-nav__badge" />
+        <BadgeCounter v-if="item.badge" :count="item.badge" :color="item.badgeColor" class="bottom-nav__badge" />
       </span>
       <span>{{ item.label }}</span>
     </RouterLink>

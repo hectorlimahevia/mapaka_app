@@ -193,7 +193,21 @@
     "extraEarnings": "Ganado con tareas",
     "bonuses": "Bonificaciones",
     "penalties": "Penalizaciones",
-    "savingsPortion": "Parte de ahorro"
+    "savingsPortion": "Parte de ahorro",
+    "statTotal": "Total",
+    "statSpending": "Para gastar",
+    "statSavings": "Ahorro",
+    "allowanceReminder": "🔔 Recuerda generar la paga de este mes",
+    "viewAllMovements": "Ver todos los movimientos →",
+    "periodWeek": "Esta semana",
+    "periodMonth": "Este mes",
+    "periodCustom": "Personalizado",
+    "customFromLabel": "Desde",
+    "customToLabel": "Hasta",
+    "filterAll": "Todos",
+    "allMovementsTitle": "Todos los movimientos",
+    "prevPage": "← Anterior",
+    "nextPage": "Siguiente →"
   },
   "aprovacions": {
     "title": "Aprobaciones pendientes",

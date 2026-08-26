@@ -193,7 +193,21 @@
     "extraEarnings": "Earned from tasks",
     "bonuses": "Bonuses",
     "penalties": "Penalties",
-    "savingsPortion": "Savings portion"
+    "savingsPortion": "Savings portion",
+    "statTotal": "Total",
+    "statSpending": "Spending",
+    "statSavings": "Savings",
+    "allowanceReminder": "🔔 Remember to generate this month's allowance",
+    "viewAllMovements": "View all movements →",
+    "periodWeek": "This week",
+    "periodMonth": "This month",
+    "periodCustom": "Custom",
+    "customFromLabel": "From",
+    "customToLabel": "To",
+    "filterAll": "All",
+    "allMovementsTitle": "All movements",
+    "prevPage": "← Previous",
+    "nextPage": "Next →"
   },
   "aprovacions": {
     "title": "Pending approvals",

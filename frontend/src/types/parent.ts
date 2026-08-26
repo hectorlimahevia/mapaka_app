@@ -1,16 +1,27 @@
 import type { MoneySourceType, TaskType, TransactionType, WalletType } from './child'
 
+export interface GoalAllocationSummary {
+  name: string
+  allocationPercentage: number
+  currentAmount: number
+}
+
 export interface ChildFamilySummary {
   childId: string
   displayName: string
   avatar: string | null
+  avatarColor: string | null
+  avatarIcon: string | null
   spendingBalance: number
   savingsBalance: number
+  totalBalance: number
   pendingApprovalsCount: number
+  goals: GoalAllocationSummary[]
 }
 
 export interface FamilyMoneyTransactionResponse {
   id: string
+  childId: string
   childDisplayName: string
   walletType: WalletType
   transactionType: TransactionType
@@ -48,6 +59,8 @@ export interface ChildDetailResponse {
   childId: string
   displayName: string
   avatar: string | null
+  avatarColor: string | null
+  avatarIcon: string | null
   age: number
   hasCustomAllowance: boolean
   allowanceMonthlyAmount: number | null
@@ -123,6 +136,10 @@ export interface GeneralAllowanceRuleRequest {
 }
 
 export type AllowanceStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
+
+export interface AllowanceStatusResponse {
+  generatedThisMonth: boolean
+}
 
 export interface MonthlyAllowanceResponse {
   id: string

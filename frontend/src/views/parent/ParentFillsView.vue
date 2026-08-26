@@ -8,6 +8,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import BirthDateInput from '@/components/base/BirthDateInput.vue'
+import ChildAvatar from '@/components/base/ChildAvatar.vue'
 import MinutesInput from '@/components/base/MinutesInput.vue'
 import { CHILD_COLORS } from '@/utils/childColors'
 import { apiErrorMessage } from '@/utils/apiError'
@@ -206,11 +207,19 @@ onMounted(load)
     </BaseCard>
     <BaseButton v-else variant="accent" class="fills__add" @click="startAddChild">+ {{ t('fills.addChild') }}</BaseButton>
 
-    <BaseCard v-for="child in children" :key="child.childId" class="child-card">
+    <BaseCard
+      v-for="child in children"
+      :key="child.childId"
+      class="child-card"
+      :style="{ '--child-color': child.avatarColor ?? 'var(--primary)' }"
+    >
       <div class="child-card__head">
-        <div>
-          <div class="child-card__name">{{ child.displayName }}</div>
-          <div class="child-card__age">{{ t('fills.age', { n: child.age }) }}</div>
+        <div class="child-card__identity">
+          <ChildAvatar :color="child.avatarColor" :icon="child.avatarIcon" :name="child.displayName" size="small" />
+          <div>
+            <div class="child-card__name">{{ child.displayName }}</div>
+            <div class="child-card__age">{{ t('fills.age', { n: child.age }) }}</div>
+          </div>
         </div>
         <div class="child-card__head-actions">
           <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
@@ -349,12 +358,19 @@ onMounted(load)
 
 .child-card {
   margin-bottom: 0.9rem;
+  border-left: 4px solid var(--child-color, var(--primary));
 }
 
 .child-card__head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.child-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .child-card__head-actions {

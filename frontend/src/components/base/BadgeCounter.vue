@@ -1,9 +1,16 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{ count: number }>(), { count: 0 })
+const props = withDefaults(defineProps<{ count: number; color?: string | null }>(), { count: 0, color: null })
 </script>
 
 <template>
-  <span v-if="props.count > 0" class="badge-counter">{{ props.count > 9 ? '9+' : props.count }}</span>
+  <span
+    v-if="props.count > 0"
+    class="badge-counter"
+    :class="{ 'badge-counter--custom': props.color }"
+    :style="props.color ? { background: props.color } : undefined"
+  >
+    {{ props.count > 9 ? '9+' : props.count }}
+  </span>
 </template>
 
 <style scoped>
@@ -22,5 +29,9 @@ const props = withDefaults(defineProps<{ count: number }>(), { count: 0 })
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+.badge-counter--custom {
+  border: 2px solid white;
 }
 </style>

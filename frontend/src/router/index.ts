@@ -61,6 +61,7 @@ const router = createRouter({
         { path: 'configuracio', name: 'parent-configuracio', component: () => import('@/views/parent/ParentConfiguracioView.vue') },
         { path: 'etiquetes-nfc', name: 'parent-nfc-tags', component: () => import('@/views/parent/ParentNfcTagsView.vue') },
         { path: 'resums-mensuals', name: 'parent-settlements', component: () => import('@/views/parent/ParentSettlementsView.vue') },
+        { path: 'moviments', name: 'parent-movements', component: () => import('@/views/parent/ParentMovementsView.vue') },
       ],
     },
     { path: '/', redirect: { name: 'login' } },

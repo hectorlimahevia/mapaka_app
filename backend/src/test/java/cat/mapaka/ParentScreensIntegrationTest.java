@@ -184,7 +184,8 @@ class ParentScreensIntegrationTest {
                 .rewardScreenMinutes(0).build());
         approvalController.reject(second.getId(), parent);
 
-        List<FamilyMoneyTransactionResponse> movements = familySummaryController.movements(f.family.getId(), parent);
+        List<FamilyMoneyTransactionResponse> movements =
+                familySummaryController.movements(f.family.getId(), null, null, null, 0, 50, parent);
         assertThat(movements).hasSize(2); // spending + savings del primer, cap del rebutjat
     }
 

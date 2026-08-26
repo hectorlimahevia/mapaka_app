@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record FamilyMoneyTransactionResponse(
         UUID id,
+        UUID childId,
         String childDisplayName,
         WalletType walletType,
         TransactionType transactionType,
@@ -18,7 +19,7 @@ public record FamilyMoneyTransactionResponse(
 
     public static FamilyMoneyTransactionResponse from(MoneyTransaction t) {
         return new FamilyMoneyTransactionResponse(
-                t.getId(), t.getChild().getDisplayName(), t.getWalletType(), t.getTransactionType(),
+                t.getId(), t.getChild().getId(), t.getChild().getDisplayName(), t.getWalletType(), t.getTransactionType(),
                 t.getAmount(), t.getDescription(), t.getSourceType(), t.getCreatedAt());
     }
 }

@@ -193,7 +193,21 @@
     "extraEarnings": "Guanyat amb tasques",
     "bonuses": "Bonificacions",
     "penalties": "Penalitzacions",
-    "savingsPortion": "Part d'estalvi"
+    "savingsPortion": "Part d'estalvi",
+    "statTotal": "Total",
+    "statSpending": "Per gastar",
+    "statSavings": "Estalvi",
+    "allowanceReminder": "🔔 Recorda generar la paga d'aquest mes",
+    "viewAllMovements": "Veure tots els moviments →",
+    "periodWeek": "Aquesta setmana",
+    "periodMonth": "Aquest mes",
+    "periodCustom": "Personalitzat",
+    "customFromLabel": "Des de",
+    "customToLabel": "Fins a",
+    "filterAll": "Tots",
+    "allMovementsTitle": "Tots els moviments",
+    "prevPage": "← Anterior",
+    "nextPage": "Següent →"
   },
   "aprovacions": {
     "title": "Aprovacions pendents",

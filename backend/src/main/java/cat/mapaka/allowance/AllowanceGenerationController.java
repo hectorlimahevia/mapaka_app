@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,19 @@ public class AllowanceGenerationController {
             AllowanceGenerationService allowanceGenerationService, MonthlyAllowanceRepository monthlyAllowanceRepository) {
         this.allowanceGenerationService = allowanceGenerationService;
         this.monthlyAllowanceRepository = monthlyAllowanceRepository;
+    }
+
+    /** Alimenta la campaneta d'alertes de Resum familiar (Prompt 15, checklist 18) —
+     * cap taula/camp nou, es dedueix de si ja existeix cap MonthlyAllowance aquest mes. */
+    @GetMapping("/api/families/{id}/allowance-status")
+    public AllowanceStatusResponse allowanceStatus(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
+        if (!id.equals(user.familyId())) {
+            throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "No pots administrar una altra família");
+        }
+        LocalDate today = LocalDate.now();
+        boolean generatedThisMonth = monthlyAllowanceRepository
+                .existsByChild_User_Family_IdAndYearAndMonth(id, today.getYear(), today.getMonthValue());
+        return new AllowanceStatusResponse(generatedThisMonth);
     }
 
     @PostMapping("/api/allowances/generate")
