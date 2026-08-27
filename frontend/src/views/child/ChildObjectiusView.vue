@@ -13,6 +13,7 @@ import type { SavingsGoalResponse, WalletResponse } from '@/types/child'
 const { t } = useI18n()
 const auth = useAuthStore()
 const goals = ref<SavingsGoalResponse[]>([])
+const spendingBalance = ref(0)
 const spendingPercentage = ref(0)
 const allocatedGoalPercentage = ref(0)
 const loading = ref(true)
@@ -23,6 +24,11 @@ const addingGoal = ref(false)
 const savingGoal = ref(false)
 const addGoalError = ref<string | null>(null)
 const newGoal = reactive({ name: '', targetAmount: 0, allocationPercentage: 0 })
+
+const contributingGoalId = ref<string | null>(null)
+const contributionAmount = ref(0)
+const contributionError = ref<string | null>(null)
+const savingContribution = ref(false)
 
 // Marge disponible = percentatge de gastar vigent menys el que ja ocupen ELS ALTRES
 // objectius actius (exclou el que s'està editant, perquè pugui conservar el seu propi
@@ -51,10 +57,42 @@ async function load() {
     api.get<WalletResponse>(`/api/children/${childId}/wallet`),
   ])
   goals.value = goalsRes.data
+  spendingBalance.value = walletRes.data.spendingBalance
   spendingPercentage.value = walletRes.data.spendingPercentage
   allocatedGoalPercentage.value = walletRes.data.allocatedGoalPercentage
   loading.value = false
   requestAnimationFrame(() => requestAnimationFrame(() => (animated.value = true)))
+}
+
+function startContribute(goal: SavingsGoalResponse) {
+  contributingGoalId.value = goal.id
+  contributionAmount.value = 0
+  contributionError.value = null
+}
+
+async function submitContribution(goalId: string) {
+  contributionError.value = null
+  const childId = auth.childId
+  if (!childId || contributionAmount.value <= 0) {
+    contributionError.value = t('objectius.missingContributionAmount')
+    return
+  }
+  if (contributionAmount.value > spendingBalance.value) {
+    contributionError.value = t('errors.CONTRIBUTION_EXCEEDS_SPENDING_BALANCE')
+    return
+  }
+  savingContribution.value = true
+  try {
+    await api.post(`/api/children/${childId}/savings-goals/${goalId}/contributions`, {
+      amount: contributionAmount.value,
+    })
+    contributingGoalId.value = null
+    await load()
+  } catch (err) {
+    contributionError.value = apiErrorMessage(err)
+  } finally {
+    savingContribution.value = false
+  }
 }
 
 function startAddGoal() {
@@ -124,9 +162,33 @@ onMounted(load)
       <div class="goal-card__bar-bg">
         <div class="goal-card__bar-fill" :style="{ width: (animated ? percentOf(goal) : 0) + '%' }" />
       </div>
-      <button v-if="goal.status === 'ACTIVE'" type="button" class="goal-card__edit" @click="startEditGoal(goal)">
-        {{ t('objectius.edit') }}
-      </button>
+      <div v-if="goal.status === 'ACTIVE'" class="goal-card__actions">
+        <button type="button" class="goal-card__edit" @click="startEditGoal(goal)">{{ t('objectius.edit') }}</button>
+        <button type="button" class="goal-card__contribute" @click="startContribute(goal)">{{ t('objectius.contributeButton') }}</button>
+      </div>
+
+      <form
+        v-if="contributingGoalId === goal.id"
+        class="contribute-form"
+        @submit.prevent="submitContribution(goal.id)"
+      >
+        <label>
+          {{ t('objectius.contributeAmountLabel') }}
+          <input v-model.number="contributionAmount" type="number" min="0.01" step="0.01" required autofocus />
+        </label>
+        <p class="contribute-form__hint">
+          {{ t('objectius.contributeAvailable', { n: spendingBalance }) }}
+        </p>
+        <p v-if="contributionError" class="objectius__error">{{ contributionError }}</p>
+        <div class="goal-form__actions">
+          <BaseButton type="submit" variant="primary" :disabled="savingContribution">
+            {{ savingContribution ? t('common.saving') : t('objectius.contributeSubmit') }}
+          </BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="savingContribution" @click="contributingGoalId = null">
+            {{ t('common.cancel') }}
+          </BaseButton>
+        </div>
+      </form>
     </div>
 
     <BaseCard v-if="addingGoal" class="goal-form-card">
@@ -229,14 +291,51 @@ onMounted(load)
   transition: width 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.goal-card__edit {
+.goal-card__actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.goal-card__edit,
+.goal-card__contribute {
   border: none;
   background: none;
-  padding: 0.5rem 0 0;
+  padding: 0;
   color: var(--primary);
   font-weight: 700;
   font-size: 0.76rem;
   cursor: pointer;
+}
+
+.contribute-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.contribute-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.contribute-form input {
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+.contribute-form__hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin: 0;
 }
 
 .split-preview {

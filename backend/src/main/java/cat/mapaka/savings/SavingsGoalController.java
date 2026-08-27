@@ -49,4 +49,15 @@ public class SavingsGoalController {
         SavingsGoal goal = savingsGoalService.requireOwnedBy(goalId, childId);
         return savingsGoalService.update(goal, request);
     }
+
+    /** El propi fill mou un import puntual del seu "per gastar" cap a un objectiu (ajust
+     * posterior) — mai pot superar el que té disponible en aquell moment. */
+    @PostMapping("/api/children/{childId}/savings-goals/{goalId}/contributions")
+    public SavingsGoalResponse contribute(
+            @PathVariable UUID childId,
+            @PathVariable UUID goalId,
+            @Valid @RequestBody ContributeToGoalRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return savingsGoalService.contribute(childId, goalId, request.amount(), user);
+    }
 }

@@ -121,6 +121,41 @@ public class SavingsGoalService {
         return toResponse(goal);
     }
 
+    /** El propi fill mou un import puntual del seu "per gastar" cap a un objectiu (ajust
+     * posterior) — a diferència d'una donació, aquí SÍ que surt del seu propi saldo, per
+     * això mai pot superar el que té disponible a la wallet SPENDING en aquell moment.
+     * Es guarden dues files (DEBIT SPENDING + CREDIT GOAL) lligades pel mateix
+     * `transferReferenceId`, mai passa per `MoneySplitCalculator` perquè no és un
+     * repartiment nou, és un moviment entre dues wallets que el fill ja té. */
+    @Transactional
+    public SavingsGoalResponse contribute(UUID childId, UUID goalId, BigDecimal amount, AuthenticatedUser requester) {
+        ChildProfile child = childAccessService.requireAccess(childId, requester);
+        SavingsGoal goal = requireOwnedBy(goalId, childId);
+
+        BigDecimal spendingBalance = moneyTransactionRepository.balanceFor(childId, WalletType.SPENDING);
+        if (amount.compareTo(spendingBalance) > 0) {
+            throw new DomainException("CONTRIBUTION_EXCEEDS_SPENDING_BALANCE", HttpStatus.BAD_REQUEST,
+                    "L'import supera el que tens disponible per gastar");
+        }
+
+        User actor = userRepository.getReferenceById(requester.userId());
+        UUID transferReferenceId = UUID.randomUUID();
+
+        moneyTransactionRepository.save(MoneyTransaction.builder()
+                .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.DEBIT)
+                .amount(amount).description(goal.getName())
+                .sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(goal.getId())
+                .transferReferenceId(transferReferenceId).createdBy(actor).build());
+        moneyTransactionRepository.save(MoneyTransaction.builder()
+                .child(child).walletType(WalletType.GOAL).transactionType(TransactionType.CREDIT)
+                .amount(amount).description(goal.getName())
+                .sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(goal.getId())
+                .transferReferenceId(transferReferenceId).createdBy(actor).build());
+
+        checkCompletion(goal);
+        return toResponse(goal);
+    }
+
     private void checkCompletion(SavingsGoal goal) {
         if (goal.getStatus() != SavingsGoalStatus.ACTIVE) {
             return;
