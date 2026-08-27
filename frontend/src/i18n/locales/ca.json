@@ -174,7 +174,13 @@
     "colorTab": "Color",
     "iconTab": "Icona",
     "colorHint": "El blanc i els tons molt clars no es poden triar, per mantenir el contrast de la icona.",
+    "noIconLabel": "Inicial",
+    "categoryAnimals": "Animals",
+    "categoryEsports": "Esports",
+    "categoryVehicles": "Vehicles",
+    "categoryFantasia": "Fantasia",
     "pinSection": "PIN",
+    "pinModifyTitle": "Modifica el teu PIN",
     "pinCurrentLabel": "PIN actual",
     "pinNewLabel": "PIN nou",
     "pinUpdated": "PIN actualitzat ✓"

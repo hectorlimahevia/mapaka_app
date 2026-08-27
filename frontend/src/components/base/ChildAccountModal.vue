@@ -1,23 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { apiErrorMessage } from '@/utils/apiError'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ChildAvatar from '@/components/base/ChildAvatar.vue'
-import { AVATAR_ICONS } from '@/utils/avatarIcons'
+import { AVATAR_ICON_CATEGORIES, AVATAR_ICONS_BY_CATEGORY, type AvatarIconCategory } from '@/utils/avatarIcons'
 import { CHILD_COLORS } from '@/utils/childColors'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const emit = defineEmits<{ close: [] }>()
 
+const CATEGORY_LABEL_KEYS: Record<AvatarIconCategory, string> = {
+  animals: 'avatar.categoryAnimals',
+  esports: 'avatar.categoryEsports',
+  vehicles: 'avatar.categoryVehicles',
+  fantasia: 'avatar.categoryFantasia',
+}
+
 const section = ref<'avatar' | 'pin'>('avatar')
 const avatarTab = ref<'color' | 'icon'>('color')
+const selectedCategory = ref<AvatarIconCategory>('animals')
 const selectedColor = ref(auth.avatarColor ?? CHILD_COLORS[0]!)
 const selectedIcon = ref<string | null>(auth.avatarIcon)
 const savingAvatar = ref(false)
+
+const currentCategoryIcons = computed(() => AVATAR_ICONS_BY_CATEGORY[selectedCategory.value])
 
 async function saveAvatar() {
   if (!auth.childId || savingAvatar.value) return
@@ -93,27 +103,42 @@ async function savePin() {
             @click="selectedColor = color"
           />
         </div>
-        <div v-else class="account-modal__icons">
-          <button
-            type="button"
-            class="account-modal__icon-cell"
-            :class="{ active: selectedIcon === null }"
-            :style="{ background: selectedColor }"
-            @click="selectedIcon = null"
-          >
-            {{ (auth.displayName ?? '').charAt(0).toUpperCase() }}
-          </button>
-          <ChildAvatar
-            v-for="icon in AVATAR_ICONS"
-            :key="icon"
-            :color="selectedColor"
-            :icon="icon"
-            :name="auth.displayName ?? ''"
-            class="account-modal__icon-cell"
-            :class="{ active: selectedIcon === icon }"
-            @click="selectedIcon = icon"
-          />
-        </div>
+        <template v-else>
+          <div class="account-modal__category-nav">
+            <button
+              v-for="category in AVATAR_ICON_CATEGORIES"
+              :key="category"
+              type="button"
+              class="account-modal__category-chip"
+              :class="{ active: selectedCategory === category }"
+              @click="selectedCategory = category"
+            >
+              {{ t(CATEGORY_LABEL_KEYS[category]) }}
+            </button>
+          </div>
+          <div class="account-modal__icons">
+            <button
+              type="button"
+              class="account-modal__icon-cell"
+              :class="{ active: selectedIcon === null }"
+              :style="{ background: selectedColor }"
+              :aria-label="t('avatar.noIconLabel')"
+              @click="selectedIcon = null"
+            >
+              {{ (auth.displayName ?? '').charAt(0).toUpperCase() }}
+            </button>
+            <ChildAvatar
+              v-for="icon in currentCategoryIcons"
+              :key="icon"
+              :color="selectedColor"
+              :icon="icon"
+              :name="auth.displayName ?? ''"
+              class="account-modal__icon-cell"
+              :class="{ active: selectedIcon === icon }"
+              @click="selectedIcon = icon"
+            />
+          </div>
+        </template>
         <p v-if="avatarTab === 'color'" class="account-modal__hint">{{ t('avatar.colorHint') }}</p>
 
         <div class="account-modal__actions">
@@ -124,25 +149,28 @@ async function savePin() {
 
       <template v-else>
         <p v-if="pinSuccess" class="account-modal__success">{{ t('avatar.pinUpdated') }}</p>
-        <form v-else class="account-modal__pin-form" @submit.prevent="savePin">
-          <label>
-            {{ t('avatar.pinCurrentLabel') }}
-            <input v-model="oldPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
-          </label>
-          <label>
-            {{ t('avatar.pinNewLabel') }}
-            <input v-model="newPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
-          </label>
-          <label>
-            {{ t('common.pinConfirmLabel') }}
-            <input v-model="newPinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
-          </label>
-          <p v-if="pinError" class="account-modal__error">{{ pinError }}</p>
-          <div class="account-modal__actions">
-            <BaseButton type="button" variant="ghost" :disabled="savingPin" @click="emit('close')">{{ t('common.cancel') }}</BaseButton>
-            <BaseButton type="submit" variant="primary" :disabled="savingPin">{{ savingPin ? t('common.saving') : t('common.save') }}</BaseButton>
-          </div>
-        </form>
+        <template v-else>
+          <p class="account-modal__subtitle">{{ t('avatar.pinModifyTitle') }}</p>
+          <form class="account-modal__pin-form" @submit.prevent="savePin">
+            <label>
+              {{ t('avatar.pinCurrentLabel') }}
+              <input v-model="oldPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
+            </label>
+            <label>
+              {{ t('avatar.pinNewLabel') }}
+              <input v-model="newPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
+            </label>
+            <label>
+              {{ t('common.pinConfirmLabel') }}
+              <input v-model="newPinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" required />
+            </label>
+            <p v-if="pinError" class="account-modal__error">{{ pinError }}</p>
+            <div class="account-modal__actions">
+              <BaseButton type="button" variant="ghost" :disabled="savingPin" @click="emit('close')">{{ t('common.cancel') }}</BaseButton>
+              <BaseButton type="submit" variant="primary" :disabled="savingPin">{{ savingPin ? t('common.saving') : t('common.save') }}</BaseButton>
+            </div>
+          </form>
+        </template>
         <div v-if="pinSuccess" class="account-modal__actions">
           <BaseButton type="button" variant="primary" @click="emit('close')">{{ t('common.close') }}</BaseButton>
         </div>
@@ -246,13 +274,48 @@ async function savePin() {
   color: white;
 }
 
+.account-modal__category-nav {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  margin-bottom: 0.85rem;
+  scrollbar-width: none;
+}
+
+.account-modal__category-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.account-modal__category-chip {
+  flex-shrink: 0;
+  border: none;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--muted);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.account-modal__category-chip.active {
+  background: var(--secondary);
+  color: white;
+}
+
 .account-modal__swatches,
 .account-modal__icons {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
   justify-items: center;
   margin-bottom: 0.5rem;
+}
+
+.account-modal__swatches {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .account-modal__swatch {

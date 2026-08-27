@@ -174,7 +174,13 @@
     "colorTab": "Color",
     "iconTab": "Icon",
     "colorHint": "White and very light tones can't be chosen, to keep the icon's contrast.",
+    "noIconLabel": "Initial",
+    "categoryAnimals": "Animals",
+    "categoryEsports": "Sports",
+    "categoryVehicles": "Vehicles",
+    "categoryFantasia": "Fantasy",
     "pinSection": "PIN",
+    "pinModifyTitle": "Change your PIN",
     "pinCurrentLabel": "Current PIN",
     "pinNewLabel": "New PIN",
     "pinUpdated": "PIN updated ✓"
