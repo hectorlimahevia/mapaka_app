@@ -164,7 +164,14 @@
     "splitSpendLabel": "Spending (was {n}%)",
     "splitSaveLabel": "Savings",
     "splitGoalLabel": "This goal",
-    "percentageWarning": "⚠️ The percentage exceeds the available margin of \"spending\"."
+    "percentageWarning": "⚠️ The percentage exceeds the available margin of \"spending\".",
+    "deleteButton": "Delete",
+    "deleteConfirm": "Are you sure you want to delete \"{name}\"?",
+    "deleteConfirmYes": "Yes, delete it",
+    "historyTitle": "Goals achieved",
+    "historyCompletedOn": "Reached on {date}",
+    "historyDurationOne": "in 1 day",
+    "historyDurationMany": "in {n} days"
   },
   "pantalla": {
     "title": "Screen time",

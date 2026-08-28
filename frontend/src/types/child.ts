@@ -42,6 +42,8 @@ export interface SavingsGoalResponse {
   currentAmount: number
   imageUrl: string | null
   status: SavingsGoalStatus
+  createdAt: string
+  completedAt: string | null
 }
 
 export interface ScreenTimeStatusResponse {

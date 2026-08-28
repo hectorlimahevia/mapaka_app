@@ -164,7 +164,14 @@
     "splitSpendLabel": "Per gastar (abans {n}%)",
     "splitSaveLabel": "Estalvi",
     "splitGoalLabel": "Aquest objectiu",
-    "percentageWarning": "⚠️ El percentatge supera el marge disponible de \"per gastar\"."
+    "percentageWarning": "⚠️ El percentatge supera el marge disponible de \"per gastar\".",
+    "deleteButton": "Elimina",
+    "deleteConfirm": "Segur que vols eliminar \"{name}\"?",
+    "deleteConfirmYes": "Sí, elimina'l",
+    "historyTitle": "Historial d'objectius assolits",
+    "historyCompletedOn": "Assolit el {date}",
+    "historyDurationOne": "en 1 dia",
+    "historyDurationMany": "en {n} dies"
   },
   "pantalla": {
     "title": "Temps de pantalla",

@@ -51,7 +51,7 @@ public class SavingsGoalService {
 
     @Transactional(readOnly = true)
     public List<SavingsGoalResponse> list(UUID childId) {
-        return savingsGoalRepository.findByChildId(childId).stream()
+        return savingsGoalRepository.findByChildIdAndStatusNot(childId, SavingsGoalStatus.CANCELLED).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -154,6 +154,42 @@ public class SavingsGoalService {
 
         checkCompletion(goal);
         return toResponse(goal);
+    }
+
+    /** Eliminar un objectiu (ajust posterior) — mai fa desaparèixer diner real: si l'objectiu
+     * ja tenia progrés (repartiment automàtic, aportacions o donacions), es retorna a "per
+     * gastar" abans de res, amb el mateix parell DEBIT GOAL + CREDIT SPENDING que fa servir
+     * `contribute` (en sentit invers). L'objectiu no s'esborra mai de la taula: es marca
+     * `CANCELLED` (valor de l'enum que ja existia des de la Fase A però que cap flux feia
+     * servir), perquè les seves `MoneyTransaction` d'origen mantinguin sentit i l'objectiu
+     * desaparegui tant de la llista activa com de l'historial. Idempotent si ja estava cancel·lat.
+     */
+    @Transactional
+    public void delete(UUID childId, UUID goalId, AuthenticatedUser requester) {
+        ChildProfile child = childAccessService.requireAccess(childId, requester);
+        SavingsGoal goal = requireOwnedBy(goalId, childId);
+        if (goal.getStatus() == SavingsGoalStatus.CANCELLED) {
+            return;
+        }
+
+        BigDecimal progress = moneyTransactionRepository.goalProgress(goal.getId());
+        if (progress.compareTo(BigDecimal.ZERO) > 0) {
+            User actor = userRepository.getReferenceById(requester.userId());
+            UUID transferReferenceId = UUID.randomUUID();
+            moneyTransactionRepository.save(MoneyTransaction.builder()
+                    .child(child).walletType(WalletType.GOAL).transactionType(TransactionType.DEBIT)
+                    .amount(progress).description(goal.getName())
+                    .sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(goal.getId())
+                    .transferReferenceId(transferReferenceId).createdBy(actor).build());
+            moneyTransactionRepository.save(MoneyTransaction.builder()
+                    .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
+                    .amount(progress).description(goal.getName())
+                    .sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(goal.getId())
+                    .transferReferenceId(transferReferenceId).createdBy(actor).build());
+        }
+
+        goal.setStatus(SavingsGoalStatus.CANCELLED);
+        savingsGoalRepository.save(goal);
     }
 
     private void checkCompletion(SavingsGoal goal) {

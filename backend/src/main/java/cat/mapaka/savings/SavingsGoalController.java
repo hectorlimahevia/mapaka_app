@@ -60,4 +60,14 @@ public class SavingsGoalController {
             @AuthenticationPrincipal AuthenticatedUser user) {
         return savingsGoalService.contribute(childId, goalId, request.amount(), user);
     }
+
+    /** Eliminar un objectiu, actiu o ja assolit (ajust posterior) — mai esborra el diner
+     * que ja tingués guardat, només el retorna a "per gastar" (SavingsGoalService.delete). */
+    @DeleteMapping("/api/children/{childId}/savings-goals/{goalId}")
+    public void delete(
+            @PathVariable UUID childId,
+            @PathVariable UUID goalId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        savingsGoalService.delete(childId, goalId, user);
+    }
 }

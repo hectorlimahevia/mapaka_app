@@ -9,9 +9,11 @@ import BaseCard from '@/components/base/BaseCard.vue'
 import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { CHILD_COLORS } from '@/utils/childColors'
+import { formatDate } from '@/utils/date'
+import type { AppLocale } from '@/i18n'
 import type { SavingsGoalResponse, WalletResponse } from '@/types/child'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const auth = useAuthStore()
 const goals = ref<SavingsGoalResponse[]>([])
 const spendingBalance = ref(0)
@@ -55,6 +57,59 @@ function triggerCelebration(goalId: string) {
   celebrationTimeout = setTimeout(() => {
     celebratingGoalId.value = null
   }, 1600)
+}
+
+// Un objectiu COMPLETED es queda a la llista activa mentre dura la seva pròpia celebració
+// (perquè el confeti i la vora daurada es vegin al mateix lloc on s'ha completat) i només
+// "cau" a l'historial quan `celebratingGoalId` es buida sol als 1.6s (ajust posterior).
+const activeGoals = computed(() =>
+  goals.value.filter((g) => g.status === 'ACTIVE' || g.id === celebratingGoalId.value),
+)
+const completedGoals = computed(() =>
+  goals.value
+    .filter((g) => g.status === 'COMPLETED' && g.id !== celebratingGoalId.value)
+    .sort((a, b) => new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime()),
+)
+
+const deletingGoalId = ref<string | null>(null)
+const deletingInProgress = ref(false)
+const deleteError = ref<string | null>(null)
+
+function startDelete(goalId: string) {
+  deletingGoalId.value = goalId
+  deleteError.value = null
+}
+
+function cancelDelete() {
+  deletingGoalId.value = null
+}
+
+async function confirmDelete(goalId: string) {
+  const childId = auth.childId
+  if (!childId) return
+  deleteError.value = null
+  deletingInProgress.value = true
+  try {
+    await api.delete(`/api/children/${childId}/savings-goals/${goalId}`)
+    deletingGoalId.value = null
+    await load()
+  } catch (err) {
+    deleteError.value = apiErrorMessage(err)
+  } finally {
+    deletingInProgress.value = false
+  }
+}
+
+function daysToComplete(goal: SavingsGoalResponse) {
+  if (!goal.completedAt) return 0
+  const start = new Date(goal.createdAt).getTime()
+  const end = new Date(goal.completedAt).getTime()
+  return Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)))
+}
+
+function completedDateLabel(goal: SavingsGoalResponse) {
+  if (!goal.completedAt) return ''
+  return formatDate(goal.completedAt, locale.value as AppLocale)
 }
 
 // Marge disponible = percentatge de gastar vigent menys el que ja ocupen ELS ALTRES
@@ -179,9 +234,9 @@ onMounted(load)
     <ChildScreenHeader :title="t('objectius.title')" />
     <p class="objectius__sub">{{ t('objectius.subtitle') }}</p>
 
-    <p v-if="!loading && goals.length === 0" class="objectius__empty">{{ t('objectius.empty') }}</p>
+    <p v-if="!loading && activeGoals.length === 0 && completedGoals.length === 0" class="objectius__empty">{{ t('objectius.empty') }}</p>
 
-    <div v-for="goal in goals" :key="goal.id" class="goal-card" :class="{ celebrate: celebratingGoalId === goal.id }">
+    <div v-for="goal in activeGoals" :key="goal.id" class="goal-card" :class="{ celebrate: celebratingGoalId === goal.id }">
       <template v-if="celebratingGoalId === goal.id">
         <span
           v-for="(piece, i) in confettiPieces"
@@ -201,9 +256,24 @@ onMounted(load)
         <div class="goal-card__bar-fill" :style="{ width: (animated ? percentOf(goal) : 0) + '%' }" />
       </div>
       <p v-if="celebratingGoalId === goal.id" class="goal-card__celebrate-status">{{ t('objectius.goalCompletedStatus') }}</p>
-      <div v-if="goal.status === 'ACTIVE'" class="goal-card__actions">
+
+      <div v-if="goal.status === 'ACTIVE' && deletingGoalId !== goal.id" class="goal-card__actions">
         <button type="button" class="goal-card__edit" @click="startEditGoal(goal)">{{ t('objectius.edit') }}</button>
         <button type="button" class="goal-card__contribute" @click="startContribute(goal)">{{ t('objectius.contributeButton') }}</button>
+        <button type="button" class="goal-card__delete" @click="startDelete(goal.id)">{{ t('objectius.deleteButton') }}</button>
+      </div>
+
+      <div v-if="deletingGoalId === goal.id" class="goal-card__confirm">
+        <p>{{ t('objectius.deleteConfirm', { name: goal.name }) }}</p>
+        <p v-if="deleteError" class="objectius__error">{{ deleteError }}</p>
+        <div class="goal-form__actions">
+          <BaseButton type="button" variant="danger" :disabled="deletingInProgress" @click="confirmDelete(goal.id)">
+            {{ deletingInProgress ? t('common.saving') : t('objectius.deleteConfirmYes') }}
+          </BaseButton>
+          <BaseButton type="button" variant="ghost" :disabled="deletingInProgress" @click="cancelDelete">
+            {{ t('common.cancel') }}
+          </BaseButton>
+        </div>
       </div>
 
       <form
@@ -269,6 +339,39 @@ onMounted(load)
       </form>
     </BaseCard>
     <BaseButton v-else variant="accent" class="objectius__add" @click="startAddGoal">+ {{ t('objectius.addGoal') }}</BaseButton>
+
+    <div v-if="completedGoals.length > 0" class="history">
+      <h2 class="history__title">{{ t('objectius.historyTitle') }}</h2>
+      <div v-for="goal in completedGoals" :key="goal.id" class="history-card">
+        <div class="history-card__top">
+          <span class="history-card__icon">🏆</span>
+          <div class="history-card__info">
+            <span class="history-card__name">{{ goal.name }}</span>
+            <span class="history-card__meta">
+              {{ t('objectius.historyCompletedOn', { date: completedDateLabel(goal) }) }} ·
+              {{ daysToComplete(goal) === 1 ? t('objectius.historyDurationOne') : t('objectius.historyDurationMany', { n: daysToComplete(goal) }) }}
+            </span>
+          </div>
+          <span class="history-card__amt"><AmountDisplay :value="goal.targetAmount" unit="€" :decimals="0" /></span>
+        </div>
+
+        <div v-if="deletingGoalId !== goal.id" class="history-card__actions">
+          <button type="button" class="goal-card__delete" @click="startDelete(goal.id)">{{ t('objectius.deleteButton') }}</button>
+        </div>
+        <div v-else class="goal-card__confirm">
+          <p>{{ t('objectius.deleteConfirm', { name: goal.name }) }}</p>
+          <p v-if="deleteError" class="objectius__error">{{ deleteError }}</p>
+          <div class="goal-form__actions">
+            <BaseButton type="button" variant="danger" :disabled="deletingInProgress" @click="confirmDelete(goal.id)">
+              {{ deletingInProgress ? t('common.saving') : t('objectius.deleteConfirmYes') }}
+            </BaseButton>
+            <BaseButton type="button" variant="ghost" :disabled="deletingInProgress" @click="cancelDelete">
+              {{ t('common.cancel') }}
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -404,6 +507,32 @@ onMounted(load)
   cursor: pointer;
 }
 
+.goal-card__delete {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: auto;
+  color: var(--error);
+  font-weight: 700;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.goal-card__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed color-mix(in srgb, var(--error) 25%, transparent);
+}
+
+.goal-card__confirm p {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .contribute-form {
   display: flex;
   flex-direction: column;
@@ -499,5 +628,67 @@ onMounted(load)
 .goal-form__actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.history {
+  margin-top: 1.75rem;
+}
+
+.history__title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+
+.history-card {
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 16px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.7rem;
+}
+
+.history-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.history-card__icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.history-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.history-card__name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.history-card__meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.history-card__amt {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--accent) 65%, var(--text));
+  flex-shrink: 0;
+}
+
+.history-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 </style>

@@ -7,6 +7,7 @@ import cat.mapaka.money.MoneyTransactionRepository;
 import cat.mapaka.money.WalletType;
 import cat.mapaka.savings.SavingsGoal;
 import cat.mapaka.savings.SavingsGoalRepository;
+import cat.mapaka.savings.SavingsGoalStatus;
 import cat.mapaka.security.AuthenticatedUser;
 import cat.mapaka.task.TaskCompletionRepository;
 import cat.mapaka.task.TaskCompletionStatus;
@@ -85,10 +86,12 @@ public class FamilySummaryController {
         var savings = moneyTransactionRepository.balanceFor(child.getId(), WalletType.SAVINGS);
         long pending = taskCompletionRepository.countByChildIdAndStatus(child.getId(), TaskCompletionStatus.PENDING);
 
-        // Tots els objectius, no només els ACTIVE: un cop COMPLETED l'import continua sent
-        // diner real del fill (no torna mai a gastar/estalvi) — excloure'l del "Total" el faria
-        // desaparèixer de la targeta en completar-se un objectiu, cosa que no té sentit.
-        List<SavingsGoal> allGoals = savingsGoalRepository.findByChildId(child.getId());
+        // Tots els objectius actius o assolits, no només els ACTIVE: un cop COMPLETED l'import
+        // continua sent diner real del fill (no torna mai a gastar/estalvi) — excloure'l del
+        // "Total" el faria desaparèixer de la targeta en completar-se un objectiu, cosa que no
+        // té sentit. Els CANCELLED (eliminats pel fill, ajust posterior) sí que se n'exclouen:
+        // el seu progrés ja s'ha retornat a "per gastar" en eliminar-los.
+        List<SavingsGoal> allGoals = savingsGoalRepository.findByChildIdAndStatusNot(child.getId(), SavingsGoalStatus.CANCELLED);
         BigDecimal goalsTotal = BigDecimal.ZERO;
         List<GoalAllocationSummary> goals = new java.util.ArrayList<>();
         for (SavingsGoal goal : allGoals) {

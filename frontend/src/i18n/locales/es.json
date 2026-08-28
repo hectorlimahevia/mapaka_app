@@ -164,7 +164,14 @@
     "splitSpendLabel": "Para gastar (antes {n}%)",
     "splitSaveLabel": "Ahorro",
     "splitGoalLabel": "Este objetivo",
-    "percentageWarning": "⚠️ El porcentaje supera el margen disponible de \"para gastar\"."
+    "percentageWarning": "⚠️ El porcentaje supera el margen disponible de \"para gastar\".",
+    "deleteButton": "Eliminar",
+    "deleteConfirm": "¿Seguro que quieres eliminar \"{name}\"?",
+    "deleteConfirmYes": "Sí, eliminar",
+    "historyTitle": "Historial de objetivos conseguidos",
+    "historyCompletedOn": "Conseguido el {date}",
+    "historyDurationOne": "en 1 día",
+    "historyDurationMany": "en {n} días"
   },
   "pantalla": {
     "title": "Tiempo de pantalla",
