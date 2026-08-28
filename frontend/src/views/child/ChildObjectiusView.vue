@@ -350,17 +350,15 @@ onMounted(load)
           <span class="history-card__icon">
             <svg :viewBox="AVATAR_ICON_VIEWBOX" fill="currentColor"><path :d="AVATAR_ICON_PATHS.trophy" /></svg>
           </span>
-          <div class="history-card__info">
-            <span class="history-card__name">{{ goal.name }}</span>
-            <span class="history-card__meta">
-              {{ t('objectius.historyCompletedOn', { date: completedDateLabel(goal) }) }} ·
-              {{ daysToComplete(goal) === 1 ? t('objectius.historyDurationOne') : t('objectius.historyDurationMany', { n: daysToComplete(goal) }) }}
-            </span>
-          </div>
+          <span class="history-card__name">{{ goal.name }}</span>
           <span class="history-card__amt"><AmountDisplay :value="goal.targetAmount" unit="€" :decimals="0" /></span>
         </div>
 
-        <div v-if="deletingGoalId !== goal.id" class="history-card__actions">
+        <div v-if="deletingGoalId !== goal.id" class="history-card__bottom">
+          <span class="history-card__meta">
+            {{ t('objectius.historyCompletedOn', { date: completedDateLabel(goal) }) }} ·
+            {{ daysToComplete(goal) === 1 ? t('objectius.historyDurationOne') : t('objectius.historyDurationMany', { n: daysToComplete(goal) }) }}
+          </span>
           <button type="button" class="goal-card__delete" @click="startDelete(goal.id)">{{ t('objectius.deleteButton') }}</button>
         </div>
         <Transition name="confirm-pop">
@@ -718,23 +716,15 @@ onMounted(load)
   height: 18px;
 }
 
-.history-card__info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-  flex: 1;
-}
-
 .history-card__name {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 0.9rem;
-}
-
-.history-card__meta {
-  font-size: 0.72rem;
-  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .history-card__amt {
@@ -744,9 +734,20 @@ onMounted(load)
   flex-shrink: 0;
 }
 
-.history-card__actions {
+/* El padding-left alinea aquesta fila amb el títol, no amb la icona — perquè
+   les "dades" (data/durada) i el link d'eliminar quedin sota el text, no
+   flotant soles a la dreta (ajust posterior, feedback de disseny). */
+.history-card__bottom {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-top: 0.35rem;
+  padding-left: calc(34px + 0.7rem);
+}
+
+.history-card__meta {
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 </style>
