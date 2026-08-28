@@ -191,7 +191,7 @@ onMounted(load)
       <BaseSwitch :model-value="settings.allowSavingsTransfer" @update:model-value="toggle('allowSavingsTransfer')" />
     </div>
 
-    <RouterLink :to="{ name: 'parent-nfc-tags' }" class="config__nfc-link">
+    <RouterLink :to="{ name: 'parent-nfc-tags' }" class="config__nfc-link text-link-underline">
       {{ t('config.nfcLink') }}
     </RouterLink>
 

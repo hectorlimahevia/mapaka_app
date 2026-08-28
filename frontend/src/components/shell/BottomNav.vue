@@ -86,6 +86,28 @@ const activeIndex = computed(() => {
   position: relative;
 }
 
+.bottom-nav__item--active .bottom-nav__icon {
+  animation: bottom-nav-bounce 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes bottom-nav-bounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-nav__item--active .bottom-nav__icon {
+    animation: none;
+  }
+}
+
 .bottom-nav__badge {
   position: absolute;
   top: -0.3rem;

@@ -264,18 +264,20 @@ onMounted(load)
         <button type="button" class="goal-card__delete" @click="startDelete(goal.id)">{{ t('objectius.deleteButton') }}</button>
       </div>
 
-      <div v-if="deletingGoalId === goal.id" class="goal-card__confirm">
-        <p>{{ t('objectius.deleteConfirm', { name: goal.name }) }}</p>
-        <p v-if="deleteError" class="objectius__error">{{ deleteError }}</p>
-        <div class="goal-form__actions">
-          <BaseButton type="button" variant="danger" :disabled="deletingInProgress" @click="confirmDelete(goal.id)">
-            {{ deletingInProgress ? t('common.saving') : t('objectius.deleteConfirmYes') }}
-          </BaseButton>
-          <BaseButton type="button" variant="ghost" :disabled="deletingInProgress" @click="cancelDelete">
-            {{ t('common.cancel') }}
-          </BaseButton>
+      <Transition name="confirm-pop">
+        <div v-if="deletingGoalId === goal.id" class="goal-card__confirm">
+          <p>{{ t('objectius.deleteConfirm', { name: goal.name }) }}</p>
+          <p v-if="deleteError" class="objectius__error">{{ deleteError }}</p>
+          <div class="goal-form__actions">
+            <BaseButton type="button" variant="danger" :disabled="deletingInProgress" @click="confirmDelete(goal.id)">
+              {{ deletingInProgress ? t('common.saving') : t('objectius.deleteConfirmYes') }}
+            </BaseButton>
+            <BaseButton type="button" variant="ghost" :disabled="deletingInProgress" @click="cancelDelete">
+              {{ t('common.cancel') }}
+            </BaseButton>
+          </div>
         </div>
-      </div>
+      </Transition>
 
       <form
         v-if="contributingGoalId === goal.id"
@@ -361,18 +363,20 @@ onMounted(load)
         <div v-if="deletingGoalId !== goal.id" class="history-card__actions">
           <button type="button" class="goal-card__delete" @click="startDelete(goal.id)">{{ t('objectius.deleteButton') }}</button>
         </div>
-        <div v-else class="goal-card__confirm">
-          <p>{{ t('objectius.deleteConfirm', { name: goal.name }) }}</p>
-          <p v-if="deleteError" class="objectius__error">{{ deleteError }}</p>
-          <div class="goal-form__actions">
-            <BaseButton type="button" variant="danger" :disabled="deletingInProgress" @click="confirmDelete(goal.id)">
-              {{ deletingInProgress ? t('common.saving') : t('objectius.deleteConfirmYes') }}
-            </BaseButton>
-            <BaseButton type="button" variant="ghost" :disabled="deletingInProgress" @click="cancelDelete">
-              {{ t('common.cancel') }}
-            </BaseButton>
+        <Transition name="confirm-pop">
+          <div v-if="deletingGoalId === goal.id" class="goal-card__confirm">
+            <p>{{ t('objectius.deleteConfirm', { name: goal.name }) }}</p>
+            <p v-if="deleteError" class="objectius__error">{{ deleteError }}</p>
+            <div class="goal-form__actions">
+              <BaseButton type="button" variant="danger" :disabled="deletingInProgress" @click="confirmDelete(goal.id)">
+                {{ deletingInProgress ? t('common.saving') : t('objectius.deleteConfirmYes') }}
+              </BaseButton>
+              <BaseButton type="button" variant="ghost" :disabled="deletingInProgress" @click="cancelDelete">
+                {{ t('common.cancel') }}
+              </BaseButton>
+            </div>
           </div>
-        </div>
+        </Transition>
       </div>
     </div>
   </div>
@@ -508,6 +512,12 @@ onMounted(load)
   font-weight: 700;
   font-size: 0.76rem;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.goal-card__edit:hover,
+.goal-card__contribute:hover {
+  color: color-mix(in srgb, var(--primary) 75%, var(--text));
 }
 
 .goal-card__delete {
@@ -519,6 +529,19 @@ onMounted(load)
   font-weight: 700;
   font-size: 0.76rem;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.goal-card__delete:hover {
+  color: color-mix(in srgb, var(--error) 75%, var(--text));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-card__edit,
+  .goal-card__contribute,
+  .goal-card__delete {
+    transition: none;
+  }
 }
 
 .goal-card__confirm {
@@ -528,6 +551,26 @@ onMounted(load)
   margin-top: 0.6rem;
   padding-top: 0.6rem;
   border-top: 1px dashed color-mix(in srgb, var(--error) 25%, transparent);
+}
+
+.confirm-pop-enter-active,
+.confirm-pop-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.confirm-pop-enter-from,
+.confirm-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-pop-enter-active,
+  .confirm-pop-leave-active {
+    transition: none;
+  }
 }
 
 .goal-card__confirm p {

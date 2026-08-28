@@ -160,12 +160,12 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
               {{ loading ? t('login.submitting') : t('login.submit') }}
             </BaseButton>
           </form>
-          <RouterLink :to="{ name: 'recover-request' }" class="login__forgot">{{ t('login.forgotPin') }}</RouterLink>
+          <RouterLink :to="{ name: 'recover-request' }" class="login__forgot text-link-underline">{{ t('login.forgotPin') }}</RouterLink>
         </template>
       </div>
     </BaseCard>
 
-    <RouterLink v-if="step === 'family'" :to="{ name: 'register-family' }" class="login__register">
+    <RouterLink v-if="step === 'family'" :to="{ name: 'register-family' }" class="login__register text-link-underline">
       {{ t('login.registerCta') }}
     </RouterLink>
 
@@ -326,6 +326,17 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
   font-weight: 700;
   cursor: pointer;
   padding: 0;
+  transition: color 0.15s ease;
+}
+
+.login__back:hover {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login__back {
+    transition: none;
+  }
 }
 
 .login__forgot {

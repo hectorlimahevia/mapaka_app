@@ -255,7 +255,7 @@ onMounted(load)
       <BaseButton variant="primary" :disabled="generating" @click="generateAllowances">
         {{ generating ? t('resum.generating') : t('resum.generateAllowances') }}
       </BaseButton>
-      <RouterLink :to="{ name: 'parent-settlements' }" class="resum__settlements-link">{{ t('resum.settlementsLink') }}</RouterLink>
+      <RouterLink :to="{ name: 'parent-settlements' }" class="resum__settlements-link text-link-underline">{{ t('resum.settlementsLink') }}</RouterLink>
     </div>
 
     <template v-if="pendingAllowances.length > 0">
@@ -283,7 +283,7 @@ onMounted(load)
 
     <div class="movements-head">
       <div class="section-label">{{ t('resum.recentFamilyMovements') }}</div>
-      <RouterLink :to="{ name: 'parent-movements' }" class="resum__all-link">{{ t('resum.viewAllMovements') }}</RouterLink>
+      <RouterLink :to="{ name: 'parent-movements' }" class="resum__all-link text-link-underline">{{ t('resum.viewAllMovements') }}</RouterLink>
     </div>
 
     <div class="filter-row">
@@ -487,6 +487,22 @@ onMounted(load)
   font-size: 0.72rem;
   line-height: 1;
   cursor: pointer;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.kid-card__donate-btn:hover {
+  transform: scale(1.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kid-card__donate-btn {
+    transition: none;
+  }
+
+  .kid-card__donate-btn:hover {
+    transform: none;
+  }
 }
 
 .kid-card__sub {

@@ -92,7 +92,7 @@ async function submit() {
       </form>
     </BaseCard>
 
-    <RouterLink :to="{ name: 'login' }" class="recover__cancel">← {{ t('login.backToLogin') }}</RouterLink>
+    <RouterLink :to="{ name: 'login' }" class="recover__cancel text-link-underline">← {{ t('login.backToLogin') }}</RouterLink>
   </div>
 </template>
 
@@ -178,6 +178,17 @@ async function submit() {
   font-weight: 700;
   cursor: pointer;
   padding: 0;
+  transition: color 0.15s ease;
+}
+
+.recover__back:hover {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recover__back {
+    transition: none;
+  }
 }
 
 .recover__error {

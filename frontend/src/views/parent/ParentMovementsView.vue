@@ -67,7 +67,7 @@ onMounted(async () => {
 
 <template>
   <div class="movements">
-    <RouterLink :to="{ name: 'parent-resum' }" class="movements__back">← {{ t('resum.title') }}</RouterLink>
+    <RouterLink :to="{ name: 'parent-resum' }" class="movements__back text-link-underline">← {{ t('resum.title') }}</RouterLink>
     <h1>{{ t('resum.allMovementsTitle') }}</h1>
 
     <div class="filter-row">
