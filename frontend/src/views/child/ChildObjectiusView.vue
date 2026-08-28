@@ -8,6 +8,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import { apiErrorMessage } from '@/utils/apiError'
+import { CHILD_COLORS } from '@/utils/childColors'
 import type { SavingsGoalResponse, WalletResponse } from '@/types/child'
 
 const { t } = useI18n()
@@ -29,6 +30,32 @@ const contributingGoalId = ref<string | null>(null)
 const contributionAmount = ref(0)
 const contributionError = ref<string | null>(null)
 const savingContribution = ref(false)
+
+// Confeti + vora daurada quan el fill arriba a un objectiu amb la seva pròpia aportació
+// (ajust posterior) — cada peça calcula el seu propi angle/distància un cop, en disparar
+// la celebració, perquè totes les repeticions no quedin idèntiques.
+const celebratingGoalId = ref<string | null>(null)
+const confettiPieces = ref<{ dx: string; dy: string; rot: string; color: string; delay: string }[]>([])
+let celebrationTimeout: ReturnType<typeof setTimeout> | undefined
+
+function triggerCelebration(goalId: string) {
+  clearTimeout(celebrationTimeout)
+  confettiPieces.value = Array.from({ length: 18 }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2
+    const dist = 60 + Math.random() * 70
+    return {
+      dx: `${Math.cos(angle) * dist}px`,
+      dy: `${Math.sin(angle) * dist - 20}px`,
+      rot: `${Math.random() * 360}deg`,
+      color: CHILD_COLORS[i % CHILD_COLORS.length]!,
+      delay: `${Math.random() * 0.12}s`,
+    }
+  })
+  celebratingGoalId.value = goalId
+  celebrationTimeout = setTimeout(() => {
+    celebratingGoalId.value = null
+  }, 1600)
+}
 
 // Marge disponible = percentatge de gastar vigent menys el que ja ocupen ELS ALTRES
 // objectius actius (exclou el que s'està editant, perquè pugui conservar el seu propi
@@ -88,6 +115,9 @@ async function submitContribution(goalId: string) {
     })
     contributingGoalId.value = null
     await load()
+    if (goals.value.find((g) => g.id === goalId)?.status === 'COMPLETED') {
+      triggerCelebration(goalId)
+    }
   } catch (err) {
     contributionError.value = apiErrorMessage(err)
   } finally {
@@ -151,7 +181,15 @@ onMounted(load)
 
     <p v-if="!loading && goals.length === 0" class="objectius__empty">{{ t('objectius.empty') }}</p>
 
-    <div v-for="goal in goals" :key="goal.id" class="goal-card">
+    <div v-for="goal in goals" :key="goal.id" class="goal-card" :class="{ celebrate: celebratingGoalId === goal.id }">
+      <template v-if="celebratingGoalId === goal.id">
+        <span
+          v-for="(piece, i) in confettiPieces"
+          :key="i"
+          class="confetti-piece"
+          :style="{ '--dx': piece.dx, '--dy': piece.dy, '--rot': piece.rot, background: piece.color, animationDelay: piece.delay }"
+        />
+      </template>
       <div class="goal-card__top">
         <span class="goal-card__name">{{ goal.name }}</span>
         <span class="goal-card__amt">
@@ -162,6 +200,7 @@ onMounted(load)
       <div class="goal-card__bar-bg">
         <div class="goal-card__bar-fill" :style="{ width: (animated ? percentOf(goal) : 0) + '%' }" />
       </div>
+      <p v-if="celebratingGoalId === goal.id" class="goal-card__celebrate-status">{{ t('objectius.goalCompletedStatus') }}</p>
       <div v-if="goal.status === 'ACTIVE'" class="goal-card__actions">
         <button type="button" class="goal-card__edit" @click="startEditGoal(goal)">{{ t('objectius.edit') }}</button>
         <button type="button" class="goal-card__contribute" @click="startContribute(goal)">{{ t('objectius.contributeButton') }}</button>
@@ -252,11 +291,68 @@ onMounted(load)
 }
 
 .goal-card {
+  position: relative;
   background: white;
   border-radius: 16px;
   padding: 1rem 1.1rem;
   margin-bottom: 0.85rem;
   box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.goal-card.celebrate {
+  animation: goal-card-glow 1.4s ease;
+}
+
+@keyframes goal-card-glow {
+  0%,
+  100% {
+    box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--text) 12%, transparent);
+  }
+  30%,
+  70% {
+    box-shadow:
+      0 0 0 3px var(--accent),
+      0 8px 24px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  animation: confetti-burst 1.1s cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1);
+  }
+}
+
+.goal-card__celebrate-status {
+  font-size: 0.72rem;
+  color: var(--success);
+  font-weight: 700;
+  margin: 0.35rem 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-card.celebrate {
+    animation: none;
+  }
+  .confetti-piece {
+    display: none;
+  }
 }
 
 .goal-card__top {

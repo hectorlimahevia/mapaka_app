@@ -160,6 +160,7 @@
     "contributeAvailable": "Tens {n}€ disponibles per gastar.",
     "contributeSubmit": "Aportar",
     "missingContributionAmount": "Cal un import superior a 0.",
+    "goalCompletedStatus": "🎉 Objectiu assolit!",
     "splitSpendLabel": "Per gastar (abans {n}%)",
     "splitSaveLabel": "Estalvi",
     "splitGoalLabel": "Aquest objectiu",

@@ -160,6 +160,7 @@
     "contributeAvailable": "Tienes {n}€ disponibles para gastar.",
     "contributeSubmit": "Aportar",
     "missingContributionAmount": "Falta un importe superior a 0.",
+    "goalCompletedStatus": "🎉 ¡Objetivo conseguido!",
     "splitSpendLabel": "Para gastar (antes {n}%)",
     "splitSaveLabel": "Ahorro",
     "splitGoalLabel": "Este objetivo",

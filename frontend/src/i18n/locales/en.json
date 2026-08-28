@@ -160,6 +160,7 @@
     "contributeAvailable": "You have {n}€ available to spend.",
     "contributeSubmit": "Add funds",
     "missingContributionAmount": "An amount greater than 0 is required.",
+    "goalCompletedStatus": "🎉 Goal reached!",
     "splitSpendLabel": "Spending (was {n}%)",
     "splitSaveLabel": "Savings",
     "splitGoalLabel": "This goal",
