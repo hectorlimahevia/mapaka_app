@@ -97,7 +97,9 @@ public class FamilySummaryController {
         for (SavingsGoal goal : allGoals) {
             BigDecimal current = moneyTransactionRepository.goalProgress(goal.getId());
             goalsTotal = goalsTotal.add(current);
-            goals.add(new GoalAllocationSummary(goal.getId(), goal.getName(), goal.getAllocationPercentage(), current));
+            goals.add(new GoalAllocationSummary(
+                    goal.getId(), goal.getName(), goal.getAllocationPercentage(), current,
+                    goal.getTargetAmount(), goal.getStatus()));
         }
         BigDecimal total = spending.add(savings).add(goalsTotal);
 

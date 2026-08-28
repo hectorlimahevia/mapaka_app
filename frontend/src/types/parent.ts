@@ -1,10 +1,12 @@
-import type { MoneySourceType, TaskType, TransactionType, WalletType } from './child'
+import type { MoneySourceType, SavingsGoalStatus, TaskType, TransactionType, WalletType } from './child'
 
 export interface GoalAllocationSummary {
   goalId: string
   name: string
   allocationPercentage: number
   currentAmount: number
+  targetAmount: number
+  status: SavingsGoalStatus
 }
 
 export interface CreateDonationRequest {

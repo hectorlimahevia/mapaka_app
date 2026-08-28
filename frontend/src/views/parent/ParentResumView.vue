@@ -7,10 +7,11 @@ import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import ChildAvatar from '@/components/base/ChildAvatar.vue'
+import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 import { formatDate } from '@/utils/date'
 import { apiErrorMessage } from '@/utils/apiError'
 import type { AppLocale } from '@/i18n'
-import type { AllowanceStatusResponse, ChildFamilySummary, FamilyMoneyTransactionResponse } from '@/types/parent'
+import type { AllowanceStatusResponse, ChildFamilySummary, FamilyMoneyTransactionResponse, GoalAllocationSummary } from '@/types/parent'
 import type { MonthlyAllowanceResponse } from '@/types/parent'
 
 const { t, locale } = useI18n()
@@ -29,8 +30,6 @@ const period = ref<Period>('week')
 const customFrom = ref('')
 const customTo = ref('')
 const selectedChildId = ref<string | null>(null)
-
-const GOAL_COLORS = ['#F59E0B', '#8B5CF6', '#EC4899', '#0EA5E9']
 
 function periodRange(): { from: Date | null; to: Date | null } {
   const now = new Date()
@@ -107,13 +106,17 @@ async function resolveAllowance(allowance: MonthlyAllowanceResponse, action: 'co
   }
 }
 
-function segmentPercent(amount: number, total: number) {
-  if (total <= 0) return 0
-  return Math.max(0, (amount / total) * 100)
+function activeGoalsOf(child: ChildFamilySummary) {
+  return child.goals.filter((g) => g.status === 'ACTIVE')
 }
 
-function goalColor(index: number) {
-  return GOAL_COLORS[index % GOAL_COLORS.length]
+function completedGoalsOf(child: ChildFamilySummary) {
+  return child.goals.filter((g) => g.status === 'COMPLETED')
+}
+
+function goalPercent(goal: GoalAllocationSummary) {
+  if (goal.targetAmount <= 0) return 0
+  return Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
 }
 
 const donatingGoal = ref<{ goalId: string; name: string } | null>(null)
@@ -212,34 +215,29 @@ onMounted(load)
           </div>
         </div>
 
-        <div class="kid-card__bar">
-          <span
-            class="kid-card__bar-seg"
-            :style="{ width: segmentPercent(child.spendingBalance, child.totalBalance) + '%', background: 'var(--primary)' }"
-          />
-          <span
-            class="kid-card__bar-seg"
-            :style="{ width: segmentPercent(child.savingsBalance, child.totalBalance) + '%', background: 'var(--success)' }"
-          />
-          <span
-            v-for="(goal, i) in child.goals"
-            :key="goal.goalId"
-            class="kid-card__bar-seg"
-            :style="{ width: segmentPercent(goal.currentAmount, child.totalBalance) + '%', background: goalColor(i) }"
-          />
-        </div>
+        <div v-if="child.goals.length > 0" class="kid-card__goals">
+          <div v-for="goal in activeGoalsOf(child)" :key="goal.goalId" class="mini-goal">
+            <div class="mini-goal__top">
+              <span class="mini-goal__name">{{ goal.name }}</span>
+              <span class="mini-goal__amt">
+                <AmountDisplay :value="goal.currentAmount" :decimals="0" /> /
+                <AmountDisplay :value="goal.targetAmount" unit="€" :decimals="0" />
+              </span>
+              <button type="button" class="kid-card__donate-btn" @click="openDonate(goal.goalId, goal.name)">🎁</button>
+            </div>
+            <div class="mini-goal__bar-bg">
+              <div class="mini-goal__bar-fill" :style="{ width: goalPercent(goal) + '%' }" />
+            </div>
+          </div>
 
-        <div class="kid-card__legend">
-          <span class="kid-card__legend-item">
-            <span class="kid-card__dot" style="background: var(--primary)" />{{ t('resum.statSpending') }}
-          </span>
-          <span class="kid-card__legend-item">
-            <span class="kid-card__dot" style="background: var(--success)" />{{ t('resum.statSavings') }}
-          </span>
-          <span v-for="(goal, i) in child.goals" :key="goal.goalId" class="kid-card__legend-item">
-            <span class="kid-card__dot" :style="{ background: goalColor(i) }" />{{ goal.name }}
+          <div v-for="goal in completedGoalsOf(child)" :key="goal.goalId" class="mini-goal mini-goal--done">
+            <span class="mini-goal__icon">
+              <svg :viewBox="AVATAR_ICON_VIEWBOX" fill="currentColor"><path :d="AVATAR_ICON_PATHS.trophy" /></svg>
+            </span>
+            <span class="mini-goal__name">{{ goal.name }}</span>
+            <span class="mini-goal__amt-done"><AmountDisplay :value="goal.targetAmount" unit="€" :decimals="0" /></span>
             <button type="button" class="kid-card__donate-btn" @click="openDonate(goal.goalId, goal.name)">🎁</button>
-          </span>
+          </div>
         </div>
 
         <div class="kid-card__sub">
@@ -444,39 +442,84 @@ onMounted(load)
   color: var(--child-color, var(--primary));
 }
 
-.kid-card__bar {
+.kid-card__goals {
   display: flex;
-  height: 8px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 0.6rem;
 }
 
-.kid-card__bar-seg {
-  height: 100%;
-}
-
-.kid-card__legend {
+.mini-goal__top {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.kid-card__legend-item {
-  display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  color: var(--muted);
+  gap: 0.4rem;
 }
 
-.kid-card__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.mini-goal__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-goal__amt {
+  font-size: 0.66rem;
+  color: var(--muted);
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-goal__bar-bg {
+  height: 5px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.mini-goal__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mini-goal--done {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 10px;
+  padding: 0.3rem 0.5rem;
+}
+
+.mini-goal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text));
+  flex-shrink: 0;
+}
+
+.mini-goal__icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.mini-goal__amt-done {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent) 65%, var(--text));
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .kid-card__donate-btn {
