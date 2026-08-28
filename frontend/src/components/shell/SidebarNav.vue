@@ -113,6 +113,7 @@ async function logout() {
 }
 
 .sidebar__language {
+  align-self: flex-start;
   margin-top: auto;
   margin-left: 0.5rem;
 }
