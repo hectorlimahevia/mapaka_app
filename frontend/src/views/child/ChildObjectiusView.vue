@@ -8,6 +8,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import ChildScreenHeader from '@/components/base/ChildScreenHeader.vue'
 import { apiErrorMessage } from '@/utils/apiError'
+import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 import { CHILD_COLORS } from '@/utils/childColors'
 import { formatDate } from '@/utils/date'
 import type { AppLocale } from '@/i18n'
@@ -344,7 +345,9 @@ onMounted(load)
       <h2 class="history__title">{{ t('objectius.historyTitle') }}</h2>
       <div v-for="goal in completedGoals" :key="goal.id" class="history-card">
         <div class="history-card__top">
-          <span class="history-card__icon">🏆</span>
+          <span class="history-card__icon">
+            <svg :viewBox="AVATAR_ICON_VIEWBOX" fill="currentColor"><path :d="AVATAR_ICON_PATHS.trophy" /></svg>
+          </span>
           <div class="history-card__info">
             <span class="history-card__name">{{ goal.name }}</span>
             <span class="history-card__meta">
@@ -656,8 +659,20 @@ onMounted(load)
 }
 
 .history-card__icon {
-  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text));
   flex-shrink: 0;
+}
+
+.history-card__icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .history-card__info {
