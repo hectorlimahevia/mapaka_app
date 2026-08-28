@@ -13,6 +13,7 @@ const auth = useAuthStore()
 const { value: balanceDisplay, animateTo } = useCountUp()
 
 const savingsBalance = ref(0)
+const totalBalance = ref(0)
 const transactions = ref<MoneyTransactionResponse[]>([])
 const pendingTaskCount = ref(0)
 const loading = ref(true)
@@ -29,6 +30,7 @@ onMounted(async () => {
 
   animateTo(walletRes.data.spendingBalance)
   savingsBalance.value = walletRes.data.savingsBalance
+  totalBalance.value = walletRes.data.total
   transactions.value = transactionsRes.data.slice(0, 5)
   pendingTaskCount.value = tasksRes.data.filter((t) => t.status === 'PENDING').length
   loading.value = false
@@ -56,7 +58,10 @@ onMounted(async () => {
       <div class="balance-card__amount">
         <AmountDisplay :value="balanceDisplay" unit="€" />
       </div>
-      <div class="balance-card__chip">{{ t('inici.savingsLabel') }} <AmountDisplay :value="savingsBalance" unit="€" /></div>
+      <div class="balance-card__chips">
+        <div class="balance-card__chip">{{ t('inici.savingsLabel') }} <AmountDisplay :value="savingsBalance" unit="€" /></div>
+        <div class="balance-card__chip">{{ t('inici.totalLabel') }} <AmountDisplay :value="totalBalance" unit="€" /></div>
+      </div>
     </div>
 
     <div class="section-label">{{ t('inici.recentMovements') }}</div>
@@ -131,6 +136,12 @@ onMounted(async () => {
 
 .balance-card__amount :deep(.amount-display) {
   color: white;
+}
+
+.balance-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .balance-card__chip {

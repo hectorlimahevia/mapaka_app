@@ -81,6 +81,7 @@
     "pendingTasks": "Tienes {n} tarea pendiente de aprobación | Tienes {n} tareas pendientes de aprobación",
     "availableBalance": "Saldo disponible",
     "savingsLabel": "Ahorro:",
+    "totalLabel": "Total:",
     "recentMovements": "Movimientos recientes",
     "noMovements": "Todavía no hay ningún movimiento."
   },

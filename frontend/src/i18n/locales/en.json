@@ -81,6 +81,7 @@
     "pendingTasks": "You have {n} task pending approval | You have {n} tasks pending approval",
     "availableBalance": "Available balance",
     "savingsLabel": "Savings:",
+    "totalLabel": "Total:",
     "recentMovements": "Recent activity",
     "noMovements": "No activity yet."
   },

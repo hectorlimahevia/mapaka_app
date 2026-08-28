@@ -44,7 +44,15 @@ public class MoneyController {
         var allocatedGoalPercentage = savingsGoalRepository.findByChildIdAndStatus(id, SavingsGoalStatus.ACTIVE).stream()
                 .map(SavingsGoal::getAllocationPercentage)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new WalletResponse(spending, savings, spending.add(savings), spendingPercentage, allocatedGoalPercentage);
+        // El "total" inclou també el que hi ha guardat als objectius (actius o assolits, mai
+        // els CANCELLED) — mateixa definició que ja feia servir FamilySummaryController pel
+        // pare; sense això el fill veuria un "total" que no compta diner seu real (ajust
+        // posterior, la card d'Inici encara no el mostrava).
+        var goalsTotal = savingsGoalRepository.findByChildIdAndStatusNot(id, SavingsGoalStatus.CANCELLED).stream()
+                .map(goal -> moneyTransactionRepository.goalProgress(goal.getId()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        var total = spending.add(savings).add(goalsTotal);
+        return new WalletResponse(spending, savings, total, spendingPercentage, allocatedGoalPercentage);
     }
 
     @GetMapping("/api/children/{id}/money-transactions")

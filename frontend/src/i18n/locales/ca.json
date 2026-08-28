@@ -81,6 +81,7 @@
     "pendingTasks": "Tens {n} tasca pendent d'aprovació | Tens {n} tasques pendents d'aprovació",
     "availableBalance": "Saldo disponible",
     "savingsLabel": "Estalvi:",
+    "totalLabel": "Total:",
     "recentMovements": "Moviments recents",
     "noMovements": "Encara no hi ha cap moviment."
   },
