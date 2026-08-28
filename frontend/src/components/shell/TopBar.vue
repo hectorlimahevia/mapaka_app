@@ -31,7 +31,7 @@ async function logout() {
       <span>Mapaka</span>
     </button>
     <div class="top-bar__actions">
-      <LanguageSwitcher v-if="auth.role === 'CHILD'" />
+      <LanguageSwitcher />
       <button
         v-if="auth.role === 'CHILD'"
         type="button"

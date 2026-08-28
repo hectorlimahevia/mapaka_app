@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import NavIcon from './NavIcon.vue'
 import BadgeCounter from '@/components/base/BadgeCounter.vue'
+import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 import { useAuthStore } from '@/stores/auth'
 
 type IconName = 'home' | 'tasks' | 'target' | 'device' | 'family' | 'check' | 'child' | 'settings'
@@ -42,6 +43,8 @@ async function logout() {
         <BadgeCounter v-if="item.badge" :count="item.badge" class="sidebar__badge" />
       </RouterLink>
     </div>
+
+    <LanguageSwitcher class="sidebar__language" />
 
     <button type="button" class="sidebar__logout" @click="logout">
       <NavIcon name="logout" />
@@ -109,11 +112,15 @@ async function logout() {
   margin-left: auto;
 }
 
+.sidebar__language {
+  margin-top: auto;
+  margin-left: 0.5rem;
+}
+
 .sidebar__logout {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  margin-top: auto;
   border: none;
   background: none;
   padding: 0.7rem 0.75rem;
