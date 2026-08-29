@@ -235,13 +235,15 @@
     "allMovementsTitle": "Tots els moviments",
     "prevPage": "← Anterior",
     "nextPage": "Següent →",
-    "donateButton": "🎁 Donar",
+    "donateButton": "Donar",
     "donateTitle": "Donar a \"{name}\"",
     "donationAmountLabel": "Import (€)",
     "donorNameLabel": "Nom del donant (opcional)",
     "donationMessageLabel": "Missatge (opcional)",
     "donationSubmit": "Confirmar donació",
-    "donationMissingAmount": "Cal un import superior a 0."
+    "donationMissingAmount": "Cal un import superior a 0.",
+    "goalsToggle": "Objectius ({n})",
+    "noActiveGoals": "Sense objectius actius"
   },
   "aprovacions": {
     "title": "Aprovacions pendents",
