@@ -127,9 +127,7 @@ function startEdit(child: ChildDetailResponse) {
   form.customAllowance = child.hasCustomAllowance
   form.monthlyAmount = child.allowanceMonthlyAmount ?? 0
   form.spendingPercentage = child.allowanceSpendingPercentage ?? 70
-  // El pare veu i edita els minuts per setmana; per sota es continua generant un cop al
-  // mes (screen_minutes_monthly), sense cap canvi de calendari (Prompt 15, conversió ×4).
-  form.baseMinutes = Math.round((child.screenBaseMinutes ?? 0) / 4)
+  form.baseMinutes = child.screenBaseMinutes ?? 0
 }
 
 function cancelEdit() {
@@ -139,7 +137,7 @@ function cancelEdit() {
 async function save(childId: string) {
   saving.value = true
   try {
-    const calls = [api.patch(`/api/children/${childId}/screen-time-rule`, { baseMinutes: form.baseMinutes * 4 })]
+    const calls = [api.patch(`/api/children/${childId}/screen-time-rule`, { baseMinutes: form.baseMinutes })]
     if (form.customAllowance) {
       calls.push(api.patch(`/api/children/${childId}/allowance-rule`, {
         monthlyAmount: form.monthlyAmount,
@@ -234,7 +232,7 @@ onMounted(load)
           {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
         </span>
         <span v-else>{{ t('fills.noAllowance') }}</span>
-        <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: Math.round(child.screenBaseMinutes / 4) }) }}</span>
+        <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: child.screenBaseMinutes }) }}</span>
         <span v-else>{{ t('fills.noScreenTime') }}</span>
       </div>
 
