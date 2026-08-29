@@ -1,0 +1,23 @@
+# Render Blueprint (Prompt 13 de mapaka_prompts_code.md) — un únic servei web Docker que
+# serveix alhora l'API Spring Boot i el frontend Vue empaquetat (Dockerfile.prod).
+#
+# Ús: al panell de Render, "New +" -> "Blueprint" -> connecta aquest repositori. Render
+# llegeix aquest fitxer i proposa crear el servei; les variables marcades amb sync:false
+# es demanen al moment (mai queden escrites en aquest fitxer ni al repositori).
+services:
+  - type: web
+    name: mapaka-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.prod
+    dockerContext: .
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

@@ -1,0 +1,29 @@
+# Imatge única de producció: backend Spring Boot + frontend Vue empaquetat com a recursos
+# estàtics del mateix jar (Prompt 13 — coste zero, sense hosting de frontend separat, un
+# únic servei a Render). Nomes per a desplegament: en desenvolupament local es fa servir
+# backend/Dockerfile (backend sol) + el servidor de Vite per separat (docker-compose.yml).
+#
+# Context de build: l'arrel del repositori (necessita veure alhora backend/ i frontend/).
+
+FROM node:22-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM eclipse-temurin:21-jdk AS backend-build
+WORKDIR /app
+COPY backend/mvnw .
+COPY backend/.mvn .mvn
+COPY backend/pom.xml .
+RUN ./mvnw -q dependency:go-offline
+COPY backend/src src
+COPY --from=frontend-build /app/frontend/dist src/main/resources/static
+RUN ./mvnw -q package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=backend-build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

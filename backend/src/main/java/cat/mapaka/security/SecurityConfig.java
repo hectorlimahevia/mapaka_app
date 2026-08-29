@@ -52,7 +52,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/families/lookup", "/api/families/*/login-profiles").permitAll()
                         // Registre públic de família i recuperació de PIN (Prompt 6) — sense sessió prèvia.
                         .requestMatchers("/api/families/register").permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers("/api/**").authenticated()
+                        // Tota la resta és el frontend Vue empaquetat com a recursos estàtics del
+                        // mateix jar (Prompt 13 — coste zero, un únic servei a Render): el propi
+                        // xassís SPA no té res a protegir, la protecció real és sempre l'API.
+                        .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

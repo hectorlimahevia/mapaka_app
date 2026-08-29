@@ -1,10 +1,20 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      # DATABASE_URL: jdbc:postgresql://<host-neon>/<db>?sslmode=require
-      # ha de proporcionar-se des de l'entorn (secrets de Render), mai hardcodejada aqui.
+      # Totes tres s'han de proporcionar des de l'entorn (secrets de Render), mai
+      # hardcodejades aquí:
+      #   DATABASE_URL   jdbc:postgresql://<user>:<password>@<host-neon>/<db>?sslmode=require
+      #   JWT_SECRET     cadena aleatòria llarga (openssl rand -base64 48)
+      #   FRONTEND_URL   origen permès per CORS — l'app Android/Capacitor (la mateixa
+      #                  app web servida des d'aquest backend no necessita CORS, és
+      #                  same-origin; aquesta variable és per a l'APK i qualsevol
+      #                  frontend fora d'aquest origen)
       DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
     ports:
       - "8080:8080"
