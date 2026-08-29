@@ -32,7 +32,7 @@
     "childToggle": "I'm a child",
     "adultToggle": "I'm an adult",
     "familyNameLabel": "Family name",
-    "familyNamePlaceholder": "Sande-Lima",
+    "familyNamePlaceholder": "Smith",
     "changeFamily": "Change family",
     "whoAreYou": "Who are you?",
     "emptyAdults": "This family doesn't have any adult set up yet.",
@@ -180,7 +180,7 @@
     "minutesUnit": "min",
     "availableMinutes": "{n} min available",
     "assignedCaption": "of {n} min this month",
-    "nfcHint": "📱 To play with the shared screen, tap the Mapaka object against the family tablet to start a play session — nothing to do here."
+    "nfcHint": "To play with the shared screen, tap the Mapaka object against the family tablet to start a play session — nothing to do here."
   },
   "avatar": {
     "title": "Customize your avatar",
@@ -224,7 +224,7 @@
     "statTotal": "Total",
     "statSpending": "Spending",
     "statSavings": "Savings",
-    "allowanceReminder": "🔔 Remember to generate this month's allowance",
+    "allowanceReminder": "Remember to generate this month's allowance",
     "viewAllMovements": "View all movements →",
     "periodWeek": "This week",
     "periodMonth": "This month",

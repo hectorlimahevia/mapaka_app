@@ -32,7 +32,7 @@
     "childToggle": "Soy un hijo",
     "adultToggle": "Soy un adulto",
     "familyNameLabel": "Nombre de la familia",
-    "familyNamePlaceholder": "Sande-Lima",
+    "familyNamePlaceholder": "García",
     "changeFamily": "Cambiar familia",
     "whoAreYou": "¿Quién eres?",
     "emptyAdults": "Esta familia todavía no tiene ningún adulto dado de alta.",
@@ -180,7 +180,7 @@
     "minutesUnit": "min",
     "availableMinutes": "{n} min disponibles",
     "assignedCaption": "de {n} min este mes",
-    "nfcHint": "📱 Para jugar con la pantalla compartida, toca el objeto Mapaka contra la tableta de la familia para empezar un tiempo de juego — no hace falta hacer nada aquí."
+    "nfcHint": "Para jugar con la pantalla compartida, toca el objeto Mapaka contra la tableta de la familia para empezar un tiempo de juego — no hace falta hacer nada aquí."
   },
   "avatar": {
     "title": "Personaliza tu avatar",
@@ -224,7 +224,7 @@
     "statTotal": "Total",
     "statSpending": "Para gastar",
     "statSavings": "Ahorro",
-    "allowanceReminder": "🔔 Recuerda generar la paga de este mes",
+    "allowanceReminder": "Recuerda generar la paga de este mes",
     "viewAllMovements": "Ver todos los movimientos →",
     "periodWeek": "Esta semana",
     "periodMonth": "Este mes",

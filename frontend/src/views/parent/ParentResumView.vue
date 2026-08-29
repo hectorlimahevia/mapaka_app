@@ -206,7 +206,13 @@ onMounted(load)
     <h1>{{ t('resum.title') }}</h1>
     <p class="resum__sub">{{ t('resum.subtitle') }}</p>
 
-    <div v-if="!allowanceGeneratedThisMonth" class="allowance-reminder">{{ t('resum.allowanceReminder') }}</div>
+    <div v-if="!allowanceGeneratedThisMonth" class="allowance-reminder">
+      <svg class="allowance-reminder__icon" viewBox="0 0 24 24">
+        <path d="M12 3a5 5 0 0 0-5 5v3.2c0 .5-.2 1-.5 1.4L5 15h14l-1.5-2.4c-.3-.4-.5-.9-.5-1.4V8a5 5 0 0 0-5-5z" />
+        <path d="M9.5 18a2.5 2.5 0 0 0 5 0" />
+      </svg>
+      {{ t('resum.allowanceReminder') }}
+    </div>
 
     <p v-if="!loading && children.length === 0" class="resum__empty">{{ t('resum.emptyChildren') }}</p>
 
@@ -425,6 +431,9 @@ onMounted(load)
 }
 
 .allowance-reminder {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: color-mix(in srgb, var(--warning) 15%, white);
   color: color-mix(in srgb, var(--warning) 70%, black);
   border-radius: 12px;
@@ -432,6 +441,17 @@ onMounted(load)
   font-size: 0.85rem;
   font-weight: 700;
   margin-bottom: 1.25rem;
+}
+
+.allowance-reminder__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .kids-grid {

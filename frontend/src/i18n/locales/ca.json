@@ -32,7 +32,7 @@
     "childToggle": "Sóc un fill",
     "adultToggle": "Sóc un adult",
     "familyNameLabel": "Nom de la família",
-    "familyNamePlaceholder": "Sande-Lima",
+    "familyNamePlaceholder": "Garcia",
     "changeFamily": "Canviar família",
     "whoAreYou": "Qui ets?",
     "emptyAdults": "Aquesta família encara no té cap adult donat d'alta.",
@@ -180,7 +180,7 @@
     "minutesUnit": "min",
     "availableMinutes": "{n} min disponibles",
     "assignedCaption": "de {n} min aquest mes",
-    "nfcHint": "📱 Per jugar amb la pantalla compartida, toca l'objecte Mapaka contra la tauleta de la família per començar un temps de joc — no cal fer res aquí."
+    "nfcHint": "Per jugar amb la pantalla compartida, toca l'objecte Mapaka contra la tauleta de la família per començar un temps de joc — no cal fer res aquí."
   },
   "avatar": {
     "title": "Personalitza el teu avatar",
@@ -224,7 +224,7 @@
     "statTotal": "Total",
     "statSpending": "Per gastar",
     "statSavings": "Estalvi",
-    "allowanceReminder": "🔔 Recorda generar la paga d'aquest mes",
+    "allowanceReminder": "Recorda generar la paga d'aquest mes",
     "viewAllMovements": "Veure tots els moviments →",
     "periodWeek": "Aquesta setmana",
     "periodMonth": "Aquest mes",
