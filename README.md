@@ -36,7 +36,7 @@ Un únic servei desplegat a Render fa de tot: `Dockerfile.prod` (a l'arrel del r
 3. Al crear el servei, Render demanarà les variables marcades com a secretes al blueprint (mai queden escrites al repositori):
    - `DATABASE_URL` — la connection string de Neon del pas anterior, tal qual.
    - `JWT_SECRET` — una cadena aleatòria llarga, p. ex. `openssl rand -base64 48`.
-   - `FRONTEND_URL` — origen permès per CORS. La mateixa app web servida des d'aquest backend no el necessita (same-origin); aquesta variable és per a l'APK Android/Capacitor o qualsevol altre frontend que hi truqui des d'un origen diferent — p. ex. `capacitor://localhost`.
+   - `FRONTEND_URL` — origen permès per CORS. La mateixa app web servida des d'aquest backend no el necessita (same-origin); aquesta variable és per a l'APK Android/Capacitor o qualsevol altre frontend que hi truqui des d'un origen diferent — p. ex. `https://localhost`.
 4. Desplega. El healthcheck de Render apunta a `/actuator/health` (ja inclòs des del Prompt 1) — Render no marca el servei com actiu fins que respon.
 5. **El pla gratuït de Render "adorm" el servei als 15 minuts d'inactivitat i triga fins a un minut a despertar.** El frontend ja mostra un estat de càrrega ("Despertant Mapaka…") a qualsevol crida que trigui — no cal fer res més per a l'MVP.
 

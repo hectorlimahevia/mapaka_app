@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -71,14 +72,20 @@ class ScreenTagAdminIntegrationTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 parent, null, List.of(new SimpleGrantedAuthority("ROLE_PARENT"))));
 
-        ScreenTagResponse first = screenTagAdminController.create(family.getId(), parent);
-        ScreenTagResponse second = screenTagAdminController.create(family.getId(), parent);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/families/" + family.getId() + "/screen-tags");
+        request.setScheme("https");
+        request.setServerName("mapaka-backend.onrender.com");
+        request.setServerPort(443);
+
+        ScreenTagResponse first = screenTagAdminController.create(family.getId(), parent, request);
+        ScreenTagResponse second = screenTagAdminController.create(family.getId(), parent, request);
 
         assertThat(first.token()).hasSize(12);
         assertThat(first.token()).isNotEqualTo(second.token());
         assertThat(first.active()).isTrue();
+        assertThat(first.url()).isEqualTo("https://mapaka-backend.onrender.com/screen/" + first.token());
 
-        List<ScreenTagResponse> list = screenTagAdminController.list(family.getId(), parent);
+        List<ScreenTagResponse> list = screenTagAdminController.list(family.getId(), parent, request);
         assertThat(list).extracting(ScreenTagResponse::token).containsExactlyInAnyOrder(first.token(), second.token());
 
         SecurityContextHolder.clearContext();

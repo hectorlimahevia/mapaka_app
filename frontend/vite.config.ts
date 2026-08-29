@@ -12,6 +12,12 @@ export default defineConfig({
     vueDevTools(),
     VitePWA({
       registerType: 'autoUpdate',
+      // injectRegister: false — el registre és manual a main.ts, només per a web
+      // (iOS PWA/navegador). L'app empaquetada amb Capacitor no ha de registrar mai
+      // cap Service Worker: en actualitzar l'APK, un SW vell servint des de la cache
+      // deixa la pantalla en blanc perquè referencia fitxers JS/CSS que ja no existeixen
+      // al bundle nou (bug real trobat en verificar el Prompt 12 en un dispositiu real).
+      injectRegister: false,
       manifest: {
         name: 'Mapaka',
         short_name: 'Mapaka',

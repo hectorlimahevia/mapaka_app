@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 !.env.development
+!.env.production
 
 # Sistema operatiu
 .DS_Store
@@ -14,6 +15,7 @@ Thumbs.db
 
 # Empaquetat Android amb Capacitor (Fase 9)
 frontend/android/app/build/
+frontend/android/app/release/
 frontend/android/.gradle/
 frontend/android/local.properties
 *.keystore
