@@ -110,13 +110,20 @@ function activeGoalsOf(child: ChildFamilySummary) {
   return child.goals.filter((g) => g.status === 'ACTIVE')
 }
 
+function completedGoalsOf(child: ChildFamilySummary) {
+  return child.goals.filter((g) => g.status === 'COMPLETED')
+}
+
 function goalPercent(goal: GoalAllocationSummary) {
   if (goal.targetAmount <= 0) return 0
   return Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
 }
 
 // El toggle "Objectius (N)" sempre comença tancat en carregar la pantalla — no cal
-// persistir-lo enlloc (ajust posterior, disseny "Opció 3" del mockup de card).
+// persistir-lo enlloc (ajust posterior, disseny "Opció 3" del mockup de card). El
+// comptador i la fila inclouen tant els actius com els assolits (child.goals ja ve
+// filtrat sense CANCELLED des del backend) — els assolits hi apareixen amb el mateix
+// tractament daurat que a l'historial del fill, en lloc de desaparèixer de la targeta.
 const showGoals = ref<Record<string, boolean>>({})
 
 function avatarIconPath(child: ChildFamilySummary) {
@@ -124,14 +131,14 @@ function avatarIconPath(child: ChildFamilySummary) {
 }
 
 // El peu de la targeta ("Sense aprovacions pendents") és sempre la informació de menys
-// prioritat; quan no hi ha cap objectiu actiu s'hi afegeix per davant (mateix disseny
-// "Opció 3" del mockup) en lloc de renderitzar una fila pròpia buida.
+// prioritat; quan el fill no té cap objectiu (ni actiu ni assolit) s'hi afegeix per
+// davant (mateix disseny "Opció 3" del mockup) en lloc de renderitzar una fila pròpia buida.
 function footerText(child: ChildFamilySummary) {
   const approvals =
     child.pendingApprovalsCount > 0
       ? t('resum.pendingApprovals', { n: child.pendingApprovalsCount }, child.pendingApprovalsCount)
       : t('resum.noPendingApprovals')
-  return activeGoalsOf(child).length === 0 ? `${t('resum.noActiveGoals')} · ${approvals}` : approvals
+  return child.goals.length === 0 ? `${t('resum.noActiveGoals')} · ${approvals}` : approvals
 }
 
 const donatingGoal = ref<{ goalId: string; name: string } | null>(null)
@@ -231,8 +238,8 @@ onMounted(load)
             </div>
           </div>
 
-          <div v-if="activeGoalsOf(child).length > 0" class="kid-card__toggle-row">
-            <span>{{ t('resum.goalsToggle', { n: activeGoalsOf(child).length }) }}</span>
+          <div v-if="child.goals.length > 0" class="kid-card__toggle-row">
+            <span>{{ t('resum.goalsToggle', { n: child.goals.length }) }}</span>
             <BaseSwitch
               :model-value="!!showGoals[child.childId]"
               @update:model-value="showGoals[child.childId] = $event"
@@ -251,6 +258,23 @@ onMounted(load)
                   <AmountDisplay :value="goal.targetAmount" unit="€" :decimals="0" />
                 </span>
                 <span>{{ Math.round(goalPercent(goal)) }}%</span>
+              </div>
+              <button type="button" class="goal-block__donate" @click="openDonate(goal.goalId, goal.name)">
+                <svg class="goal-block__gift-icon" viewBox="0 0 24 24">
+                  <rect x="4" y="9" width="16" height="11" rx="1.5" />
+                  <path d="M4 9h16M12 9v11M12 9c-1.8 0-3-1.3-3-3s1.5-2.5 3-1c1.5-1.5 3 0 3 1s-1.2 3-3 3z" />
+                </svg>
+                {{ t('resum.donateButton') }}
+              </button>
+            </div>
+
+            <div v-for="goal in completedGoalsOf(child)" :key="goal.goalId" class="goal-block goal-block--done">
+              <div class="goal-block__done-top">
+                <span class="goal-block__trophy">
+                  <svg :viewBox="AVATAR_ICON_VIEWBOX" fill="currentColor"><path :d="AVATAR_ICON_PATHS.trophy" /></svg>
+                </span>
+                <span class="goal-block__done-name">{{ goal.name }}</span>
+                <span class="goal-block__done-amt"><AmountDisplay :value="goal.targetAmount" unit="€" :decimals="0" /></span>
               </div>
               <button type="button" class="goal-block__donate" @click="openDonate(goal.goalId, goal.name)">
                 <svg class="goal-block__gift-icon" viewBox="0 0 24 24">
@@ -534,7 +558,7 @@ onMounted(load)
 .goal-block__bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--child-color, var(--primary));
+  background: linear-gradient(90deg, var(--child-color, var(--primary)), var(--primary));
   transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -568,6 +592,59 @@ onMounted(load)
   stroke: white;
   fill: none;
   stroke-width: 2;
+}
+
+.goal-block--done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+}
+
+.goal-block__done-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.goal-block__trophy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text));
+  flex-shrink: 0;
+}
+
+.goal-block__trophy svg {
+  width: 12px;
+  height: 12px;
+}
+
+.goal-block__done-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-block__done-amt {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--accent) 65%, var(--text));
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .kid-card__footer {
