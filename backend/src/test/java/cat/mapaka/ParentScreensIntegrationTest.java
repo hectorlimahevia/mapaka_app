@@ -1,6 +1,8 @@
 package cat.mapaka;
 
+import cat.mapaka.allowance.AllowanceGenerationController;
 import cat.mapaka.allowance.AllowanceRuleUpdateRequest;
+import cat.mapaka.allowance.MonthlyAllowanceResponse;
 import cat.mapaka.child.*;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.family.*;
@@ -82,6 +84,7 @@ class ParentScreensIntegrationTest {
     @Autowired FamilySettingsController familySettingsController;
     @Autowired ChildManagementController childManagementController;
     @Autowired ScreenTimeController screenTimeController;
+    @Autowired AllowanceGenerationController allowanceGenerationController;
     @Autowired TaskController taskController;
     @Autowired TaskManagementController taskManagementController;
 
@@ -381,5 +384,40 @@ class ParentScreensIntegrationTest {
         List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
         // -1.00€ repartit gastar/estalvi segons el percentatge per defecte (100% gastar, sense regla).
         assertThat(summary.get(0).spendingBalance().add(summary.get(0).savingsBalance())).isEqualByComparingTo("-1.00");
+    }
+
+    @Test
+    @Transactional
+    void confirmAllowance_creditsMoneyAndScreenTimeInTheSameAct() {
+        // Prompt 16 (punt 14/24): abans el temps de pantalla es generava per separat i
+        // diàriament; ara "Generar la paga del mes" ha de crear els dos moviments alhora,
+        // en confirmar, i no abans.
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("70"), new BigDecimal("30")), parent);
+        childManagementController.updateScreenTime(f.child.getId(), new ScreenTimeRuleUpdateRequest(240), parent);
+
+        List<MonthlyAllowanceResponse> drafts = allowanceGenerationController.generate(parent);
+        assertThat(drafts).hasSize(1);
+
+        // Generar només crea el DRAFT — cap moviment encara, ni de diners ni de pantalla.
+        List<ChildFamilySummary> beforeConfirm = familySummaryController.summary(f.family.getId(), parent);
+        assertThat(beforeConfirm.get(0).totalBalance()).isEqualByComparingTo("0.00");
+        assertThat(screenTimeController.today(f.child.getId(), asChild(f.child)).availableMinutes()).isZero();
+
+        allowanceGenerationController.confirm(drafts.get(0).id(), parent);
+
+        List<ChildFamilySummary> afterConfirm = familySummaryController.summary(f.family.getId(), parent);
+        assertThat(afterConfirm.get(0).spendingBalance()).isEqualByComparingTo("7.00");
+        assertThat(afterConfirm.get(0).savingsBalance()).isEqualByComparingTo("3.00");
+        assertThat(screenTimeController.today(f.child.getId(), asChild(f.child)).availableMinutes()).isEqualTo(240);
+
+        // Confirmar-la un segon cop ha de fallar (RN-03, ja no és DRAFT) — i no duplica res.
+        assertThatThrownBy(() -> allowanceGenerationController.confirm(drafts.get(0).id(), parent))
+                .isInstanceOf(DomainException.class);
+        assertThat(screenTimeController.today(f.child.getId(), asChild(f.child)).availableMinutes()).isEqualTo(240);
     }
 }

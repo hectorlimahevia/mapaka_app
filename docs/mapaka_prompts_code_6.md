@@ -521,3 +521,9 @@ Revisa tot el que s'ha implementat als prompts 1-15 contra Família+.pdf i contr
 
 Informa de qualsevol incoherència trobada abans de continuar.
 ```
+
+**Resultat de la verificació (executada 2026-08-29):** dels 30 punts, 27 confirmats sense cap incoherència (auditoria en quatre parts, cadascuna contra el codi real, no contra aquest document). Es van trobar 3 incoherències:
+
+- **Punt 14/24 — incoherència real, corregida (ajust posterior 5):** `AllowanceGenerationService` mai havia arribat a generar temps de pantalla — `ScreenTimeService` seguia acreditant `ScreenTimeRule.baseMinutes` **cada dia** via `DailyBaseCreditor` (el disseny "diari" que aquest mateix document diu que es va substituir a la secció 8), mentre que `ParentFillsView` ja feia la conversió ÷4/×4 assumint que per sota es generava un cop al mes. Efecte real: un pare que introduïa "60 min/setmana" acreditava 240 min **cada dia**, no cada mes (~28x de més). Corregit traslladant l'acreditació a `AllowanceGenerationService.confirm()` (mateix acte que la paga en diners, mateix gate `requireDraft` que evita duplicar-la), afegint `ScreenSourceType.MONTHLY_BASE` (migració V13) i eliminant `DailyBaseCreditor` i tota la lògica de `weekday` (mai s'havia arribat a fer servir: cap codi creava mai una regla amb `weekday` no nul). `ScreenTimeService.getTodayStatus()` ara és una simple lectura, sense cap efecte secundari. Verificat manualment (family TestScreenTimeFix): 60 min/setmana → regla de 240 min → cap moviment fins confirmar la paga → exactament 240 min acreditats un únic cop, sense duplicar-se en recarregar la pantalla.
+- **Punt 7 — gap de tests, encara pendent:** `NfcScreenSessionIntegrationTest` crida el servei directament, no els endpoints HTTP reals; el cas de saldo negatiu es comprova de forma implícita.
+- **Punt 9 — gap de tests, encara pendent:** cap test cobreix el registre de família, l'alta d'un fill amb PIN, ni la recuperació (incloent el codi ja consumit).

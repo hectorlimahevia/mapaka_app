@@ -7,6 +7,11 @@ import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
 import cat.mapaka.money.MoneyTransactionRepository;
 import cat.mapaka.money.WalletType;
+import cat.mapaka.screentime.ScreenSourceType;
+import cat.mapaka.screentime.ScreenTimeRule;
+import cat.mapaka.screentime.ScreenTimeRuleRepository;
+import cat.mapaka.screentime.ScreenTimeTransaction;
+import cat.mapaka.screentime.ScreenTimeTransactionRepository;
 import cat.mapaka.settlement.MonthlySettlement;
 import cat.mapaka.settlement.MonthlySettlementRepository;
 import cat.mapaka.settlement.SettlementStatus;
@@ -29,7 +34,11 @@ import java.util.UUID;
 /**
  * Generar la paga del mes (Prompt 9 ampliat, secció 8 de mapaka_documento_global.md) —
  * flux de dos passos perquè un import equivocat no es pugui aplicar per error: generate()
- * només crea files DRAFT, confirm() és qui realment mou diner al ledger.
+ * només crea files DRAFT, confirm() és qui realment mou diner al ledger. Des del Prompt 16
+ * (punt 14/24 de la verificació), confirm() també acredita el temps de pantalla mensual
+ * del fill en el mateix acte — abans es generava per separat i diàriament
+ * (ScreenTimeService/DailyBaseCreditor), cosa que no coincidia amb el que ja
+ * mostrava/editava Fills en termes mensuals (×4 setmanal).
  */
 @Service
 public class AllowanceGenerationService {
@@ -41,6 +50,8 @@ public class AllowanceGenerationService {
     private final MonthlySettlementRepository monthlySettlementRepository;
     private final UserRepository userRepository;
     private final MoneySplitCalculator moneySplitCalculator;
+    private final ScreenTimeRuleRepository screenTimeRuleRepository;
+    private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
 
     public AllowanceGenerationService(
             ChildProfileRepository childProfileRepository,
@@ -49,7 +60,9 @@ public class AllowanceGenerationService {
             MoneyTransactionRepository moneyTransactionRepository,
             MonthlySettlementRepository monthlySettlementRepository,
             UserRepository userRepository,
-            MoneySplitCalculator moneySplitCalculator) {
+            MoneySplitCalculator moneySplitCalculator,
+            ScreenTimeRuleRepository screenTimeRuleRepository,
+            ScreenTimeTransactionRepository screenTimeTransactionRepository) {
         this.childProfileRepository = childProfileRepository;
         this.allowanceRuleRepository = allowanceRuleRepository;
         this.monthlyAllowanceRepository = monthlyAllowanceRepository;
@@ -57,6 +70,8 @@ public class AllowanceGenerationService {
         this.monthlySettlementRepository = monthlySettlementRepository;
         this.userRepository = userRepository;
         this.moneySplitCalculator = moneySplitCalculator;
+        this.screenTimeRuleRepository = screenTimeRuleRepository;
+        this.screenTimeTransactionRepository = screenTimeTransactionRepository;
     }
 
     @Transactional
@@ -121,6 +136,7 @@ public class AllowanceGenerationService {
         MoneySplitCalculator.SplitResult split = moneySplitCalculator.apply(
                 child, allowance.getGrossAmount(), TransactionType.CREDIT,
                 MoneySourceType.MONTHLY_ALLOWANCE, allowance.getId(), "Paga mensual", parent);
+        creditMonthlyScreenTime(child, allowance, parent);
 
         allowance.setStatus(AllowanceStatus.CONFIRMED);
         allowance.setConfirmedAt(Instant.now());
@@ -129,6 +145,25 @@ public class AllowanceGenerationService {
 
         closeSettlement(allowance, split, parent);
         return MonthlyAllowanceResponse.from(allowance);
+    }
+
+    /** Mateix acte que la paga en diners (checklist Prompt 16, punt 14): el fill té com a
+     * molt una regla activa sense dia de la setmana (ScreenTimeRule.weekday sempre null,
+     * ChildManagementService.updateScreenTimeRule) amb els minuts MENSUALS ja calculats
+     * (Fills els mostra/edita en setmanal i els multiplica per 4 abans de desar-los). Es
+     * crea com a molt un moviment per fill i mes gràcies al mateix gate de `requireDraft`
+     * que ja evita confirmar dos cops la mateixa paga. */
+    private void creditMonthlyScreenTime(ChildProfile child, MonthlyAllowance allowance, User parent) {
+        Optional<ScreenTimeRule> rule = screenTimeRuleRepository.findByChildIdAndWeekdayIsNullAndActiveTrue(child.getId());
+        if (rule.isEmpty() || rule.get().getBaseMinutes() <= 0) {
+            return;
+        }
+        ZoneId zone = ZoneId.of(child.getUser().getFamily().getTimezone());
+        screenTimeTransactionRepository.save(ScreenTimeTransaction.builder()
+                .child(child).transactionType(TransactionType.CREDIT)
+                .minutes(rule.get().getBaseMinutes()).description("Temps de pantalla mensual")
+                .sourceType(ScreenSourceType.MONTHLY_BASE).sourceId(allowance.getId())
+                .occurredOn(LocalDate.now(zone)).createdBy(parent).build());
     }
 
     @Transactional

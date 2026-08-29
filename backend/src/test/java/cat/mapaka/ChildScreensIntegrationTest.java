@@ -157,7 +157,10 @@ class ChildScreensIntegrationTest {
 
     @Test
     @Transactional
-    void screenTime_creditsDailyBaseOnceAndIsIdempotent() {
+    void screenTime_todayStatusIsReadOnly_neverCreditsByItself() {
+        // Prompt 16 (punt 14/24): el temps de pantalla ja no es genera en consultar l'estat
+        // ("baseMinutes" és només informatiu, per pintar l'anell) — l'únic que crea moviments
+        // reals és AllowanceGenerationService.confirm(), en el mateix acte que la paga.
         ChildProfile child = seedChild();
         screenTimeRuleRepository.save(ScreenTimeRule.builder()
                 .child(child).baseMinutes(45).rolloverEnabled(false)
@@ -166,19 +169,12 @@ class ChildScreensIntegrationTest {
         AuthenticatedUser principal = asChild(child);
         UUID childId = child.getId();
 
-        // DailyBaseCreditor obre una transacció pròpia (REQUIRES_NEW) que, en producció,
-        // sempre veu un fill ja confirmat d'una petició anterior. Aquí cal confirmar-lo
-        // explícitament perquè la transacció anidada el pugui veure de debò.
-        org.springframework.test.context.transaction.TestTransaction.flagForCommit();
-        org.springframework.test.context.transaction.TestTransaction.end();
-        org.springframework.test.context.transaction.TestTransaction.start();
-
         var first = screenTimeController.today(childId, principal);
         assertThat(first.baseMinutes()).isEqualTo(45);
-        assertThat(first.availableMinutes()).isEqualTo(45);
+        assertThat(first.availableMinutes()).isEqualTo(0); // res acreditat encara
 
         var second = screenTimeController.today(childId, principal);
-        assertThat(second.availableMinutes()).isEqualTo(45); // no duplicat el segon cop
+        assertThat(second.availableMinutes()).isEqualTo(0); // consultar-ho no crea cap moviment
     }
 
     @Test
