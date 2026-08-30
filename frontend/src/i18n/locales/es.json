@@ -14,7 +14,8 @@
     "monthPlaceholder": "MM",
     "yearPlaceholder": "AAAA",
     "wakingUp": "Despertando Mapaka…",
-    "wakingUpHint": "Puede tardar hasta un minuto si la aplicación no se ha usado hace un rato."
+    "wakingUpHint": "Puede tardar hasta un minuto si la aplicación no se ha usado hace un rato.",
+    "perMonthUnit": "€/mes"
   },
   "nav": {
     "inici": "Inicio",

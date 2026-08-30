@@ -228,7 +228,7 @@ onMounted(load)
       <div v-if="editingId !== child.childId" class="child-card__info">
         <span v-if="child.allowanceMonthlyAmount !== null">
           {{ child.hasCustomAllowance ? t('fills.allowancePrefix') : t('fills.allowanceGeneralPrefix') }}
-          <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
+          <AmountDisplay :value="child.allowanceMonthlyAmount" :unit="t('common.perMonthUnit')" />
           {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
         </span>
         <span v-else>{{ t('fills.noAllowance') }}</span>

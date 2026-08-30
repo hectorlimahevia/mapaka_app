@@ -211,7 +211,7 @@ onMounted(load)
         </div>
       </div>
       <div class="rule-card__detail">
-        {{ t('fills.allowancePrefix') }} {{ rule.monthlyAmount }} €/mes
+        {{ t('fills.allowancePrefix') }} {{ rule.monthlyAmount }} {{ t('common.perMonthUnit') }}
         {{ t('fills.allowanceDetail', { spending: rule.spendingPercentage, savings: rule.savingsPercentage }) }}
       </div>
 

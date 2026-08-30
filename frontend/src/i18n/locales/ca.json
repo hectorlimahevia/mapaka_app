@@ -14,7 +14,8 @@
     "monthPlaceholder": "MM",
     "yearPlaceholder": "AAAA",
     "wakingUp": "Despertant Mapaka…",
-    "wakingUpHint": "Pot trigar fins a un minut si l'aplicació no s'ha fet servir fa una estona."
+    "wakingUpHint": "Pot trigar fins a un minut si l'aplicació no s'ha fet servir fa una estona.",
+    "perMonthUnit": "€/mes"
   },
   "nav": {
     "inici": "Inici",

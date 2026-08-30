@@ -14,7 +14,8 @@
     "monthPlaceholder": "MM",
     "yearPlaceholder": "YYYY",
     "wakingUp": "Waking up Mapaka…",
-    "wakingUpHint": "This can take up to a minute if the app hasn't been used in a while."
+    "wakingUpHint": "This can take up to a minute if the app hasn't been used in a while.",
+    "perMonthUnit": "€/month"
   },
   "nav": {
     "inici": "Home",
