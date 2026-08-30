@@ -28,16 +28,29 @@ const profiles = ref<LoginProfile[]>([])
 const selectedProfile = ref<LoginProfile | null>(null)
 const pin = ref('')
 
+const familySearching = ref(false)
+const familySearchError = ref<string | null>(null)
+
 let searchTimeout: ReturnType<typeof setTimeout>
 watch(familyQuery, (q) => {
   clearTimeout(searchTimeout)
+  familySearchError.value = null
   if (q.trim().length < 2) {
     familyResults.value = []
+    familySearching.value = false
     return
   }
+  familySearching.value = true
   searchTimeout = setTimeout(async () => {
-    const { data } = await api.get<FamilySummary[]>('/api/families/lookup', { params: { q } })
-    familyResults.value = data
+    try {
+      const { data } = await api.get<FamilySummary[]>('/api/families/lookup', { params: { q } })
+      familyResults.value = data
+    } catch (err) {
+      familyResults.value = []
+      familySearchError.value = apiErrorMessage(err)
+    } finally {
+      familySearching.value = false
+    }
   }, 300)
 })
 
@@ -122,6 +135,8 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
             {{ t('login.familyNameLabel') }}
             <input v-model="familyQuery" type="text" :placeholder="t('login.familyNamePlaceholder')" autocomplete="off" />
           </label>
+          <p v-if="familySearching" class="login__search-status">{{ t('login.searching') }}</p>
+          <p v-else-if="familySearchError" class="login__search-status login__search-status--error">{{ familySearchError }}</p>
           <ul v-if="familyResults.length" class="login__list">
             <li v-for="family in familyResults" :key="family.id">
               <button type="button" @click="selectFamily(family)">{{ family.name }}</button>
@@ -254,6 +269,17 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
   color: var(--muted);
   font-size: 0.85rem;
   margin: 0;
+}
+
+.login__search-status {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.login__search-status--error {
+  color: var(--error);
+  font-weight: 700;
 }
 
 .login__list {

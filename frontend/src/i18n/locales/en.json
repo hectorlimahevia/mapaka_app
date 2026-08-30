@@ -12,7 +12,9 @@
     "pinMismatch": "The PINs don't match.",
     "dayPlaceholder": "DD",
     "monthPlaceholder": "MM",
-    "yearPlaceholder": "YYYY"
+    "yearPlaceholder": "YYYY",
+    "wakingUp": "Waking up Mapaka…",
+    "wakingUpHint": "This can take up to a minute if the app hasn't been used in a while."
   },
   "nav": {
     "inici": "Home",
@@ -33,6 +35,7 @@
     "adultToggle": "I'm an adult",
     "familyNameLabel": "Family name",
     "familyNamePlaceholder": "Smith",
+    "searching": "Searching…",
     "changeFamily": "Change family",
     "whoAreYou": "Who are you?",
     "emptyAdults": "This family doesn't have any adult set up yet.",

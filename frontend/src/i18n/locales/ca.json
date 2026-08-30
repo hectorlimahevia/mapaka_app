@@ -12,7 +12,9 @@
     "pinMismatch": "Els PIN no coincideixen.",
     "dayPlaceholder": "DD",
     "monthPlaceholder": "MM",
-    "yearPlaceholder": "AAAA"
+    "yearPlaceholder": "AAAA",
+    "wakingUp": "Despertant Mapaka…",
+    "wakingUpHint": "Pot trigar fins a un minut si l'aplicació no s'ha fet servir fa una estona."
   },
   "nav": {
     "inici": "Inici",
@@ -33,6 +35,7 @@
     "adultToggle": "Sóc un adult",
     "familyNameLabel": "Nom de la família",
     "familyNamePlaceholder": "Garcia",
+    "searching": "Cercant…",
     "changeFamily": "Canviar família",
     "whoAreYou": "Qui ets?",
     "emptyAdults": "Aquesta família encara no té cap adult donat d'alta.",
