@@ -11,6 +11,8 @@
 ![Capacitor](https://img.shields.io/badge/Capacitor-Android-119EFF?logo=capacitor&logoColor=white)
 ![i18n](https://img.shields.io/badge/i18n-ca%20%7C%20es%20%7C%20en-orange)
 
+![Mapaka walkthrough](docs/mapaka-demo.gif)
+
 ## Overview
 
 Mapaka is a full-stack web app I designed and built end-to-end for my own family, replacing an ad-hoc spreadsheet with a real system for managing our children's allowance, chores, savings goals and screen time. It's in active daily use at home, running on a real production stack — PostgreSQL on Neon, Spring Boot on Render — installed as a PWA on iOS and as a sideloaded APK on Android, at zero infrastructure cost.
@@ -64,7 +66,7 @@ Running on Render's free tier, so the backend sleeps after 15 minutes of inactiv
 ```
 backend/    Spring Boot 4.1 (Java 21) — REST API, JPA, Flyway migrations, JWT security
 frontend/   Vue 3 + Vite + TypeScript — SPA/PWA, Capacitor Android wrapper
-docs/       Brand assets
+docs/       Brand assets, demo GIF
 ```
 
 ## Running it locally
