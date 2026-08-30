@@ -17,6 +17,20 @@ Mapaka is a full-stack web app I designed and built end-to-end for my own family
 
 Beyond solving a real problem, it's an end-to-end case study in owning a product from functional spec through architecture decisions to a deployed, multi-platform app used by real people every day.
 
+## Live demo
+
+**[mapaka-backend.onrender.com](https://mapaka-backend.onrender.com)** — a separate "Demo Family" with fictional data, kept fully isolated from my own family's real usage.
+
+| Role | Family name | Login |
+|---|---|---|
+| Parent | `Demo Family` | PIN `1234` (name: **Demo Parent**) |
+| Child | `Demo Family` | PIN `1111` (name: **Alex**) |
+| Child | `Demo Family` | PIN `2222` (name: **Sam**) |
+
+The demo family already has a month's allowance generated and confirmed, a savings goal in progress with a donation, an approved chore showing the automatic reward split, and one pending chore waiting for approval — so there's real data to look at immediately, and a pending-approval flow to try as the parent.
+
+Running on Render's free tier, so the backend sleeps after 15 minutes of inactivity and can take up to a minute to wake up on the first request — the app shows an explicit loading screen for that instead of a blank page (see [Deployment](#deployment)).
+
 ## Feature highlights
 
 - **Two roles, one codebase.** PARENT (full control) and CHILD (age-appropriate, restricted) share the same authenticated app, with authorization enforced server-side at the endpoint level, not just hidden in the UI.
