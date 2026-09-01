@@ -293,7 +293,13 @@
     "adjustmentValueMinutesLabel": "Valor (minuts)",
     "adjustmentReasonLabel": "Motiu",
     "missingReason": "Cal indicar un motiu.",
-    "missingAdjustmentValue": "Cal un valor superior a 0."
+    "missingAdjustmentValue": "Cal un valor superior a 0.",
+    "inactiveLabel": "Inactiu",
+    "deactivate": "Desactivar",
+    "reactivate": "Reactivar",
+    "delete": "Eliminar",
+    "deleteConfirm": "Vols eliminar {name} definitivament? Aquesta acció no es pot desfer.",
+    "deleteConfirmYes": "Sí, elimina'l"
   },
   "config": {
     "title": "Configuració",
@@ -351,6 +357,7 @@
   },
   "errors": {
     "GENERIC": "Alguna cosa ha fallat. Torna-ho a provar.",
+    "CHILD_HAS_HISTORY": "Aquest fill ja té activitat registrada; desactiva'l en lloc d'eliminar-lo.",
     "INVALID_CREDENTIALS": "PIN incorrecte.",
     "INVALID_LOGIN_REQUEST": "Falten dades per iniciar sessió.",
     "INVALID_TOKEN": "La sessió ha caducat. Torna a iniciar sessió.",

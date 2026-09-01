@@ -38,7 +38,7 @@ public class FamilyController {
         if (!id.equals(user.familyId())) {
             throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "No pots consultar una altra família");
         }
-        return childProfileRepository.findAllByFamilyId(id).stream()
+        return childProfileRepository.findAllActiveByFamilyIdFetchUser(id).stream()
                 .map(ChildSummary::from)
                 .toList();
     }

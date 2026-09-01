@@ -11,6 +11,8 @@ public interface MonthlySettlementRepository extends JpaRepository<MonthlySettle
 
     Optional<MonthlySettlement> findByChildIdAndYearAndMonth(UUID childId, int year, int month);
 
+    boolean existsByChildId(UUID childId);
+
     @Query("""
         SELECT s FROM MonthlySettlement s JOIN FETCH s.child c JOIN FETCH c.user u
         WHERE u.family.id = :familyId ORDER BY s.year DESC, s.month DESC

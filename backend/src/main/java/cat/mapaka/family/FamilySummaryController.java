@@ -54,7 +54,7 @@ public class FamilySummaryController {
     @GetMapping("/api/families/{id}/summary")
     public List<ChildFamilySummary> summary(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
         familyAccessService.requireParentAccess(id, user);
-        return childProfileRepository.findAllByFamilyId(id).stream()
+        return childProfileRepository.findAllActiveByFamilyIdFetchUser(id).stream()
                 .map(this::toSummary)
                 .toList();
     }

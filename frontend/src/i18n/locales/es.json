@@ -293,7 +293,13 @@
     "adjustmentValueMinutesLabel": "Valor (minutos)",
     "adjustmentReasonLabel": "Motivo",
     "missingReason": "Hay que indicar un motivo.",
-    "missingAdjustmentValue": "Falta un valor superior a 0."
+    "missingAdjustmentValue": "Falta un valor superior a 0.",
+    "inactiveLabel": "Inactivo",
+    "deactivate": "Desactivar",
+    "reactivate": "Reactivar",
+    "delete": "Eliminar",
+    "deleteConfirm": "¿Eliminar a {name} definitivamente? Esta acción no se puede deshacer.",
+    "deleteConfirmYes": "Sí, eliminar"
   },
   "config": {
     "title": "Configuración",
@@ -351,6 +357,7 @@
   },
   "errors": {
     "GENERIC": "Algo ha fallado. Vuelve a intentarlo.",
+    "CHILD_HAS_HISTORY": "Este hijo ya tiene actividad registrada; desactívalo en vez de eliminarlo.",
     "INVALID_CREDENTIALS": "PIN incorrecto.",
     "INVALID_LOGIN_REQUEST": "Faltan datos para iniciar sesión.",
     "INVALID_TOKEN": "La sesión ha caducado. Vuelve a iniciar sesión.",

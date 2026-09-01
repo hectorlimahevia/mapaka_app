@@ -122,6 +122,56 @@ async function load() {
   loading.value = false
 }
 
+const statusChangingId = ref<string | null>(null)
+const statusError = ref<string | null>(null)
+const confirmingDeleteId = ref<string | null>(null)
+
+async function deactivateChild(childId: string) {
+  statusChangingId.value = childId
+  statusError.value = null
+  try {
+    await api.post(`/api/children/${childId}/deactivate`)
+    await load()
+  } catch (err) {
+    statusError.value = apiErrorMessage(err)
+  } finally {
+    statusChangingId.value = null
+  }
+}
+
+async function reactivateChild(childId: string) {
+  statusChangingId.value = childId
+  statusError.value = null
+  try {
+    await api.post(`/api/children/${childId}/reactivate`)
+    await load()
+  } catch (err) {
+    statusError.value = apiErrorMessage(err)
+  } finally {
+    statusChangingId.value = null
+  }
+}
+
+function askDeleteConfirmation(childId: string) {
+  confirmingDeleteId.value = childId
+  statusError.value = null
+}
+
+async function deleteChild(childId: string) {
+  statusChangingId.value = childId
+  statusError.value = null
+  try {
+    await api.delete(`/api/children/${childId}`)
+    confirmingDeleteId.value = null
+    await load()
+  } catch (err) {
+    statusError.value = apiErrorMessage(err)
+    confirmingDeleteId.value = null
+  } finally {
+    statusChangingId.value = null
+  }
+}
+
 function startEdit(child: ChildDetailResponse) {
   editingId.value = child.childId
   form.customAllowance = child.hasCustomAllowance
@@ -205,23 +255,54 @@ onMounted(load)
     </BaseCard>
     <BaseButton v-else variant="accent" class="fills__add" @click="startAddChild">+ {{ t('fills.addChild') }}</BaseButton>
 
+    <p v-if="statusError" class="fills__error">{{ statusError }}</p>
+
     <BaseCard
       v-for="child in children"
       :key="child.childId"
       class="child-card"
+      :class="{ 'child-card--inactive': !child.active }"
       :style="{ '--child-color': child.avatarColor ?? 'var(--primary)' }"
     >
       <div class="child-card__head">
         <div class="child-card__identity">
           <ChildAvatar :color="child.avatarColor" :icon="child.avatarIcon" :name="child.displayName" size="small" />
           <div>
-            <div class="child-card__name">{{ child.displayName }}</div>
+            <div class="child-card__name">
+              {{ child.displayName }}
+              <span v-if="!child.active" class="child-card__inactive-badge">{{ t('fills.inactiveLabel') }}</span>
+            </div>
             <div class="child-card__age">{{ t('fills.age', { n: child.age }) }}</div>
           </div>
         </div>
         <div class="child-card__head-actions">
-          <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
-          <BaseButton v-if="adjustingId !== child.childId" variant="accent" @click="startAdjustment(child)">{{ t('fills.manualAdjustment') }}</BaseButton>
+          <template v-if="child.active">
+            <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
+            <BaseButton v-if="adjustingId !== child.childId" variant="accent" @click="startAdjustment(child)">{{ t('fills.manualAdjustment') }}</BaseButton>
+            <BaseButton variant="ghost" :disabled="statusChangingId === child.childId" @click="deactivateChild(child.childId)">
+              {{ t('fills.deactivate') }}
+            </BaseButton>
+          </template>
+          <template v-else>
+            <BaseButton variant="accent" :disabled="statusChangingId === child.childId" @click="reactivateChild(child.childId)">
+              {{ t('fills.reactivate') }}
+            </BaseButton>
+            <BaseButton v-if="child.deletable" variant="danger" :disabled="statusChangingId === child.childId" @click="askDeleteConfirmation(child.childId)">
+              {{ t('fills.delete') }}
+            </BaseButton>
+          </template>
+        </div>
+      </div>
+
+      <div v-if="confirmingDeleteId === child.childId" class="child-card__delete-confirm">
+        <p>{{ t('fills.deleteConfirm', { name: child.displayName }) }}</p>
+        <div class="child-card__form-actions">
+          <BaseButton variant="danger" :disabled="statusChangingId === child.childId" @click="deleteChild(child.childId)">
+            {{ t('fills.deleteConfirmYes') }}
+          </BaseButton>
+          <BaseButton variant="ghost" :disabled="statusChangingId === child.childId" @click="confirmingDeleteId = null">
+            {{ t('common.cancel') }}
+          </BaseButton>
         </div>
       </div>
 
@@ -253,7 +334,7 @@ onMounted(load)
         </template>
         <p v-else class="child-card__readonly-hint">
           <template v-if="child.allowanceMonthlyAmount !== null">
-            {{ t('fills.allowanceGeneralPrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" unit="€/mes" />
+            {{ t('fills.allowanceGeneralPrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" :unit="t('common.perMonthUnit')" />
             {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
           </template>
           <template v-else>{{ t('fills.noAllowance') }}</template>
@@ -357,6 +438,38 @@ onMounted(load)
 .child-card {
   margin-bottom: 0.9rem;
   border-left: 4px solid var(--child-color, var(--primary));
+}
+
+.child-card--inactive {
+  opacity: 0.6;
+}
+
+.child-card__inactive-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
+.child-card__delete-confirm {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--error) 10%, white);
+}
+
+.child-card__delete-confirm p {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .child-card__head {

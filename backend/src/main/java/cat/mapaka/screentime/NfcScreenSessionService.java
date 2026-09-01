@@ -130,7 +130,7 @@ public class NfcScreenSessionService {
         screenSessionRepository.save(session);
 
         UUID familyId = session.getScreenTag().getFamily().getId();
-        List<ChildSummary> children = childProfileRepository.findAllByFamilyId(familyId).stream()
+        List<ChildSummary> children = childProfileRepository.findAllActiveByFamilyIdFetchUser(familyId).stream()
                 .map(ChildSummary::from)
                 .toList();
 

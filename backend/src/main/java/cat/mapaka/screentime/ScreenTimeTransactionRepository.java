@@ -11,6 +11,8 @@ public interface ScreenTimeTransactionRepository extends JpaRepository<ScreenTim
 
     List<ScreenTimeTransaction> findByChildIdOrderByCreatedAtDesc(UUID childId);
 
+    boolean existsByChildId(UUID childId);
+
     @Query("""
         SELECT COALESCE(SUM(CASE WHEN t.transactionType = :credit THEN t.minutes ELSE -t.minutes END), 0)
         FROM ScreenTimeTransaction t

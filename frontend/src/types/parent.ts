@@ -76,6 +76,8 @@ export interface ChildDetailResponse {
   allowanceSpendingPercentage: number | null
   allowanceSavingsPercentage: number | null
   screenBaseMinutes: number | null
+  active: boolean
+  deletable: boolean
 }
 
 export interface ScreenTagResponse {

@@ -293,7 +293,13 @@
     "adjustmentValueMinutesLabel": "Value (minutes)",
     "adjustmentReasonLabel": "Reason",
     "missingReason": "A reason is required.",
-    "missingAdjustmentValue": "A value greater than 0 is required."
+    "missingAdjustmentValue": "A value greater than 0 is required.",
+    "inactiveLabel": "Inactive",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "delete": "Delete",
+    "deleteConfirm": "Permanently delete {name}? This cannot be undone.",
+    "deleteConfirmYes": "Yes, delete"
   },
   "config": {
     "title": "Settings",
@@ -351,6 +357,7 @@
   },
   "errors": {
     "GENERIC": "Something went wrong. Please try again.",
+    "CHILD_HAS_HISTORY": "This child already has recorded activity; deactivate them instead of deleting.",
     "INVALID_CREDENTIALS": "Wrong PIN.",
     "INVALID_LOGIN_REQUEST": "Missing data to log in.",
     "INVALID_TOKEN": "Your session has expired. Please log in again.",

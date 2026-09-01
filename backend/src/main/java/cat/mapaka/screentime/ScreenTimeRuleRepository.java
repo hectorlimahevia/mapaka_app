@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface ScreenTimeRuleRepository extends JpaRepository<ScreenTimeRule, UUID> {
 
     Optional<ScreenTimeRule> findByChildIdAndWeekdayIsNullAndActiveTrue(UUID childId);
+
+    void deleteByChildId(UUID childId);
 }

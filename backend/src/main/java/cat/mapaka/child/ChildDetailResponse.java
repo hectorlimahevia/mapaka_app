@@ -14,5 +14,7 @@ public record ChildDetailResponse(
         BigDecimal allowanceMonthlyAmount,
         BigDecimal allowanceSpendingPercentage,
         BigDecimal allowanceSavingsPercentage,
-        Integer screenBaseMinutes) {
+        Integer screenBaseMinutes,
+        boolean active,
+        boolean deletable) {
 }

@@ -450,4 +450,57 @@ class ParentScreensIntegrationTest {
 
         assertThat(allowanceGenerationController.pending(parent)).isEmpty();
     }
+
+    @Test
+    @Transactional
+    void deactivateChild_hidesFromFamilySummary_preservesHistory_andReactivateBringsBack() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("70"), new BigDecimal("30")), parent);
+        List<MonthlyAllowanceResponse> drafts = allowanceGenerationController.generate(parent);
+        allowanceGenerationController.confirm(drafts.get(0).id(), parent);
+
+        assertThat(familySummaryController.summary(f.family.getId(), parent)).hasSize(1);
+
+        childManagementController.deactivate(f.child.getId(), parent);
+        assertThat(familySummaryController.summary(f.family.getId(), parent)).isEmpty();
+
+        // Desactivar no esborra ni un cèntim de l'històric — el fill només queda fora
+        // de l'ús actiu, mai perd el que ja s'havia guardat.
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), cat.mapaka.money.WalletType.SPENDING))
+                .isEqualByComparingTo("7.00");
+
+        childManagementController.reactivate(f.child.getId(), parent);
+        assertThat(familySummaryController.summary(f.family.getId(), parent)).hasSize(1);
+    }
+
+    @Test
+    @Transactional
+    void deleteChild_succeedsWhenNeverUsed_butRefusesOnceThereIsHistory() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        // Un fill que mai ha tingut cap activitat real es pot esborrar de debò — la
+        // configuració (regla de paga) no compta com a "activitat", és configuració.
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("70"), new BigDecimal("30")), parent);
+        childManagementController.delete(f.child.getId(), parent);
+        assertThat(childManagementController.details(f.family.getId(), parent)).isEmpty();
+
+        // Un fill amb activitat real (paga confirmada) mai es pot esborrar de debò.
+        ChildProfile other = seedSibling(f.family, "HasHistory");
+        childManagementController.updateAllowance(
+                other.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("70"), new BigDecimal("30")), parent);
+        List<MonthlyAllowanceResponse> drafts = allowanceGenerationController.generate(parent);
+        allowanceGenerationController.confirm(drafts.get(0).id(), parent);
+
+        assertThatThrownBy(() -> childManagementController.delete(other.getId(), parent))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "CHILD_HAS_HISTORY");
+        assertThat(childManagementController.details(f.family.getId(), parent)).hasSize(1);
+    }
 }

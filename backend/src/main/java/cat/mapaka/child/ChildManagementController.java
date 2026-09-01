@@ -83,6 +83,24 @@ public class ChildManagementController {
         childManagementService.updateAvatar(child, request);
     }
 
+    @PostMapping("/api/children/{childId}/deactivate")
+    public void deactivate(@PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = requireChildInFamily(childId, user);
+        childManagementService.deactivate(child);
+    }
+
+    @PostMapping("/api/children/{childId}/reactivate")
+    public void reactivate(@PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = requireChildInFamily(childId, user);
+        childManagementService.reactivate(child);
+    }
+
+    @DeleteMapping("/api/children/{childId}")
+    public void delete(@PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = requireChildInFamily(childId, user);
+        childManagementService.delete(child);
+    }
+
     private ChildProfile requireChildInFamily(UUID childId, AuthenticatedUser user) {
         ChildProfile child = childProfileRepository.findByIdFetchUserAndFamily(childId)
                 .orElseThrow(() -> new DomainException("CHILD_NOT_FOUND", HttpStatus.NOT_FOUND, "Fill no trobat"));

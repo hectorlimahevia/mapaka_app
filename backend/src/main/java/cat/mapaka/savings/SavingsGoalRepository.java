@@ -9,6 +9,8 @@ public interface SavingsGoalRepository extends JpaRepository<SavingsGoal, UUID> 
 
     List<SavingsGoal> findByChildId(UUID childId);
 
+    boolean existsByChildId(UUID childId);
+
     List<SavingsGoal> findByChildIdAndStatus(UUID childId, SavingsGoalStatus status);
 
     List<SavingsGoal> findByChildIdAndStatusNot(UUID childId, SavingsGoalStatus status);

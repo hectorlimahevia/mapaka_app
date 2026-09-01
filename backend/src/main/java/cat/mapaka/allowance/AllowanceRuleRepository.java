@@ -11,4 +11,6 @@ public interface AllowanceRuleRepository extends JpaRepository<AllowanceRule, UU
     Optional<AllowanceRule> findByChildIdAndActiveTrue(UUID childId);
 
     List<AllowanceRule> findByFamilyIdAndChildIsNullAndActiveTrueOrderByMinAgeAsc(UUID familyId);
+
+    void deleteByChildId(UUID childId);
 }

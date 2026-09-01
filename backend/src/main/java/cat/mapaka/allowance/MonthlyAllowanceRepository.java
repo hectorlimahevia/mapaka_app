@@ -12,6 +12,8 @@ public interface MonthlyAllowanceRepository extends JpaRepository<MonthlyAllowan
 
     Optional<MonthlyAllowance> findByChildIdAndYearAndMonth(UUID childId, int year, int month);
 
+    boolean existsByChildId(UUID childId);
+
     /** Camp per a la campaneta d'alertes de Resum familiar (Prompt 15, checklist 18):
      * "ja generat aquest mes" es dedueix directament d'aquí, sense cap taula/camp nou. */
     boolean existsByChild_User_Family_IdAndYearAndMonth(UUID familyId, int year, int month);

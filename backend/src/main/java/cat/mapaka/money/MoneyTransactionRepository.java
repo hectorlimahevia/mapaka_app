@@ -14,6 +14,8 @@ public interface MoneyTransactionRepository extends JpaRepository<MoneyTransacti
 
     List<MoneyTransaction> findByChildIdOrderByCreatedAtDesc(UUID childId);
 
+    boolean existsByChildId(UUID childId);
+
     @Query("""
         SELECT t FROM MoneyTransaction t JOIN FETCH t.child
         WHERE t.child.user.family.id = :familyId ORDER BY t.createdAt DESC

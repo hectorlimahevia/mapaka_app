@@ -10,6 +10,8 @@ public interface ScreenSessionParticipantRepository extends JpaRepository<Screen
 
     List<ScreenSessionParticipant> findBySessionId(UUID sessionId);
 
+    boolean existsByChildId(UUID childId);
+
     @Query("""
         SELECT p FROM ScreenSessionParticipant p JOIN FETCH p.child
         WHERE p.child.user.family.id = :familyId AND p.resultingBalanceNegative = true

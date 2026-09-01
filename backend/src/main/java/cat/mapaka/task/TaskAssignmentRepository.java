@@ -13,4 +13,6 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
     List<TaskAssignment> findByTaskId(UUID taskId);
 
     Optional<TaskAssignment> findByTaskIdAndChildId(UUID taskId, UUID childId);
+
+    void deleteByChildId(UUID childId);
 }

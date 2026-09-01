@@ -16,6 +16,8 @@ public interface TaskCompletionRepository extends JpaRepository<TaskCompletion, 
 
     long countByChildIdAndStatus(UUID childId, TaskCompletionStatus status);
 
+    boolean existsByChildId(UUID childId);
+
     @Query("""
         SELECT c FROM TaskCompletion c JOIN FETCH c.child JOIN FETCH c.task
         WHERE c.task.family.id = :familyId AND c.status = :status
