@@ -133,9 +133,11 @@
     "rewardMoneyLabel": "Money (€)",
     "rewardMinutesLabel": "Screen time (minutes)",
     "rewardHint": "At least one of the two amounts must be greater than 0.",
+    "rewardOptionalHint": "The reward is optional for a responsibility task.",
     "assignLabel": "Assign to:",
     "missingName": "A task name is required.",
     "missingReward": "At least one reward (money or minutes) is required.",
+    "missingPenalty": "At least one penalty (money or minutes) is required.",
     "stepBasic": "Basic",
     "stepReward": "Reward",
     "stepAssign": "Assignment",
@@ -146,6 +148,7 @@
     "penaltySection": "Penalty (if not completed)",
     "penaltyMoneyLabel": "Penalty — Money (€)",
     "penaltyMinutesLabel": "Penalty — Screen time (minutes)",
+    "penaltyRequiredHint": "At least one penalty (money or minutes) is required — a responsibility task must always have one.",
     "penaltyHint": "Applied manually from \"Incomplete\" — never automatically."
   },
   "objectius": {

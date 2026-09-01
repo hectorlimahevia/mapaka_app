@@ -388,6 +388,53 @@ class ParentScreensIntegrationTest {
 
     @Test
     @Transactional
+    void responsibilityTask_requiresPenalty_rewardIsOptional_extraRequiresReward() {
+        // Feedback real: una Responsabilitat sense penalització no té cap conseqüència real
+        // de no fer-la, per això la penalització hi és sempre obligatòria (la recompensa no);
+        // combinacions vàlides: recompensa+penalització, o només penalització. Una Extra, en
+        // canvi, no té penalització i per tant sempre necessita recompensa.
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        // Responsabilitat amb recompensa i SENSE penalització -> rebutjada.
+        assertThatThrownBy(() -> taskManagementController.create(
+                new CreateTaskRequest("Fer el llit", null, TaskType.RESPONSIBILITY, null, true,
+                        RecurrenceType.DAILY, new BigDecimal("0.50"), 0, BigDecimal.ZERO, 0,
+                        List.of(f.child.getId())),
+                parent))
+                .isInstanceOf(DomainException.class)
+                .satisfies(ex -> assertThat(((DomainException) ex).code()).isEqualTo("INVALID_TASK_PENALTY"));
+
+        // Responsabilitat SENSE recompensa i amb penalització -> acceptada.
+        TaskManagementResponse onlyPenalty = taskManagementController.create(
+                new CreateTaskRequest("Recollir joguines", null, TaskType.RESPONSIBILITY, null, true,
+                        RecurrenceType.DAILY, BigDecimal.ZERO, 0, new BigDecimal("1.00"), 5,
+                        List.of(f.child.getId())),
+                parent).getBody();
+        assertThat(onlyPenalty).isNotNull();
+        assertThat(onlyPenalty.rewardMoney()).isEqualByComparingTo("0.00");
+        assertThat(onlyPenalty.penaltyMoneyAmount()).isEqualByComparingTo("1.00");
+
+        // Responsabilitat amb recompensa I penalització -> acceptada.
+        TaskManagementResponse both = taskManagementController.create(
+                new CreateTaskRequest("Treure les escombraries", null, TaskType.RESPONSIBILITY, null, true,
+                        RecurrenceType.DAILY, new BigDecimal("0.50"), 0, new BigDecimal("1.00"), 0,
+                        List.of(f.child.getId())),
+                parent).getBody();
+        assertThat(both).isNotNull();
+
+        // Extra SENSE recompensa -> rebutjada (mai té penalització que la compensi).
+        assertThatThrownBy(() -> taskManagementController.create(
+                new CreateTaskRequest("Ajudar amb la compra", null, TaskType.EXTRA, null, true,
+                        RecurrenceType.NONE, BigDecimal.ZERO, 0, null, null, List.of()),
+                parent))
+                .isInstanceOf(DomainException.class)
+                .satisfies(ex -> assertThat(((DomainException) ex).code()).isEqualTo("INVALID_TASK_REWARD"));
+    }
+
+    @Test
+    @Transactional
     void confirmAllowance_creditsMoneyAndScreenTimeInTheSameAct() {
         // Prompt 16 (punt 14/24): abans el temps de pantalla es generava per separat i
         // diàriament; ara "Generar la paga del mes" ha de crear els dos moviments alhora,

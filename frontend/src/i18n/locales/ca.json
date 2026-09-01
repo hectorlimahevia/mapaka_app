@@ -133,9 +133,11 @@
     "rewardMoneyLabel": "Diners (€)",
     "rewardMinutesLabel": "Minuts de pantalla",
     "rewardHint": "Com a mínim un dels dos imports ha de ser més gran que 0.",
+    "rewardOptionalHint": "La recompensa és opcional en una tasca de responsabilitat.",
     "assignLabel": "Assignar a:",
     "missingName": "Cal un nom per a la tasca.",
     "missingReward": "Cal com a mínim una recompensa (diners o minuts).",
+    "missingPenalty": "Cal com a mínim una penalització (diners o minuts).",
     "stepBasic": "Bàsic",
     "stepReward": "Recompensa",
     "stepAssign": "Assignació",
@@ -146,6 +148,7 @@
     "penaltySection": "Penalització (si no es compleix)",
     "penaltyMoneyLabel": "Penalització — Diners (€)",
     "penaltyMinutesLabel": "Penalització — Minuts de pantalla",
+    "penaltyRequiredHint": "Cal com a mínim una penalització (diners o minuts) — una responsabilitat sempre n'ha de tenir.",
     "penaltyHint": "S'aplica manualment des de \"Incompletes\" — mai de forma automàtica."
   },
   "objectius": {

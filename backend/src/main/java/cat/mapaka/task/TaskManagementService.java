@@ -52,7 +52,8 @@ public class TaskManagementService {
 
     @Transactional
     public TaskManagementResponse create(Family family, User createdBy, CreateTaskRequest request) {
-        requireValidReward(request.rewardMoney(), request.rewardScreenMinutes());
+        requireValidRewardOrPenalty(request.taskType(), request.rewardMoney(), request.rewardScreenMinutes(),
+                request.penaltyMoneyAmount(), request.penaltyScreenMinutes());
         // Una tasca Extra no té assignació fixa — és visible per a tots els fills de la
         // família (Prompt 15); els childIds que arribin per a una Extra s'ignoren.
         Set<ChildProfile> children = request.taskType() == TaskType.EXTRA
@@ -89,7 +90,8 @@ public class TaskManagementService {
 
     @Transactional
     public TaskManagementResponse update(Task task, CreateTaskRequest request) {
-        requireValidReward(request.rewardMoney(), request.rewardScreenMinutes());
+        requireValidRewardOrPenalty(request.taskType(), request.rewardMoney(), request.rewardScreenMinutes(),
+                request.penaltyMoneyAmount(), request.penaltyScreenMinutes());
         Set<ChildProfile> children = request.taskType() == TaskType.EXTRA
                 ? Set.of() : resolveChildren(task.getFamily().getId(), request.childIds());
 
@@ -170,11 +172,29 @@ public class TaskManagementService {
         return children;
     }
 
-    private void requireValidReward(BigDecimal money, int screenMinutes) {
-        boolean hasReward = money.compareTo(BigDecimal.ZERO) > 0 || screenMinutes > 0;
-        if (!hasReward) {
-            throw new DomainException("INVALID_TASK_REWARD", HttpStatus.BAD_REQUEST,
-                    "La tasca ha de tenir com a mínim una recompensa (diners o minuts)");
+    /** Una tasca Extra sempre necessita recompensa (és l'únic incentiu per fer-la). Una
+     * Responsabilitat, en canvi, sempre necessita penalització — la recompensa hi és
+     * opcional, però mai una Responsabilitat amb recompensa i sense penalització: sense
+     * penalització no hi ha conseqüència real de no fer-la (feedback explícit: "con
+     * recompensa y penalizacion" / "sin recompensa y penalizacion" són vàlides, "con
+     * recompensa y sin penalizacion" no ho és). */
+    private void requireValidRewardOrPenalty(
+            TaskType taskType, BigDecimal rewardMoney, int rewardScreenMinutes,
+            BigDecimal penaltyMoneyAmount, Integer penaltyScreenMinutes) {
+        if (taskType == TaskType.EXTRA) {
+            boolean hasReward = rewardMoney.compareTo(BigDecimal.ZERO) > 0 || rewardScreenMinutes > 0;
+            if (!hasReward) {
+                throw new DomainException("INVALID_TASK_REWARD", HttpStatus.BAD_REQUEST,
+                        "La tasca ha de tenir com a mínim una recompensa (diners o minuts)");
+            }
+            return;
+        }
+        BigDecimal penalty = penaltyOrZero(penaltyMoneyAmount);
+        int penaltyMinutes = penaltyScreenMinutes != null ? penaltyScreenMinutes : 0;
+        boolean hasPenalty = penalty.compareTo(BigDecimal.ZERO) > 0 || penaltyMinutes > 0;
+        if (!hasPenalty) {
+            throw new DomainException("INVALID_TASK_PENALTY", HttpStatus.BAD_REQUEST,
+                    "Aquesta tasca no té cap penalització configurada");
         }
     }
 

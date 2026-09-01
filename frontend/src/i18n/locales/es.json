@@ -133,9 +133,11 @@
     "rewardMoneyLabel": "Dinero (€)",
     "rewardMinutesLabel": "Minutos de pantalla",
     "rewardHint": "Al menos uno de los dos importes debe ser mayor que 0.",
+    "rewardOptionalHint": "La recompensa es opcional en una tarea de responsabilidad.",
     "assignLabel": "Asignar a:",
     "missingName": "Falta un nombre para la tarea.",
     "missingReward": "Falta al menos una recompensa (dinero o minutos).",
+    "missingPenalty": "Falta al menos una penalización (dinero o minutos).",
     "stepBasic": "Básico",
     "stepReward": "Recompensa",
     "stepAssign": "Asignación",
@@ -146,6 +148,7 @@
     "penaltySection": "Penalización (si no se cumple)",
     "penaltyMoneyLabel": "Penalización — Dinero (€)",
     "penaltyMinutesLabel": "Penalización — Minutos de pantalla",
+    "penaltyRequiredHint": "Hace falta al menos una penalización (dinero o minutos) — una responsabilidad siempre debe tener una.",
     "penaltyHint": "Se aplica manualmente desde \"Incompletas\" — nunca de forma automática."
   },
   "objectius": {

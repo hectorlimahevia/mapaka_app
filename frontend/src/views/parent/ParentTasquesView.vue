@@ -167,8 +167,16 @@ async function submitForm() {
     activeStep.value = 0
     return
   }
-  if (form.rewardMoney <= 0 && form.rewardScreenMinutes <= 0) {
-    formError.value = t('tasques.missingReward')
+  if (form.taskType === 'EXTRA') {
+    if (form.rewardMoney <= 0 && form.rewardScreenMinutes <= 0) {
+      formError.value = t('tasques.missingReward')
+      activeStep.value = 1
+      return
+    }
+  } else if (form.penaltyMoneyAmount <= 0 && form.penaltyScreenMinutes <= 0) {
+    // Responsabilitat: la recompensa és opcional, però mai sense penalització — sense
+    // penalització no hi ha conseqüència real de no fer la tasca.
+    formError.value = t('tasques.missingPenalty')
     activeStep.value = 1
     return
   }
@@ -323,7 +331,8 @@ onMounted(load)
               </span>
               <span class="split-preview__values">{{ t('tasques.splitPreviewValues', { spend: formatMoney(previewSplit.spend), save: formatMoney(previewSplit.save) }) }}</span>
             </div>
-            <p class="task-form__hint">{{ t('tasques.rewardHint') }}</p>
+            <p v-if="form.taskType === 'EXTRA'" class="task-form__hint">{{ t('tasques.rewardHint') }}</p>
+            <p v-else class="task-form__hint">{{ t('tasques.rewardOptionalHint') }}</p>
             <div class="task-form__switch-row">
               <span>{{ t('tasques.requiresApprovalLabel') }}</span>
               <BaseSwitch v-model="form.requiresApproval" />
@@ -345,6 +354,7 @@ onMounted(load)
                 </div>
                 <MinutesInput v-model="form.penaltyScreenMinutes" :disabled="!minutesPenaltyOn" />
               </div>
+              <p class="task-form__hint">{{ t('tasques.penaltyRequiredHint') }}</p>
               <p class="task-form__hint">{{ t('tasques.penaltyHint') }}</p>
             </template>
           </div>
