@@ -24,6 +24,7 @@ const generating = ref(false)
 const pendingAllowances = ref<MonthlyAllowanceResponse[]>([])
 const resolvingAllowanceId = ref<string | null>(null)
 const allowanceGeneratedThisMonth = ref(true)
+const allowanceError = ref<string | null>(null)
 
 type Period = 'week' | 'month' | 'custom'
 const period = ref<Period>('week')
@@ -85,10 +86,13 @@ watch([period, selectedChildId], () => loadMovements())
 
 async function generateAllowances() {
   generating.value = true
+  allowanceError.value = null
   try {
     const { data } = await api.post<MonthlyAllowanceResponse[]>('/api/allowances/generate')
     pendingAllowances.value = data
     await loadAllowanceStatus()
+  } catch (err) {
+    allowanceError.value = apiErrorMessage(err)
   } finally {
     generating.value = false
   }
@@ -97,10 +101,13 @@ async function generateAllowances() {
 async function resolveAllowance(allowance: MonthlyAllowanceResponse, action: 'confirm' | 'cancel') {
   if (resolvingAllowanceId.value) return
   resolvingAllowanceId.value = allowance.id
+  allowanceError.value = null
   try {
     await api.post(`/api/allowances/${allowance.id}/${action}`)
     pendingAllowances.value = pendingAllowances.value.filter((a) => a.id !== allowance.id)
     if (action === 'confirm') await load()
+  } catch (err) {
+    allowanceError.value = apiErrorMessage(err)
   } finally {
     resolvingAllowanceId.value = null
   }
@@ -303,6 +310,7 @@ onMounted(load)
       </BaseButton>
       <RouterLink :to="{ name: 'parent-settlements' }" class="resum__settlements-link text-link-underline">{{ t('resum.settlementsLink') }}</RouterLink>
     </div>
+    <p v-if="allowanceError" class="resum__error">{{ allowanceError }}</p>
 
     <template v-if="pendingAllowances.length > 0">
       <div class="section-label">{{ t('resum.pendingAllowancesTitle') }}</div>
@@ -428,6 +436,13 @@ onMounted(load)
 .resum__empty {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.resum__error {
+  color: var(--error);
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
 }
 
 .allowance-reminder {
