@@ -37,6 +37,11 @@ public class AllowanceGenerationController {
         return new AllowanceStatusResponse(generatedThisMonth);
     }
 
+    @GetMapping("/api/allowances/pending")
+    public List<MonthlyAllowanceResponse> pending(@AuthenticationPrincipal AuthenticatedUser user) {
+        return allowanceGenerationService.pendingDrafts(user.familyId());
+    }
+
     @PostMapping("/api/allowances/generate")
     public List<MonthlyAllowanceResponse> generate(@AuthenticationPrincipal AuthenticatedUser user) {
         return allowanceGenerationService.generate(user.familyId());

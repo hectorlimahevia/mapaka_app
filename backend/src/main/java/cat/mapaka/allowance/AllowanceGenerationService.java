@@ -74,6 +74,18 @@ public class AllowanceGenerationService {
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
     }
 
+    /** Esborranys (DRAFT) ja existents per a la família — cal cridar-ho en carregar la
+     * pantalla, no només confiar en la resposta de generate(), perquè un esborrany creat en
+     * una sessió anterior i mai confirmat (app tancada, reinstal·lada, o pàgina recarregada
+     * abans de prémer "Confirmar") altrament queda invisible per sempre: generate() el
+     * trobaria ja existent i el descartaria en silenci sense cap manera de tornar-lo a veure. */
+    @Transactional(readOnly = true)
+    public List<MonthlyAllowanceResponse> pendingDrafts(UUID familyId) {
+        return monthlyAllowanceRepository.findDraftsByFamilyId(familyId).stream()
+                .map(MonthlyAllowanceResponse::from)
+                .toList();
+    }
+
     @Transactional
     public List<MonthlyAllowanceResponse> generate(UUID familyId) {
         LocalDate today = LocalDate.now();

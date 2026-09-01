@@ -77,8 +77,17 @@ async function loadAllowanceStatus() {
   allowanceGeneratedThisMonth.value = data.generatedThisMonth
 }
 
+// Un esborrany (DRAFT) generat en una sessió anterior i mai confirmat (app tancada,
+// reinstal·lada, o pàgina recarregada abans de prémer "Confirmar") altrament queda
+// invisible per sempre: generate() el tornaria a trobar ja existent i el descartaria en
+// silenci, sense cap manera de tornar-lo a veure ni confirmar.
+async function loadPendingAllowances() {
+  const { data } = await api.get<MonthlyAllowanceResponse[]>('/api/allowances/pending')
+  pendingAllowances.value = data
+}
+
 async function load() {
-  await Promise.all([loadSummary(), loadMovements(), loadAllowanceStatus()])
+  await Promise.all([loadSummary(), loadMovements(), loadAllowanceStatus(), loadPendingAllowances()])
   loading.value = false
 }
 
