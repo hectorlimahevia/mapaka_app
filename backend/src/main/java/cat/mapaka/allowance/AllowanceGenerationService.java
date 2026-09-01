@@ -81,7 +81,7 @@ public class AllowanceGenerationService {
      * trobaria ja existent i el descartaria en silenci sense cap manera de tornar-lo a veure. */
     @Transactional(readOnly = true)
     public List<MonthlyAllowanceResponse> pendingDrafts(UUID familyId) {
-        return monthlyAllowanceRepository.findDraftsByFamilyId(familyId).stream()
+        return monthlyAllowanceRepository.findByFamilyIdAndStatus(familyId, AllowanceStatus.DRAFT).stream()
                 .map(MonthlyAllowanceResponse::from)
                 .toList();
     }

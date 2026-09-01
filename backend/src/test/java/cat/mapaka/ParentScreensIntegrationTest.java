@@ -420,4 +420,34 @@ class ParentScreensIntegrationTest {
                 .isInstanceOf(DomainException.class);
         assertThat(screenTimeController.today(f.child.getId(), asChild(f.child)).availableMinutes()).isEqualTo(240);
     }
+
+    @Test
+    @Transactional
+    void pendingAllowances_surfacesDraftsFromAnEarlierSessionAndClearsOnceConfirmed() {
+        // Bug real: comparar l'enum natiu de Postgres (status) amb un literal a la JPQL
+        // ("a.status = ...AllowanceStatus.DRAFT") generava un cast SQL amb el nom de la
+        // classe Java (::AllowanceStatus) en lloc del tipus real de Postgres
+        // (allowance_status), i Postgres el rebutjava — verificat contra Postgres real, no
+        // una base de dades en memòria, perquè és precisament aquí on fallava.
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("70"), new BigDecimal("30")), parent);
+
+        assertThat(allowanceGenerationController.pending(parent)).isEmpty();
+
+        List<MonthlyAllowanceResponse> drafts = allowanceGenerationController.generate(parent);
+        assertThat(drafts).hasSize(1);
+
+        // Simula una sessió nova (app tancada/reinstal·lada abans de confirmar): el DRAFT
+        // ha de seguir sent recuperable encara que ja no hi hagi la resposta original de
+        // generate() en memòria.
+        assertThat(allowanceGenerationController.pending(parent)).hasSize(1);
+
+        allowanceGenerationController.confirm(drafts.get(0).id(), parent);
+
+        assertThat(allowanceGenerationController.pending(parent)).isEmpty();
+    }
 }

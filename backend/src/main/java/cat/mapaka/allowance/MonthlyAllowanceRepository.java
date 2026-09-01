@@ -2,6 +2,7 @@ package cat.mapaka.allowance;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,6 @@ public interface MonthlyAllowanceRepository extends JpaRepository<MonthlyAllowan
      * esborrany creat en una sessió anterior (app tancada/reinstal·lada abans de confirmar-lo)
      * queda invisible per sempre: generate() el torna a trobar ja existent i el descarta en
      * silenci, sense cap manera de tornar-lo a veure ni confirmar. */
-    @Query("SELECT a FROM MonthlyAllowance a JOIN FETCH a.child c WHERE c.user.family.id = :familyId AND a.status = cat.mapaka.allowance.AllowanceStatus.DRAFT")
-    List<MonthlyAllowance> findDraftsByFamilyId(UUID familyId);
+    @Query("SELECT a FROM MonthlyAllowance a JOIN FETCH a.child c WHERE c.user.family.id = :familyId AND a.status = :status")
+    List<MonthlyAllowance> findByFamilyIdAndStatus(@Param("familyId") UUID familyId, @Param("status") AllowanceStatus status);
 }
