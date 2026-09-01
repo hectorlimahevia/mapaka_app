@@ -176,7 +176,14 @@
     "historyTitle": "Historial d'objectius assolits",
     "historyCompletedOn": "Assolit el {date}",
     "historyDurationOne": "en 1 dia",
-    "historyDurationMany": "en {n} dies"
+    "historyDurationMany": "en {n} dies",
+    "shareWithSiblings": "Compartir amb germans",
+    "shareWithSiblingsHint": "Als germans que triïs els arribarà una invitació amb les mateixes condicions.",
+    "pendingInvitationsTitle": "Invitacions a objectius compartits",
+    "invitationFrom": "{name} et convida a l'objectiu \"{goal}\"",
+    "invitationDetails": "{amount} € · {percent}% del teu \"per gastar\"",
+    "acceptInvitation": "Acceptar",
+    "rejectInvitation": "Rebutjar"
   },
   "pantalla": {
     "title": "Temps de pantalla",
@@ -390,6 +397,8 @@
     "TASK_ALREADY_CLAIMED": "Aquesta tasca ja ha estat reclamada per a aquest període.",
     "INVALID_TASK_TYPE": "Aquesta acció no és vàlida per a aquest tipus de tasca.",
     "INVALID_TASK_PENALTY": "Aquesta tasca no té cap penalització configurada.",
-    "INVALID_CURRENT_PIN": "El PIN actual no és correcte."
+    "INVALID_CURRENT_PIN": "El PIN actual no és correcte.",
+    "GOAL_INVITATION_NOT_FOUND": "No s'ha trobat aquesta invitació.",
+    "GOAL_INVITATION_ALREADY_RESOLVED": "Aquesta invitació ja s'ha resolt."
   }
 }

@@ -7,9 +7,12 @@ import cat.mapaka.common.TransactionType;
 import cat.mapaka.family.Family;
 import cat.mapaka.family.FamilyRepository;
 import cat.mapaka.money.*;
+import cat.mapaka.savings.CreateSavingsGoalRequest;
 import cat.mapaka.savings.SavingsGoal;
 import cat.mapaka.savings.SavingsGoalController;
+import cat.mapaka.savings.SavingsGoalInvitationResponse;
 import cat.mapaka.savings.SavingsGoalRepository;
+import cat.mapaka.savings.SavingsGoalResponse;
 import cat.mapaka.savings.SavingsGoalStatus;
 import cat.mapaka.screentime.ScreenTimeController;
 import cat.mapaka.screentime.ScreenTimeRule;
@@ -113,6 +116,18 @@ class ChildScreensIntegrationTest {
         return child;
     }
 
+    private ChildProfile seedSibling(ChildProfile existingChild, String displayName) {
+        Family family = existingChild.getUser().getFamily();
+        User siblingUser = userRepository.save(User.builder()
+                .family(family).username("kid" + UUID.randomUUID())
+                .passwordHash(new BCryptPasswordEncoder().encode("1234")).role(UserRole.CHILD).active(true)
+                .build());
+        return childProfileRepository.save(ChildProfile.builder()
+                .user(siblingUser).displayName(displayName).birthDate(LocalDate.of(2017, 1, 1))
+                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .build());
+    }
+
     private AuthenticatedUser asChild(ChildProfile child) {
         return new AuthenticatedUser(child.getUser().getId(), child.getUser().getFamily().getId(), UserRole.CHILD, child.getId());
     }
@@ -153,6 +168,42 @@ class ChildScreensIntegrationTest {
         assertThat(goals).hasSize(1);
         // 4.00 (nomes les aportacions pròpies de l'objectiu), no els 6.00 d'estalvi general del fill.
         assertThat(goals.get(0).currentAmount()).isEqualByComparingTo("4.00");
+    }
+
+    @Test
+    @Transactional
+    void sharedGoal_inviteSiblingThenAccept_clonesConditionsIntoOwnGoal_rejectCreatesNothing() {
+        ChildProfile inviter = seedChild();
+        ChildProfile accepter = seedSibling(inviter, "Accepter");
+        ChildProfile rejecter = seedSibling(inviter, "Rejecter");
+
+        SavingsGoalResponse created = savingsGoalController.create(
+                inviter.getId(),
+                new CreateSavingsGoalRequest("Bici", new BigDecimal("100.00"), BigDecimal.ZERO,
+                        List.of(accepter.getId(), rejecter.getId())),
+                asChild(inviter)).getBody();
+        assertThat(created).isNotNull();
+
+        List<SavingsGoalInvitationResponse> accepterInvitations =
+                savingsGoalController.pendingInvitations(accepter.getId(), asChild(accepter));
+        assertThat(accepterInvitations).hasSize(1);
+        assertThat(accepterInvitations.get(0).goalName()).isEqualTo("Bici");
+        assertThat(accepterInvitations.get(0).targetAmount()).isEqualByComparingTo("100.00");
+        assertThat(accepterInvitations.get(0).inviterChildName()).isEqualTo("Kid");
+
+        SavingsGoalResponse accepterGoal = savingsGoalController.acceptInvitation(
+                accepter.getId(), accepterInvitations.get(0).id(), asChild(accepter));
+        assertThat(accepterGoal.name()).isEqualTo("Bici");
+        assertThat(accepterGoal.targetAmount()).isEqualByComparingTo("100.00");
+        assertThat(savingsGoalController.goals(accepter.getId(), asChild(accepter))).hasSize(1);
+        assertThat(savingsGoalController.pendingInvitations(accepter.getId(), asChild(accepter))).isEmpty();
+
+        List<SavingsGoalInvitationResponse> rejecterInvitations =
+                savingsGoalController.pendingInvitations(rejecter.getId(), asChild(rejecter));
+        assertThat(rejecterInvitations).hasSize(1);
+        savingsGoalController.rejectInvitation(rejecter.getId(), rejecterInvitations.get(0).id(), asChild(rejecter));
+        assertThat(savingsGoalController.goals(rejecter.getId(), asChild(rejecter))).isEmpty();
+        assertThat(savingsGoalController.pendingInvitations(rejecter.getId(), asChild(rejecter))).isEmpty();
     }
 
     @Test

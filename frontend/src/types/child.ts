@@ -46,6 +46,17 @@ export interface SavingsGoalResponse {
   completedAt: string | null
 }
 
+export interface SavingsGoalInvitationResponse {
+  id: string
+  sourceGoalId: string
+  goalName: string
+  targetAmount: number
+  allocationPercentage: number
+  imageUrl: string | null
+  inviterChildName: string
+  createdAt: string
+}
+
 export interface ScreenTimeStatusResponse {
   baseMinutes: number
   availableMinutes: number

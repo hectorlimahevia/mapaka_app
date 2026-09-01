@@ -176,7 +176,14 @@
     "historyTitle": "Historial de objetivos conseguidos",
     "historyCompletedOn": "Conseguido el {date}",
     "historyDurationOne": "en 1 día",
-    "historyDurationMany": "en {n} días"
+    "historyDurationMany": "en {n} días",
+    "shareWithSiblings": "Compartir con hermanos",
+    "shareWithSiblingsHint": "A los hermanos que elijas les llegará una invitación con las mismas condiciones.",
+    "pendingInvitationsTitle": "Invitaciones a objetivos compartidos",
+    "invitationFrom": "{name} te invita al objetivo \"{goal}\"",
+    "invitationDetails": "{amount} € · {percent}% de tu \"para gastar\"",
+    "acceptInvitation": "Aceptar",
+    "rejectInvitation": "Rechazar"
   },
   "pantalla": {
     "title": "Tiempo de pantalla",
@@ -390,6 +397,8 @@
     "TASK_ALREADY_CLAIMED": "Esta tarea ya ha sido reclamada para este periodo.",
     "INVALID_TASK_TYPE": "Esta acción no es válida para este tipo de tarea.",
     "INVALID_TASK_PENALTY": "Esta tarea no tiene ninguna penalización configurada.",
-    "INVALID_CURRENT_PIN": "El PIN actual no es correcto."
+    "INVALID_CURRENT_PIN": "El PIN actual no es correcto.",
+    "GOAL_INVITATION_NOT_FOUND": "No se ha encontrado esta invitación.",
+    "GOAL_INVITATION_ALREADY_RESOLVED": "Esta invitación ya se ha resuelto."
   }
 }

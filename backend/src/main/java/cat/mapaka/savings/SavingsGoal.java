@@ -54,4 +54,9 @@ public class SavingsGoal {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    /** Vincula totes les còpies (una per germà) nascudes de la mateixa invitació de
+     * compartir objectiu — null si l'objectiu no s'ha compartit mai. */
+    @Column(name = "shared_goal_group_id")
+    private UUID sharedGoalGroupId;
 }

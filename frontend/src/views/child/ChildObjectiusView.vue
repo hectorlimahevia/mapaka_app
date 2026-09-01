@@ -12,7 +12,8 @@ import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 import { CHILD_COLORS } from '@/utils/childColors'
 import { formatDate } from '@/utils/date'
 import type { AppLocale } from '@/i18n'
-import type { SavingsGoalResponse, WalletResponse } from '@/types/child'
+import type { SavingsGoalInvitationResponse, SavingsGoalResponse, WalletResponse } from '@/types/child'
+import type { ChildSummary } from '@/types/nfc'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
@@ -22,12 +23,70 @@ const spendingPercentage = ref(0)
 const allocatedGoalPercentage = ref(0)
 const loading = ref(true)
 const animated = ref(false)
+const siblings = ref<ChildSummary[]>([])
 
 const editingGoalId = ref<string | null>(null)
 const addingGoal = ref(false)
 const savingGoal = ref(false)
 const addGoalError = ref<string | null>(null)
 const newGoal = reactive({ name: '', targetAmount: 0, allocationPercentage: 0 })
+const shareWithSiblingIds = ref<string[]>([])
+
+function toggleShareSibling(id: string) {
+  const i = shareWithSiblingIds.value.indexOf(id)
+  if (i === -1) shareWithSiblingIds.value.push(id)
+  else shareWithSiblingIds.value.splice(i, 1)
+}
+
+// Objectius compartits (Prompt: compartir objectiu) — invitacions pendents que un germà
+// ha enviat a aquest fill, amb les condicions (import, percentatge) ja fixades per ell.
+const invitations = ref<SavingsGoalInvitationResponse[]>([])
+const respondingInvitationId = ref<string | null>(null)
+const invitationError = ref<string | null>(null)
+
+async function loadInvitations() {
+  const childId = auth.childId
+  if (!childId) return
+  const { data } = await api.get<SavingsGoalInvitationResponse[]>(`/api/children/${childId}/goal-invitations`)
+  invitations.value = data
+}
+
+async function loadSiblings() {
+  const familyId = auth.familyId
+  if (!familyId) return
+  const { data } = await api.get<ChildSummary[]>(`/api/families/${familyId}/children`)
+  siblings.value = data.filter((c) => c.id !== auth.childId)
+}
+
+async function acceptInvitation(invitationId: string) {
+  const childId = auth.childId
+  if (!childId) return
+  invitationError.value = null
+  respondingInvitationId.value = invitationId
+  try {
+    await api.post(`/api/children/${childId}/goal-invitations/${invitationId}/accept`)
+    await Promise.all([load(), loadInvitations()])
+  } catch (err) {
+    invitationError.value = apiErrorMessage(err)
+  } finally {
+    respondingInvitationId.value = null
+  }
+}
+
+async function rejectInvitation(invitationId: string) {
+  const childId = auth.childId
+  if (!childId) return
+  invitationError.value = null
+  respondingInvitationId.value = invitationId
+  try {
+    await api.post(`/api/children/${childId}/goal-invitations/${invitationId}/reject`)
+    await loadInvitations()
+  } catch (err) {
+    invitationError.value = apiErrorMessage(err)
+  } finally {
+    respondingInvitationId.value = null
+  }
+}
 
 const contributingGoalId = ref<string | null>(null)
 const contributionAmount = ref(0)
@@ -188,6 +247,7 @@ function startAddGoal() {
   newGoal.name = ''
   newGoal.targetAmount = 0
   newGoal.allocationPercentage = 0
+  shareWithSiblingIds.value = []
 }
 
 function startEditGoal(goal: SavingsGoalResponse) {
@@ -197,6 +257,7 @@ function startEditGoal(goal: SavingsGoalResponse) {
   newGoal.name = goal.name
   newGoal.targetAmount = goal.targetAmount
   newGoal.allocationPercentage = goal.allocationPercentage
+  shareWithSiblingIds.value = []
 }
 
 async function submitAddGoal() {
@@ -208,15 +269,19 @@ async function submitAddGoal() {
   }
   savingGoal.value = true
   try {
-    const payload = {
-      name: newGoal.name,
-      targetAmount: newGoal.targetAmount,
-      allocationPercentage: newGoal.allocationPercentage,
-    }
     if (editingGoalId.value) {
-      await api.patch(`/api/children/${childId}/savings-goals/${editingGoalId.value}`, payload)
+      await api.patch(`/api/children/${childId}/savings-goals/${editingGoalId.value}`, {
+        name: newGoal.name,
+        targetAmount: newGoal.targetAmount,
+        allocationPercentage: newGoal.allocationPercentage,
+      })
     } else {
-      await api.post(`/api/children/${childId}/savings-goals`, payload)
+      await api.post(`/api/children/${childId}/savings-goals`, {
+        name: newGoal.name,
+        targetAmount: newGoal.targetAmount,
+        allocationPercentage: newGoal.allocationPercentage,
+        shareWithChildIds: shareWithSiblingIds.value,
+      })
     }
     addingGoal.value = false
     await load()
@@ -227,13 +292,48 @@ async function submitAddGoal() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadSiblings()
+  loadInvitations()
+})
 </script>
 
 <template>
   <div class="objectius">
     <ChildScreenHeader :title="t('objectius.title')" />
     <p class="objectius__sub">{{ t('objectius.subtitle') }}</p>
+
+    <div v-if="invitations.length > 0" class="invitations">
+      <h2 class="invitations__title">{{ t('objectius.pendingInvitationsTitle') }}</h2>
+      <div v-for="invitation in invitations" :key="invitation.id" class="invitation-card">
+        <p class="invitation-card__text">
+          {{ t('objectius.invitationFrom', { name: invitation.inviterChildName, goal: invitation.goalName }) }}
+        </p>
+        <p class="invitation-card__meta">
+          {{ t('objectius.invitationDetails', { amount: invitation.targetAmount, percent: invitation.allocationPercentage }) }}
+        </p>
+        <div class="goal-form__actions">
+          <BaseButton
+            type="button"
+            variant="primary"
+            :disabled="respondingInvitationId === invitation.id"
+            @click="acceptInvitation(invitation.id)"
+          >
+            {{ t('objectius.acceptInvitation') }}
+          </BaseButton>
+          <BaseButton
+            type="button"
+            variant="ghost"
+            :disabled="respondingInvitationId === invitation.id"
+            @click="rejectInvitation(invitation.id)"
+          >
+            {{ t('objectius.rejectInvitation') }}
+          </BaseButton>
+        </div>
+      </div>
+      <p v-if="invitationError" class="objectius__error">{{ invitationError }}</p>
+    </div>
 
     <p v-if="!loading && activeGoals.length === 0 && completedGoals.length === 0" class="objectius__empty">{{ t('objectius.empty') }}</p>
 
@@ -317,6 +417,22 @@ onMounted(load)
           {{ t('objectius.percentageLabel') }}
           <input v-model.number="newGoal.allocationPercentage" type="number" min="0" max="100" step="1" />
         </label>
+        <div v-if="!editingGoalId && siblings.length > 0" class="share-siblings">
+          <span class="share-siblings__label">{{ t('objectius.shareWithSiblings') }}</span>
+          <div class="collab-chip-row">
+            <button
+              v-for="sibling in siblings"
+              :key="sibling.id"
+              type="button"
+              class="collab-chip"
+              :class="{ active: shareWithSiblingIds.includes(sibling.id) }"
+              @click="toggleShareSibling(sibling.id)"
+            >
+              {{ sibling.displayName }}
+            </button>
+          </div>
+          <p v-if="shareWithSiblingIds.length > 0" class="share-siblings__hint">{{ t('objectius.shareWithSiblingsHint') }}</p>
+        </div>
         <div class="split-preview">
           <div class="split-preview__row">
             <span>{{ t('objectius.splitSpendLabel', { n: spendingPercentage }) }}</span>
@@ -749,5 +865,80 @@ onMounted(load)
 .history-card__meta {
   font-size: 0.72rem;
   color: var(--muted);
+}
+
+.invitations {
+  margin-bottom: 1.1rem;
+}
+
+.invitations__title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+}
+
+.invitation-card {
+  background: color-mix(in srgb, var(--primary) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 16px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.invitation-card__text {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.invitation-card__meta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.share-siblings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.share-siblings__label {
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.share-siblings__hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.collab-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.collab-chip {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--primary) 15%, transparent);
+  background: white;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.collab-chip.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, white);
+  color: var(--primary);
 }
 </style>

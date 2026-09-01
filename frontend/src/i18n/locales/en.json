@@ -176,7 +176,14 @@
     "historyTitle": "Goals achieved",
     "historyCompletedOn": "Reached on {date}",
     "historyDurationOne": "in 1 day",
-    "historyDurationMany": "in {n} days"
+    "historyDurationMany": "in {n} days",
+    "shareWithSiblings": "Share with siblings",
+    "shareWithSiblingsHint": "Siblings you pick will get an invitation with the same conditions.",
+    "pendingInvitationsTitle": "Shared goal invitations",
+    "invitationFrom": "{name} invited you to the goal \"{goal}\"",
+    "invitationDetails": "{amount} € · {percent}% of your \"spending\"",
+    "acceptInvitation": "Accept",
+    "rejectInvitation": "Reject"
   },
   "pantalla": {
     "title": "Screen time",
@@ -390,6 +397,8 @@
     "TASK_ALREADY_CLAIMED": "This task has already been claimed for this period.",
     "INVALID_TASK_TYPE": "This action isn't valid for this task type.",
     "INVALID_TASK_PENALTY": "This task has no penalty configured.",
-    "INVALID_CURRENT_PIN": "The current PIN isn't correct."
+    "INVALID_CURRENT_PIN": "The current PIN isn't correct.",
+    "GOAL_INVITATION_NOT_FOUND": "This invitation couldn't be found.",
+    "GOAL_INVITATION_ALREADY_RESOLVED": "This invitation has already been resolved."
   }
 }

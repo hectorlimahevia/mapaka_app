@@ -70,4 +70,31 @@ public class SavingsGoalController {
             @AuthenticationPrincipal AuthenticatedUser user) {
         savingsGoalService.delete(childId, goalId, user);
     }
+
+    /** Invitacions pendents a objectius compartits per a aquest fill (compartir objectiu
+     * entre germans). */
+    @GetMapping("/api/children/{childId}/goal-invitations")
+    public List<SavingsGoalInvitationResponse> pendingInvitations(
+            @PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
+        childAccessService.requireAccess(childId, user);
+        return savingsGoalService.pendingInvitations(childId);
+    }
+
+    @PostMapping("/api/children/{childId}/goal-invitations/{invitationId}/accept")
+    public SavingsGoalResponse acceptInvitation(
+            @PathVariable UUID childId,
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = childAccessService.requireAccess(childId, user);
+        return savingsGoalService.acceptInvitation(child, invitationId);
+    }
+
+    @PostMapping("/api/children/{childId}/goal-invitations/{invitationId}/reject")
+    public void rejectInvitation(
+            @PathVariable UUID childId,
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = childAccessService.requireAccess(childId, user);
+        savingsGoalService.rejectInvitation(child, invitationId);
+    }
 }

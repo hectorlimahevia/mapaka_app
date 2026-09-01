@@ -3,6 +3,7 @@ package cat.mapaka.savings;
 import cat.mapaka.allowance.AllowanceRuleService;
 import cat.mapaka.child.ChildAccessService;
 import cat.mapaka.child.ChildProfile;
+import cat.mapaka.child.ChildProfileRepository;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,6 +35,8 @@ public class SavingsGoalService {
     private final ChildAccessService childAccessService;
     private final DonationRepository donationRepository;
     private final UserRepository userRepository;
+    private final SavingsGoalInvitationRepository savingsGoalInvitationRepository;
+    private final ChildProfileRepository childProfileRepository;
 
     public SavingsGoalService(
             SavingsGoalRepository savingsGoalRepository,
@@ -40,13 +44,17 @@ public class SavingsGoalService {
             AllowanceRuleService allowanceRuleService,
             ChildAccessService childAccessService,
             DonationRepository donationRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            SavingsGoalInvitationRepository savingsGoalInvitationRepository,
+            ChildProfileRepository childProfileRepository) {
         this.savingsGoalRepository = savingsGoalRepository;
         this.moneyTransactionRepository = moneyTransactionRepository;
         this.allowanceRuleService = allowanceRuleService;
         this.childAccessService = childAccessService;
         this.donationRepository = donationRepository;
         this.userRepository = userRepository;
+        this.savingsGoalInvitationRepository = savingsGoalInvitationRepository;
+        this.childProfileRepository = childProfileRepository;
     }
 
     @Transactional(readOnly = true)
@@ -60,14 +68,101 @@ public class SavingsGoalService {
     public SavingsGoalResponse create(ChildProfile child, CreateSavingsGoalRequest request) {
         BigDecimal allocation = allocationOrZero(request);
         requireAllocationFits(child, allocation, null);
+        List<UUID> inviteeIds = request.shareWithChildIds() != null ? request.shareWithChildIds() : List.of();
+        UUID sharedGroupId = inviteeIds.isEmpty() ? null : UUID.randomUUID();
+
         SavingsGoal goal = savingsGoalRepository.save(SavingsGoal.builder()
                 .child(child)
                 .name(request.name())
                 .targetAmount(request.targetAmount())
                 .allocationPercentage(allocation)
                 .status(SavingsGoalStatus.ACTIVE)
+                .sharedGoalGroupId(sharedGroupId)
                 .build());
+
+        if (sharedGroupId != null) {
+            inviteSiblings(child, goal, sharedGroupId, inviteeIds);
+        }
         return toResponse(goal);
+    }
+
+    /** Crea una invitació PENDING per cada germà seleccionat (Prompt: compartir objectiu) —
+     * mai per al propi fill, i mai per a un fill d'una altra família encara que l'id fos
+     * manipulat des del frontend. */
+    private void inviteSiblings(ChildProfile inviter, SavingsGoal goal, UUID sharedGroupId, List<UUID> inviteeIds) {
+        UUID familyId = inviter.getUser().getFamily().getId();
+        List<UUID> distinctIds = new ArrayList<>();
+        for (UUID id : inviteeIds) {
+            if (!id.equals(inviter.getId()) && !distinctIds.contains(id)) {
+                distinctIds.add(id);
+            }
+        }
+        for (UUID invitedId : distinctIds) {
+            ChildProfile invited = childProfileRepository.findByIdFetchUserAndFamily(invitedId)
+                    .orElseThrow(() -> new DomainException("CHILD_NOT_FOUND", HttpStatus.NOT_FOUND, "Fill no trobat"));
+            if (!invited.getUser().getFamily().getId().equals(familyId)) {
+                throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "Només pots convidar germans de la mateixa família");
+            }
+            savingsGoalInvitationRepository.save(SavingsGoalInvitation.builder()
+                    .sharedGoalGroupId(sharedGroupId)
+                    .sourceGoal(goal)
+                    .inviterChild(inviter)
+                    .invitedChild(invited)
+                    .status(GoalInvitationStatus.PENDING)
+                    .build());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<SavingsGoalInvitationResponse> pendingInvitations(UUID childId) {
+        return savingsGoalInvitationRepository.findByInvitedChildIdAndStatus(childId, GoalInvitationStatus.PENDING).stream()
+                .map(SavingsGoalInvitationResponse::from)
+                .toList();
+    }
+
+    /** Acceptar clona les condicions de `sourceGoal` en un SavingsGoal nou i propi del germà
+     * convidat (mateix `sharedGoalGroupId`) — mai reutilitza la fila de l'objectiu original,
+     * perquè cada germà ha de poder editar/eliminar/aportar al seu sense afectar l'altre. */
+    @Transactional
+    public SavingsGoalResponse acceptInvitation(ChildProfile child, UUID invitationId) {
+        SavingsGoalInvitation invitation = requireOwnInvitation(child, invitationId);
+        SavingsGoal source = invitation.getSourceGoal();
+        requireAllocationFits(child, source.getAllocationPercentage(), null);
+
+        SavingsGoal mine = savingsGoalRepository.save(SavingsGoal.builder()
+                .child(child)
+                .name(source.getName())
+                .targetAmount(source.getTargetAmount())
+                .allocationPercentage(source.getAllocationPercentage())
+                .imageUrl(source.getImageUrl())
+                .status(SavingsGoalStatus.ACTIVE)
+                .sharedGoalGroupId(invitation.getSharedGoalGroupId())
+                .build());
+
+        invitation.setStatus(GoalInvitationStatus.ACCEPTED);
+        invitation.setRespondedAt(Instant.now());
+        savingsGoalInvitationRepository.save(invitation);
+        return toResponse(mine);
+    }
+
+    @Transactional
+    public void rejectInvitation(ChildProfile child, UUID invitationId) {
+        SavingsGoalInvitation invitation = requireOwnInvitation(child, invitationId);
+        invitation.setStatus(GoalInvitationStatus.REJECTED);
+        invitation.setRespondedAt(Instant.now());
+        savingsGoalInvitationRepository.save(invitation);
+    }
+
+    private SavingsGoalInvitation requireOwnInvitation(ChildProfile child, UUID invitationId) {
+        SavingsGoalInvitation invitation = savingsGoalInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new DomainException("GOAL_INVITATION_NOT_FOUND", HttpStatus.NOT_FOUND, "Convit no trobat"));
+        if (!invitation.getInvitedChild().getId().equals(child.getId())) {
+            throw new DomainException("ACCESS_DENIED", HttpStatus.FORBIDDEN, "Aquesta invitació no és per a tu");
+        }
+        if (invitation.getStatus() != GoalInvitationStatus.PENDING) {
+            throw new DomainException("GOAL_INVITATION_ALREADY_RESOLVED", HttpStatus.CONFLICT, "Aquesta invitació ja s'ha resolt");
+        }
+        return invitation;
     }
 
     @Transactional
