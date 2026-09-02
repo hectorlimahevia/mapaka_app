@@ -82,8 +82,25 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* iOS treats `position: fixed` as relative to the page while the document itself
+   scrolls, which is exactly what breaks TopBar/BottomNav on a real device (and worse
+   in an installed PWA's standalone mode): they visibly drift with the scroll instead
+   of staying pinned. Making the shell itself the fixed, full-viewport box — with only
+   `.app-shell__content` scrolling internally — removes the document scroll those bugs
+   depend on, so the bars never move regardless of platform or display mode. */
+.app-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .app-shell__content {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-shell--sidebar .app-shell__content {
@@ -92,7 +109,9 @@ onMounted(() => {
 
 .app-shell--bottom-nav .app-shell__content {
   padding-top: 3.5rem;
-  padding-bottom: 4.5rem;
+  /* BottomNav's own safe-area padding makes it taller on notched iPhones — match that
+     here too, or content ends up hidden behind the bar instead of scrolled clear of it. */
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
 }
 </style>
 

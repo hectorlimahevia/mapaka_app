@@ -262,7 +262,6 @@ onMounted(load)
       :key="child.childId"
       class="child-card"
       :class="{ 'child-card--inactive': !child.active }"
-      :style="{ '--child-color': child.avatarColor ?? 'var(--primary)' }"
     >
       <div class="child-card__head">
         <div class="child-card__identity">
@@ -437,7 +436,6 @@ onMounted(load)
 
 .child-card {
   margin-bottom: 0.9rem;
-  border-left: 4px solid var(--child-color, var(--primary));
 }
 
 .child-card--inactive {
@@ -474,18 +472,22 @@ onMounted(load)
 
 .child-card__head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.6rem;
 }
 
 .child-card__identity {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  min-width: 0;
 }
 
 .child-card__head-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
