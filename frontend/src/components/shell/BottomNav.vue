@@ -19,7 +19,7 @@ const activeIndex = computed(() => {
 
 <template>
   <nav class="bottom-nav" :style="{ '--count': items.length, '--active': activeIndex }">
-    <span class="bottom-nav__indicator" />
+    <span class="bottom-nav__indicator"><span class="bottom-nav__indicator-pill" /></span>
     <RouterLink
       v-for="item in items"
       :key="item.name"
@@ -50,16 +50,27 @@ const activeIndex = computed(() => {
   z-index: 20;
 }
 
+/* Sized to exactly one column so `translateX(N * 100%)` — a percentage of this
+   element's OWN box, per the CSS transform spec — lands on column N exactly. The
+   previous version shrank this box by 0.5rem for the visual inset, so each 100%
+   step fell short of a real column width and the miss compounded with every tab;
+   the inset now lives on the inner pill instead, which doesn't affect the math. */
 .bottom-nav__indicator {
   position: absolute;
-  top: 0.35rem;
-  left: 0.25rem;
-  height: calc(100% - 0.7rem);
-  width: calc(100% / var(--count) - 0.5rem);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: calc(100% / var(--count));
   transform: translateX(calc(var(--active) * 100%));
   transition: transform 0.32s cubic-bezier(0.3, 0.8, 0.3, 1);
+  pointer-events: none;
+}
+
+.bottom-nav__indicator-pill {
+  position: absolute;
+  inset: 0.35rem 0.25rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .bottom-nav__item {

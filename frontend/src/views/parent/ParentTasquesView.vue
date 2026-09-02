@@ -220,7 +220,7 @@ onMounted(load)
       <p v-if="incompleteTasks.length === 0" class="tasques-parent__empty">{{ t('tasques.incompleteEmpty') }}</p>
       <BaseCard v-for="item in incompleteTasks" :key="`${item.taskId}-${item.childId}`" class="task-card">
         <div class="task-card__head">
-          <div>
+          <div class="task-card__info">
             <div class="task-card__name">{{ item.taskName }}</div>
             <div class="task-card__type">{{ item.childDisplayName }}</div>
           </div>
@@ -244,7 +244,7 @@ onMounted(load)
 
       <BaseCard v-for="task in visibleTasks" :key="task.id" class="task-card" :class="{ 'task-card--inactive': !task.active }">
         <div class="task-card__head">
-          <div>
+          <div class="task-card__info">
             <div class="task-card__name">{{ task.name }}</div>
             <div class="task-card__type">{{ task.taskType === 'RESPONSIBILITY' ? t('tasques.typeResponsibility') : t('tasques.typeExtra') }}</div>
           </div>
@@ -454,9 +454,14 @@ onMounted(load)
 
 .task-card__head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.6rem 0.75rem;
+}
+
+.task-card__info {
+  min-width: 0;
 }
 
 .task-card__name {
@@ -475,8 +480,8 @@ onMounted(load)
 
 .task-card__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  flex-shrink: 0;
 }
 
 .task-card__reward {
