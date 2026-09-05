@@ -1,0 +1,20 @@
+name: Keep backend awake
+
+# Render's free tier spins the backend down after 15 minutes without traffic, and the
+# next request then pays a ~1 minute cold start (documented in README as the "Waking up
+# Mapaka..." screen). Pinging the public health endpoint every 10 minutes — a safe margin
+# under that 15-minute window even if a run gets delayed — keeps the instance warm so real
+# users never see the cold start. This repo is public, so Actions minutes are unlimited.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        # --max-time is generous on purpose: if a run does land while the instance is
+        # asleep, we want it to wait out the cold start and succeed, not time out.
+        run: curl --fail --silent --show-error --max-time 90 https://mapaka-backend.onrender.com/actuator/health
