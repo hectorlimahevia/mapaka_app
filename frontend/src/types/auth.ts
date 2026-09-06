@@ -22,6 +22,7 @@ export interface PinLoginRequest {
 export interface FamilySummary {
   id: string
   name: string
+  familyCode: string
 }
 
 export interface LoginProfile {
@@ -42,6 +43,7 @@ export interface FamilyRegisterRequest {
 export interface FamilyRegisterResponse {
   auth: AuthResponse
   recoveryCode: string
+  familyCode: string
 }
 
 export interface CreateChildRequest {

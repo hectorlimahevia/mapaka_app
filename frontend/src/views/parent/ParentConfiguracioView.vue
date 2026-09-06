@@ -19,7 +19,15 @@ const settings = reactive<FamilySettings>({
   taskApprovalRequired: true,
   notifyPendingApprovalsEnabled: false,
   allowSavingsTransfer: true,
+  familyCode: '',
 })
+const codeCopied = ref(false)
+
+async function copyFamilyCode() {
+  await navigator.clipboard.writeText(settings.familyCode)
+  codeCopied.value = true
+  setTimeout(() => (codeCopied.value = false), 2000)
+}
 
 const allowanceRules = ref<AllowanceRuleResponse[]>([])
 const addingRule = ref(false)
@@ -99,7 +107,7 @@ async function removeRule(rule: AllowanceRuleResponse) {
   await load()
 }
 
-async function toggle(key: keyof FamilySettings) {
+async function toggle(key: 'taskApprovalRequired' | 'notifyPendingApprovalsEnabled' | 'allowSavingsTransfer') {
   if (loading.value) return
   settings[key] = !settings[key]
   const familyId = auth.familyId
@@ -177,6 +185,17 @@ onMounted(load)
   <div class="config">
     <h1>{{ t('config.title') }}</h1>
     <p class="config__sub">{{ t('config.subtitle') }}</p>
+
+    <div class="family-code-card">
+      <div>
+        <p class="family-code-card__label">{{ t('config.familyCodeLabel') }}</p>
+        <p class="family-code-card__code">{{ settings.familyCode }}</p>
+        <p class="family-code-card__hint">{{ t('config.familyCodeHint') }}</p>
+      </div>
+      <BaseButton type="button" variant="accent" @click="copyFamilyCode">
+        {{ codeCopied ? t('registre.copied') : t('config.copyFamilyCode') }}
+      </BaseButton>
+    </div>
 
     <div class="settings-row">
       <span>{{ t('config.taskApprovalRequired') }}</span>
@@ -327,6 +346,42 @@ onMounted(load)
   border-radius: 12px;
   margin-bottom: 0.6rem;
   font-size: 0.87rem;
+}
+
+.family-code-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: color-mix(in srgb, var(--accent) 12%, white);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px;
+  margin-bottom: 1.1rem;
+}
+
+.family-code-card__label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.family-code-card__code {
+  margin: 0.15rem 0;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.family-code-card__hint {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--muted);
 }
 
 .config__nfc-link {

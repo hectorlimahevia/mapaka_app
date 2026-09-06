@@ -25,6 +25,11 @@ public class Family {
     @Column(nullable = false, length = 100)
     private String name;
 
+    /** Codi curt i unic (mai secret) perque la familia es pugui trobar sempre al login,
+     * encara que n'hi hagi moltes amb el mateix nom (a diferencia de `name`, que no es unic). */
+    @Column(name = "family_code", nullable = false, length = 8)
+    private String familyCode;
+
     @Column(nullable = false, length = 3)
     private String currency;
 

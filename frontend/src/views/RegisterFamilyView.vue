@@ -25,6 +25,7 @@ const familyName = ref('')
 
 const parent = reactive({ displayName: '', pin: '', pinConfirm: '' })
 const recoveryCode = ref('')
+const familyCode = ref('')
 const codeCopied = ref(false)
 const savedConfirmed = ref(false)
 
@@ -58,6 +59,7 @@ async function registerParent() {
     })
     await auth.applyRegisterResponse(data)
     recoveryCode.value = data.recoveryCode
+    familyCode.value = data.familyCode
     step.value = 3
   } catch (err) {
     error.value = apiErrorMessage(err)
@@ -192,6 +194,10 @@ async function finish() {
       </div>
 
       <div v-else class="register__form">
+        <p class="register__prompt">{{ t('registre.familyCodeTitle') }}</p>
+        <div class="register__code register__code--accent">{{ familyCode }}</div>
+        <p class="register__hint">{{ t('registre.familyCodeHint') }}</p>
+
         <p class="register__prompt">{{ t('registre.recoveryCodeTitle') }}</p>
         <p class="register__warning">{{ t('registre.recoveryCodeWarning') }}</p>
         <div class="register__code">{{ recoveryCode }}</div>
@@ -312,6 +318,13 @@ async function finish() {
   margin: 0;
 }
 
+.register__hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
 .register__code {
   font-family: var(--font-body);
   font-variant-numeric: tabular-nums;
@@ -322,6 +335,11 @@ async function finish() {
   padding: 0.85rem;
   border-radius: 12px;
   background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.register__code--accent {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
 }
 
 .register__checkbox {

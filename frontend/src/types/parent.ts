@@ -64,6 +64,7 @@ export interface FamilySettings {
   taskApprovalRequired: boolean
   notifyPendingApprovalsEnabled: boolean
   allowSavingsTransfer: boolean
+  familyCode: string
 }
 
 export interface ChildDetailResponse {

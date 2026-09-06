@@ -73,7 +73,8 @@ class NfcScreenSessionIntegrationTest {
 
     private Fixture seed() {
         Family family = familyRepository.save(Family.builder()
-                .name("Sande-Lima" + UUID.randomUUID()).currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
+                .name("Sande-Lima" + UUID.randomUUID()).familyCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
                 .build());
         userRepository.save(User.builder()
                 .family(family).email("parent" + UUID.randomUUID() + "@mapaka.test")

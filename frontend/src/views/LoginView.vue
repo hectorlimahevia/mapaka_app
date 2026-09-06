@@ -135,11 +135,15 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
             {{ t('login.familyNameLabel') }}
             <input v-model="familyQuery" type="text" :placeholder="t('login.familyNamePlaceholder')" autocomplete="off" />
           </label>
+          <p class="login__code-hint">{{ t('login.familyCodeHint') }}</p>
           <p v-if="familySearching" class="login__search-status">{{ t('login.searching') }}</p>
           <p v-else-if="familySearchError" class="login__search-status login__search-status--error">{{ familySearchError }}</p>
           <ul v-if="familyResults.length" class="login__list">
             <li v-for="family in familyResults" :key="family.id">
-              <button type="button" @click="selectFamily(family)">{{ family.name }}</button>
+              <button type="button" @click="selectFamily(family)">
+                {{ family.name }}
+                <span class="login__list-code">{{ family.familyCode }}</span>
+              </button>
             </li>
           </ul>
         </template>
@@ -293,6 +297,10 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
 
 .login__list button {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
   text-align: left;
   padding: 0.6rem 0.85rem;
   border-radius: 12px;
@@ -300,6 +308,20 @@ const visibleProfiles = () => profilesForMode(profiles.value, mode.value)
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   font-weight: 700;
   cursor: pointer;
+}
+
+.login__list-code {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.login__code-hint {
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin: -0.5rem 0 0;
 }
 
 .login__prompt {

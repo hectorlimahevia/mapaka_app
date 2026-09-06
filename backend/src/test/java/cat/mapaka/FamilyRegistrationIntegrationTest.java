@@ -12,10 +12,12 @@ import cat.mapaka.child.ChildProfileRepository;
 import cat.mapaka.child.CreateChildRequest;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.family.Family;
+import cat.mapaka.family.FamilyController;
 import cat.mapaka.family.FamilyRegisterRequest;
 import cat.mapaka.family.FamilyRegisterResponse;
 import cat.mapaka.family.FamilyRegistrationController;
 import cat.mapaka.family.FamilyRepository;
+import cat.mapaka.family.FamilySummary;
 import cat.mapaka.security.AuthenticatedUser;
 import cat.mapaka.user.User;
 import cat.mapaka.user.UserRepository;
@@ -73,6 +75,7 @@ class FamilyRegistrationIntegrationTest {
     }
 
     @Autowired FamilyRegistrationController familyRegistrationController;
+    @Autowired FamilyController familyController;
     @Autowired AuthController authController;
     @Autowired ChildManagementController childManagementController;
     @Autowired FamilyRepository familyRepository;
@@ -106,8 +109,10 @@ class FamilyRegistrationIntegrationTest {
 
         assertThat(registered.auth().role()).isEqualTo(UserRole.PARENT);
         assertThat(registered.recoveryCode()).isNotBlank();
+        assertThat(registered.familyCode()).isNotBlank();
 
         Family family = familyRepository.findById(registered.auth().familyId()).orElseThrow();
+        assertThat(family.getFamilyCode()).isEqualTo(registered.familyCode());
         assertThat(family.getRecoveryCodeHash()).isNotEqualTo(registered.recoveryCode());
         assertThat(passwordEncoder.matches(registered.recoveryCode(), family.getRecoveryCodeHash())).isTrue();
 
@@ -171,5 +176,24 @@ class FamilyRegistrationIntegrationTest {
         RecoverResponse recovered = authController
                 .recover(new RecoverRequest(auth.familyId(), registered.recoveryCode())).getBody();
         assertThat(recovered.recoveryToken()).isNotBlank();
+    }
+
+    @Test
+    @Transactional
+    void lookup_byExactFamilyCode_findsTheRightFamilyAmongDuplicateNames() {
+        String sharedName = "Gonzalez" + UUID.randomUUID();
+        FamilyRegisterResponse first = register(sharedName, "1111");
+        FamilyRegisterResponse second = register(sharedName, "2222");
+
+        // Mateix nom, codis diferents.
+        assertThat(first.familyCode()).isNotEqualTo(second.familyCode());
+
+        // La cerca pel nom els troba totes dues (comportament ja existent, sense canvis).
+        assertThat(familyController.lookup(sharedName)).hasSize(2);
+
+        // La cerca pel codi exacte identifica nomes la familia correcta, sense ambiguitat.
+        List<FamilySummary> byCode = familyController.lookup(second.familyCode());
+        assertThat(byCode).hasSize(1);
+        assertThat(byCode.get(0).id()).isEqualTo(second.auth().familyId());
     }
 }

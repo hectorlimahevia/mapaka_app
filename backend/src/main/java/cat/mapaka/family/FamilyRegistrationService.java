@@ -27,6 +27,8 @@ import java.time.Instant;
 public class FamilyRegistrationService {
 
     private static final String RECOVERY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final int FAMILY_CODE_LENGTH = 6;
+    private static final int FAMILY_CODE_MAX_ATTEMPTS = 10;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final FamilyRepository familyRepository;
@@ -55,6 +57,7 @@ public class FamilyRegistrationService {
     public RegisterResult register(FamilyRegisterRequest request) {
         Family family = familyRepository.save(Family.builder()
                 .name(request.familyName())
+                .familyCode(generateUniqueFamilyCode())
                 .currency("EUR")
                 .timezone("Europe/Madrid")
                 .language("ca")
@@ -80,7 +83,8 @@ public class FamilyRegistrationService {
         familyRepository.save(family);
 
         AuthService.LoginResult loginResult = authService.issueTokensForUser(parent);
-        return new RegisterResult(new FamilyRegisterResponse(loginResult.response(), recoveryCode), loginResult.refreshToken());
+        return new RegisterResult(
+                new FamilyRegisterResponse(loginResult.response(), recoveryCode, family.getFamilyCode()), loginResult.refreshToken());
     }
 
     public record RegisterResult(FamilyRegisterResponse body, String refreshToken) {
@@ -140,5 +144,24 @@ public class FamilyRegistrationService {
             sb.append(RECOVERY_ALPHABET.charAt(RANDOM.nextInt(RECOVERY_ALPHABET.length())));
         }
         return sb.toString();
+    }
+
+    /** A diferència del recovery code, aquest MAI és secret — serveix perquè una família es
+     * pugui trobar sempre al login (FamilyController.lookup) encara que n'hi hagi moltes amb
+     * el mateix nom. Reintenta si per atzar ja existeix (col·lisió estadísticament gairebé
+     * impossible amb 6 caràcters d'un alfabet de 32, però mai s'ha de confiar només en l'atzar
+     * quan hi ha una restricció UNIQUE real a la base de dades). */
+    private String generateUniqueFamilyCode() {
+        for (int attempt = 0; attempt < FAMILY_CODE_MAX_ATTEMPTS; attempt++) {
+            StringBuilder sb = new StringBuilder(FAMILY_CODE_LENGTH);
+            for (int i = 0; i < FAMILY_CODE_LENGTH; i++) {
+                sb.append(RECOVERY_ALPHABET.charAt(RANDOM.nextInt(RECOVERY_ALPHABET.length())));
+            }
+            String candidate = sb.toString();
+            if (!familyRepository.existsByFamilyCode(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("No s'ha pogut generar un codi de família únic");
     }
 }

@@ -87,7 +87,8 @@ class ChildScreensIntegrationTest {
 
     private ChildProfile seedChild() {
         Family family = familyRepository.save(Family.builder()
-                .name("Test Family").currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
+                .name("Test Family").familyCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
                 .build());
         User parentUser = userRepository.save(User.builder()
                 .family(family).email("p" + UUID.randomUUID() + "@test.com")

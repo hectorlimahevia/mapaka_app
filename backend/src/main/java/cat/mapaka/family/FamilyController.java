@@ -45,16 +45,21 @@ public class FamilyController {
 
     /**
      * Cerca pública de família pel login infantil (secció 39: "Família → Selecciona perfil").
-     * Només retorna id + nom — mai dades de fills ni saldos.
+     * Només retorna id + nom + codi — mai dades de fills ni saldos. Prova primer una coincidència
+     * exacta pel codi de família (únic per definició: si hi ha moltes famílies amb el mateix nom,
+     * el codi és l'única manera fiable de trobar la teva a partir de la desena, ja que la cerca
+     * per nom es talla a 10 resultats); si no en troba cap, cau a la cerca habitual pel nom.
      */
     @GetMapping("/api/families/lookup")
     public List<FamilySummary> lookup(@RequestParam String q) {
         if (q.isBlank()) {
             return List.of();
         }
-        return familyRepository.findByActiveTrueAndNameContainingIgnoreCase(q, Limit.of(10)).stream()
-                .map(FamilySummary::from)
-                .toList();
+        return familyRepository.findByActiveTrueAndFamilyCodeIgnoreCase(q.trim())
+                .map(family -> List.of(FamilySummary.from(family)))
+                .orElseGet(() -> familyRepository.findByActiveTrueAndNameContainingIgnoreCase(q, Limit.of(10)).stream()
+                        .map(FamilySummary::from)
+                        .toList());
     }
 
     /**

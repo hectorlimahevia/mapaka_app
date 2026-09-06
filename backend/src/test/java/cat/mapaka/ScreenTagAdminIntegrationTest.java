@@ -61,7 +61,8 @@ class ScreenTagAdminIntegrationTest {
     @Transactional
     void createGeneratesUniqueTokenAndListReturnsIt() {
         Family family = familyRepository.save(Family.builder()
-                .name("Test Family").currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
+                .name("Test Family").familyCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
                 .taskApprovalRequired(true).notifyPendingApprovalsEnabled(false).allowSavingsTransfer(true)
                 .build());
         User parentUser = userRepository.save(User.builder()
