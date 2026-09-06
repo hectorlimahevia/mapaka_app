@@ -99,7 +99,7 @@ class ChildScreensIntegrationTest {
                 .build());
         ChildProfile child = childProfileRepository.save(ChildProfile.builder()
                 .user(childUser).displayName("Kid").birthDate(LocalDate.of(2016, 1, 1))
-                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
         moneyTransactionRepository.save(MoneyTransaction.builder()
                 .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.CREDIT)
@@ -124,7 +124,7 @@ class ChildScreensIntegrationTest {
                 .build());
         return childProfileRepository.save(ChildProfile.builder()
                 .user(siblingUser).displayName(displayName).birthDate(LocalDate.of(2017, 1, 1))
-                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
     }
 

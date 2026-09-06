@@ -20,6 +20,24 @@ export interface WalletResponse {
   total: number
   spendingPercentage: number
   allocatedGoalPercentage: number
+  canLogExpenses: boolean
+}
+
+export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+export interface ExpenseResponse {
+  id: string
+  childId: string
+  childName: string
+  amount: number
+  reason: string
+  status: ExpenseStatus
+  createdAt: string
+}
+
+export interface CreateExpenseRequest {
+  amount: number
+  reason: string
 }
 
 export interface MoneyTransactionResponse {

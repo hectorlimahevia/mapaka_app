@@ -16,5 +16,6 @@ public record ChildDetailResponse(
         BigDecimal allowanceSavingsPercentage,
         Integer screenBaseMinutes,
         boolean active,
-        boolean deletable) {
+        boolean deletable,
+        boolean canLogExpenses) {
 }

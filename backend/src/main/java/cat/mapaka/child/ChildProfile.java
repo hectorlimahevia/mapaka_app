@@ -51,6 +51,12 @@ public class ChildProfile {
     @Column(name = "screen_time_enabled", nullable = false)
     private boolean screenTimeEnabled;
 
+    /** Si el propi fill pot registrar els seus propis gastos (queden PENDING fins que un
+     * pare els aprova) — un pare sempre pot desactivar-ho per als més petits sense afectar
+     * la resta de germans (mateix criteri que allowanceEnabled/screenTimeEnabled). */
+    @Column(name = "can_log_expenses", nullable = false)
+    private boolean canLogExpenses;
+
     @Column(nullable = false)
     private boolean active;
 

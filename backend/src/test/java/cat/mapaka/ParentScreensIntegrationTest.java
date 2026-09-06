@@ -5,6 +5,7 @@ import cat.mapaka.allowance.AllowanceRuleUpdateRequest;
 import cat.mapaka.allowance.MonthlyAllowanceResponse;
 import cat.mapaka.child.*;
 import cat.mapaka.common.DomainException;
+import cat.mapaka.expense.*;
 import cat.mapaka.family.*;
 import cat.mapaka.money.FamilyMoneyTransactionResponse;
 import cat.mapaka.money.MoneyTransactionRepository;
@@ -87,6 +88,7 @@ class ParentScreensIntegrationTest {
     @Autowired AllowanceGenerationController allowanceGenerationController;
     @Autowired TaskController taskController;
     @Autowired TaskManagementController taskManagementController;
+    @Autowired ExpenseController expenseController;
 
     private void authenticateAs(AuthenticatedUser user) {
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
@@ -111,7 +113,7 @@ class ParentScreensIntegrationTest {
                 .build());
         ChildProfile child = childProfileRepository.save(ChildProfile.builder()
                 .user(childUser).displayName("Kid").birthDate(LocalDate.of(2016, 1, 1))
-                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
         return new Fixture(family, parentUser, child);
     }
@@ -127,7 +129,7 @@ class ParentScreensIntegrationTest {
                 .build());
         return childProfileRepository.save(ChildProfile.builder()
                 .user(siblingUser).displayName(name).birthDate(LocalDate.of(2015, 1, 1))
-                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
     }
 
@@ -549,5 +551,64 @@ class ParentScreensIntegrationTest {
                 .isInstanceOf(DomainException.class)
                 .hasFieldOrPropertyWithValue("code", "CHILD_HAS_HISTORY");
         assertThat(childManagementController.details(f.family.getId(), parent)).hasSize(1);
+    }
+
+    @Test
+    @Transactional
+    void expenses_parentImmediate_childPendingUntilApproved_disabledFlagBlocksChild() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        // El pare reflecteix un gasto directament -> efecte immediat, sense pas per aprovació.
+        ExpenseResponse parentExpense = expenseController.create(
+                f.child.getId(), new CreateExpenseRequest(new BigDecimal("5.00"), "Excursió"), parent).getBody();
+        assertThat(parentExpense).isNotNull();
+        assertThat(parentExpense.status()).isEqualTo(ExpenseStatus.APPROVED);
+        assertThat(familySummaryController.summary(f.family.getId(), parent).get(0).spendingBalance())
+                .isEqualByComparingTo("-5.00");
+
+        // El fill en registra un altre -> PENDING, sense efecte al saldo encara.
+        authenticateAs(asChild(f.child));
+        ExpenseResponse childExpense = expenseController.create(
+                f.child.getId(), new CreateExpenseRequest(new BigDecimal("3.00"), "Chuches"), asChild(f.child)).getBody();
+        assertThat(childExpense).isNotNull();
+        assertThat(childExpense.status()).isEqualTo(ExpenseStatus.PENDING);
+
+        authenticateAs(parent);
+        assertThat(familySummaryController.summary(f.family.getId(), parent).get(0).spendingBalance())
+                .isEqualByComparingTo("-5.00");
+        assertThat(expenseController.pending(f.family.getId(), parent)).hasSize(1);
+
+        // El pare l'aprova -> ara sí descompta.
+        expenseController.approve(childExpense.id(), parent);
+        assertThat(familySummaryController.summary(f.family.getId(), parent).get(0).spendingBalance())
+                .isEqualByComparingTo("-8.00");
+        assertThat(expenseController.pending(f.family.getId(), parent)).isEmpty();
+
+        // Un altre gasto del fill, rebutjat -> cap efecte al saldo, ni segona resolució possible.
+        authenticateAs(asChild(f.child));
+        ExpenseResponse rejected = expenseController.create(
+                f.child.getId(), new CreateExpenseRequest(new BigDecimal("2.00"), "Cromos"), asChild(f.child)).getBody();
+        authenticateAs(parent);
+        expenseController.reject(rejected.id(), parent);
+        assertThat(familySummaryController.summary(f.family.getId(), parent).get(0).spendingBalance())
+                .isEqualByComparingTo("-8.00");
+        assertThatThrownBy(() -> expenseController.approve(rejected.id(), parent))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "EXPENSE_ALREADY_RESOLVED");
+
+        // Desactivar el permís bloqueja el fill — el pare sempre pot seguir reflectint gastos.
+        childManagementController.updateCanLogExpenses(f.child.getId(), new UpdateCanLogExpensesRequest(false), parent);
+        authenticateAs(asChild(f.child));
+        assertThatThrownBy(() -> expenseController.create(
+                f.child.getId(), new CreateExpenseRequest(new BigDecimal("1.00"), "No permès"), asChild(f.child)))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "CHILD_EXPENSES_DISABLED");
+
+        authenticateAs(parent);
+        assertThat(expenseController.create(
+                f.child.getId(), new CreateExpenseRequest(new BigDecimal("1.00"), "Permès pel pare"), parent).getBody().status())
+                .isEqualTo(ExpenseStatus.APPROVED);
     }
 }

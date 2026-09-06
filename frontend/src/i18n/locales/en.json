@@ -87,7 +87,14 @@
     "savingsLabel": "Savings:",
     "totalLabel": "Total:",
     "recentMovements": "Recent activity",
-    "noMovements": "No activity yet."
+    "noMovements": "No activity yet.",
+    "logExpenseButton": "Log an expense",
+    "expenseAmountLabel": "Amount (€)",
+    "expenseReasonLabel": "Reason",
+    "expenseSubmit": "Log expense",
+    "missingExpenseFields": "An amount greater than 0 and a reason are required.",
+    "expenseSentPending": "Sent to your parents for approval.",
+    "pendingPill": "Pending"
   },
   "tasques": {
     "title": "Your tasks",
@@ -268,7 +275,9 @@
     "reject": "Reject",
     "collaborative": "· Collaboration",
     "negativeBalanceSectionTitle": "Screen sessions with negative balance",
-    "negativeBalanceRow": "{name} ended up with a negative screen time balance — it recovers with the next time allowance."
+    "negativeBalanceRow": "{name} ended up with a negative screen time balance — it recovers with the next time allowance.",
+    "pendingExpensesTitle": "Pending expenses",
+    "expenseRequested": "Requested amount:"
   },
   "fills": {
     "title": "Children",
@@ -291,7 +300,7 @@
     "birthDateLabel": "Date of birth",
     "adding": "Adding…",
     "missingChildFields": "A name and a date of birth are required.",
-    "manualAdjustment": "Bonuses",
+    "manualAdjustment": "Adjust",
     "adjustmentTypeLabel": "Type",
     "adjustmentBonus": "Bonus",
     "adjustmentPenalty": "Penalty",
@@ -309,7 +318,14 @@
     "reactivate": "Reactivate",
     "delete": "Delete",
     "deleteConfirm": "Permanently delete {name}? This cannot be undone.",
-    "deleteConfirmYes": "Yes, delete"
+    "deleteConfirmYes": "Yes, delete",
+    "expenseButton": "Expense",
+    "expenseFormTitle": "Log an expense for {name}",
+    "expenseAmountLabel": "Amount (€)",
+    "expenseReasonLabel": "Reason",
+    "expenseSubmit": "Log expense",
+    "missingExpenseFields": "An amount greater than 0 and a reason are required.",
+    "canLogExpensesLabel": "Can log their own expenses"
   },
   "config": {
     "title": "Settings",
@@ -402,6 +418,9 @@
     "INVALID_TASK_PENALTY": "This task has no penalty configured.",
     "INVALID_CURRENT_PIN": "The current PIN isn't correct.",
     "GOAL_INVITATION_NOT_FOUND": "This invitation couldn't be found.",
-    "GOAL_INVITATION_ALREADY_RESOLVED": "This invitation has already been resolved."
+    "GOAL_INVITATION_ALREADY_RESOLVED": "This invitation has already been resolved.",
+    "CHILD_EXPENSES_DISABLED": "This child can't log their own expenses.",
+    "EXPENSE_NOT_FOUND": "This expense couldn't be found.",
+    "EXPENSE_ALREADY_RESOLVED": "This expense has already been reviewed."
   }
 }

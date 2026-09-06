@@ -92,11 +92,11 @@ class NfcScreenSessionIntegrationTest {
                 .build());
         ChildProfile marti = childProfileRepository.save(ChildProfile.builder()
                 .user(childUser1).displayName("Martí").birthDate(LocalDate.of(2016, 5, 1))
-                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
         ChildProfile pau = childProfileRepository.save(ChildProfile.builder()
                 .user(childUser2).displayName("Pau").birthDate(LocalDate.of(2018, 3, 1))
-                .allowanceEnabled(true).screenTimeEnabled(true).active(true)
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
         return new Fixture(family, marti, pau);
     }

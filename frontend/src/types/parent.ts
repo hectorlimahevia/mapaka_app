@@ -1,5 +1,7 @@
 import type { MoneySourceType, SavingsGoalStatus, TaskType, TransactionType, WalletType } from './child'
 
+export type { ExpenseResponse, ExpenseStatus, CreateExpenseRequest } from './child'
+
 export interface GoalAllocationSummary {
   goalId: string
   name: string
@@ -78,6 +80,7 @@ export interface ChildDetailResponse {
   screenBaseMinutes: number | null
   active: boolean
   deletable: boolean
+  canLogExpenses: boolean
 }
 
 export interface ScreenTagResponse {

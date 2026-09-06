@@ -112,6 +112,7 @@ public class ChildManagementService {
                 .colorTheme(request.colorTheme())
                 .allowanceEnabled(true)
                 .screenTimeEnabled(true)
+                .canLogExpenses(true)
                 .active(true)
                 .build());
 
@@ -142,7 +143,8 @@ public class ChildManagementService {
                 effectiveRule != null ? effectiveRule.getSavingsPercentage() : null,
                 screenRule != null ? screenRule.getBaseMinutes() : null,
                 child.isActive(),
-                !hasAnyHistory(child.getId()));
+                !hasAnyHistory(child.getId()),
+                child.isCanLogExpenses());
     }
 
     /** Un fill és "deletable" (eliminable de debò, no només desactivable) quan mai ha
@@ -172,6 +174,12 @@ public class ChildManagementService {
     @Transactional
     public void reactivate(ChildProfile child) {
         child.setActive(true);
+        childProfileRepository.save(child);
+    }
+
+    @Transactional
+    public void setCanLogExpenses(ChildProfile child, boolean canLogExpenses) {
+        child.setCanLogExpenses(canLogExpenses);
         childProfileRepository.save(child);
     }
 

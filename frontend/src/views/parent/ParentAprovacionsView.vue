@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useApprovalsStore } from '@/stores/approvals'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import type { NegativeBalanceSessionResponse, PendingApprovalResponse } from '@/types/parent'
+import type { ExpenseResponse, NegativeBalanceSessionResponse, PendingApprovalResponse } from '@/types/parent'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -14,8 +14,10 @@ const approvalsStore = useApprovalsStore()
 
 const approvals = ref<PendingApprovalResponse[]>([])
 const negativeSessions = ref<NegativeBalanceSessionResponse[]>([])
+const expenses = ref<ExpenseResponse[]>([])
 const loading = ref(true)
 const resolvingId = ref<string | null>(null)
+const resolvingExpenseId = ref<string | null>(null)
 
 // Totes les finalitzacions comparteixen un completionGroupId (individual o col·laboratiu,
 // Prompt 15) — s'agrupen sempre en una sola fila i s'aproven/rebutgen amb l'endpoint de grup.
@@ -38,12 +40,14 @@ const groups = computed(() => {
 async function load() {
   const familyId = auth.familyId
   if (!familyId) return
-  const [approvalsRes, negativeRes] = await Promise.all([
+  const [approvalsRes, negativeRes, expensesRes] = await Promise.all([
     api.get<PendingApprovalResponse[]>(`/api/families/${familyId}/pending-approvals`),
     api.get<NegativeBalanceSessionResponse[]>(`/api/families/${familyId}/screen-sessions/negative-balance`),
+    api.get<ExpenseResponse[]>(`/api/families/${familyId}/pending-expenses`),
   ])
   approvals.value = approvalsRes.data
   negativeSessions.value = negativeRes.data
+  expenses.value = expensesRes.data
   loading.value = false
 }
 
@@ -60,6 +64,18 @@ async function resolve(completionGroupId: string, action: 'approve' | 'reject') 
   }
 }
 
+async function resolveExpense(expenseId: string, action: 'approve' | 'reject') {
+  if (resolvingExpenseId.value) return
+  resolvingExpenseId.value = expenseId
+  try {
+    await api.post(`/api/expenses/${expenseId}/${action}`)
+    expenses.value = expenses.value.filter((e) => e.id !== expenseId)
+    approvalsStore.decrement(1)
+  } finally {
+    resolvingExpenseId.value = null
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -68,7 +84,7 @@ onMounted(load)
     <h1>{{ t('aprovacions.title') }}</h1>
     <p class="aprovacions__sub">{{ t('aprovacions.subtitle') }}</p>
 
-    <p v-if="!loading && approvals.length === 0" class="aprovacions__empty">{{ t('aprovacions.empty') }}</p>
+    <p v-if="!loading && approvals.length === 0 && expenses.length === 0" class="aprovacions__empty">{{ t('aprovacions.empty') }}</p>
 
     <TransitionGroup name="approval" tag="div">
       <div v-for="group in groups" :key="group.completionGroupId" class="approval-row">
@@ -87,6 +103,24 @@ onMounted(load)
         </div>
       </div>
     </TransitionGroup>
+
+    <template v-if="expenses.length > 0">
+      <div class="section-label">{{ t('aprovacions.pendingExpensesTitle') }}</div>
+      <TransitionGroup name="approval" tag="div">
+        <div v-for="item in expenses" :key="item.id" class="approval-row">
+          <div class="approval-row__info">
+            <div class="approval-row__title">{{ item.childName }} — {{ item.reason }}</div>
+            <div class="approval-row__sub approval-row__sub--debit">
+              {{ t('aprovacions.expenseRequested') }} <AmountDisplay :value="item.amount" unit="€" />
+            </div>
+          </div>
+          <div class="approval-row__actions">
+            <BaseButton variant="primary" :disabled="!!resolvingExpenseId" @click="resolveExpense(item.id, 'approve')">{{ t('aprovacions.approve') }}</BaseButton>
+            <BaseButton variant="danger" :disabled="!!resolvingExpenseId" @click="resolveExpense(item.id, 'reject')">{{ t('aprovacions.reject') }}</BaseButton>
+          </div>
+        </div>
+      </TransitionGroup>
+    </template>
 
     <template v-if="negativeSessions.length > 0">
       <div class="section-label">{{ t('aprovacions.negativeBalanceSectionTitle') }}</div>
@@ -148,6 +182,11 @@ onMounted(load)
   margin-left: 0.4rem;
   font-weight: 700;
   color: var(--primary);
+}
+
+.approval-row__sub--debit {
+  color: var(--error);
+  font-weight: 700;
 }
 
 .approval-row__actions {

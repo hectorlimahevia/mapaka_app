@@ -10,5 +10,6 @@ public record WalletResponse(
         BigDecimal savingsBalance,
         BigDecimal total,
         BigDecimal spendingPercentage,
-        BigDecimal allocatedGoalPercentage) {
+        BigDecimal allocatedGoalPercentage,
+        boolean canLogExpenses) {
 }

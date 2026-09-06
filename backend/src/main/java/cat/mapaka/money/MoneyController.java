@@ -52,7 +52,7 @@ public class MoneyController {
                 .map(goal -> moneyTransactionRepository.goalProgress(goal.getId()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         var total = spending.add(savings).add(goalsTotal);
-        return new WalletResponse(spending, savings, total, spendingPercentage, allocatedGoalPercentage);
+        return new WalletResponse(spending, savings, total, spendingPercentage, allocatedGoalPercentage, child.isCanLogExpenses());
     }
 
     @GetMapping("/api/children/{id}/money-transactions")

@@ -8,12 +8,16 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import BirthDateInput from '@/components/base/BirthDateInput.vue'
-import ChildAvatar from '@/components/base/ChildAvatar.vue'
 import MinutesInput from '@/components/base/MinutesInput.vue'
+import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 import { CHILD_COLORS } from '@/utils/childColors'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
 import type { ChildDetailResponse } from '@/types/parent'
+
+function avatarIconPath(child: ChildDetailResponse) {
+  return child.avatarIcon ? AVATAR_ICON_PATHS[child.avatarIcon] : null
+}
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -66,6 +70,46 @@ async function submitAdjustment(childId: string) {
     adjustmentError.value = apiErrorMessage(err)
   } finally {
     savingAdjustment.value = false
+  }
+}
+
+const expensingId = ref<string | null>(null)
+const savingExpense = ref(false)
+const expenseError = ref<string | null>(null)
+const expense = reactive({ amount: 0, reason: '' })
+
+function startExpense(child: ChildDetailResponse) {
+  expensingId.value = child.childId
+  expenseError.value = null
+  Object.assign(expense, { amount: 0, reason: '' })
+}
+
+async function submitExpense(childId: string) {
+  expenseError.value = null
+  if (expense.amount <= 0 || !expense.reason.trim()) {
+    expenseError.value = t('fills.missingExpenseFields')
+    return
+  }
+  savingExpense.value = true
+  try {
+    await api.post(`/api/children/${childId}/expenses`, { amount: expense.amount, reason: expense.reason })
+    expensingId.value = null
+    await load()
+  } catch (err) {
+    expenseError.value = apiErrorMessage(err)
+  } finally {
+    savingExpense.value = false
+  }
+}
+
+async function toggleCanLogExpenses(child: ChildDetailResponse) {
+  const next = !child.canLogExpenses
+  child.canLogExpenses = next
+  try {
+    await api.patch(`/api/children/${child.childId}/can-log-expenses`, { canLogExpenses: next })
+  } catch (err) {
+    child.canLogExpenses = !next
+    statusError.value = apiErrorMessage(err)
   }
 }
 
@@ -215,7 +259,7 @@ onMounted(load)
 
     <p v-if="!loading && children.length === 0" class="fills__empty">{{ t('fills.empty') }}</p>
 
-    <BaseCard v-if="addingChild" class="child-card">
+    <BaseCard v-if="addingChild" class="add-child-card">
       <form class="child-card__form" @submit.prevent="submitAddChild">
         <label>
           {{ t('fills.childNameLabel') }}
@@ -257,134 +301,174 @@ onMounted(load)
 
     <p v-if="statusError" class="fills__error">{{ statusError }}</p>
 
-    <BaseCard
+    <div
       v-for="child in children"
       :key="child.childId"
       class="child-card"
       :class="{ 'child-card--inactive': !child.active }"
+      :style="{ '--child-color': child.avatarColor ?? 'var(--primary)' }"
     >
-      <div class="child-card__head">
-        <div class="child-card__identity">
-          <ChildAvatar :color="child.avatarColor" :icon="child.avatarIcon" :name="child.displayName" size="small" />
-          <div>
-            <div class="child-card__name">
-              {{ child.displayName }}
-              <span v-if="!child.active" class="child-card__inactive-badge">{{ t('fills.inactiveLabel') }}</span>
-            </div>
-            <div class="child-card__age">{{ t('fills.age', { n: child.age }) }}</div>
-          </div>
+      <div class="child-card__band">
+        <span class="child-card__avatar">
+          <svg v-if="avatarIconPath(child)" :viewBox="AVATAR_ICON_VIEWBOX" fill="white"><path :d="avatarIconPath(child)!" /></svg>
+          <span v-else>{{ child.displayName.charAt(0).toUpperCase() }}</span>
+        </span>
+        <span class="child-card__name">
+          {{ child.displayName }}
+          <span v-if="!child.active" class="child-card__inactive-badge">{{ t('fills.inactiveLabel') }}</span>
+        </span>
+        <span class="child-card__age">{{ t('fills.age', { n: child.age }) }}</span>
+      </div>
+
+      <div class="child-card__body">
+        <div v-if="editingId !== child.childId" class="child-card__info">
+          <span v-if="child.allowanceMonthlyAmount !== null">
+            {{ child.hasCustomAllowance ? t('fills.allowancePrefix') : t('fills.allowanceGeneralPrefix') }}
+            <AmountDisplay :value="child.allowanceMonthlyAmount" :unit="t('common.perMonthUnit')" />
+            {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
+          </span>
+          <span v-else>{{ t('fills.noAllowance') }}</span>
+          <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: child.screenBaseMinutes }) }}</span>
+          <span v-else>{{ t('fills.noScreenTime') }}</span>
         </div>
-        <div class="child-card__head-actions">
+
+        <form v-else class="child-card__form" @submit.prevent="save(child.childId)">
+          <div class="child-card__switch-row">
+            <span>{{ t('fills.customAllowanceLabel') }}</span>
+            <BaseSwitch v-model="form.customAllowance" />
+          </div>
+          <template v-if="form.customAllowance">
+            <label>
+              {{ t('fills.monthlyAmountLabel') }}
+              <input v-model.number="form.monthlyAmount" type="number" min="0" step="0.5" required />
+            </label>
+            <label>
+              {{ t('fills.spendingPercentageLabel') }}
+              <input v-model.number="form.spendingPercentage" type="number" min="0" max="100" required />
+            </label>
+          </template>
+          <p v-else class="child-card__readonly-hint">
+            <template v-if="child.allowanceMonthlyAmount !== null">
+              {{ t('fills.allowanceGeneralPrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" :unit="t('common.perMonthUnit')" />
+              {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
+            </template>
+            <template v-else>{{ t('fills.noAllowance') }}</template>
+          </p>
+          <label>
+            {{ t('fills.screenMinutesLabel') }}
+            <MinutesInput v-model="form.baseMinutes" />
+          </label>
+          <div class="child-card__form-actions">
+            <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? t('common.saving') : t('common.save') }}</BaseButton>
+            <BaseButton type="button" variant="ghost" :disabled="saving" @click="cancelEdit">{{ t('common.cancel') }}</BaseButton>
+          </div>
+        </form>
+
+        <div class="child-card__actions">
           <template v-if="child.active">
-            <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">{{ t('fills.edit') }}</BaseButton>
-            <BaseButton v-if="adjustingId !== child.childId" variant="accent" @click="startAdjustment(child)">{{ t('fills.manualAdjustment') }}</BaseButton>
+            <BaseButton v-if="editingId !== child.childId" variant="accent" @click="startEdit(child)">
+              <svg class="btn-icon" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
+              {{ t('fills.edit') }}
+            </BaseButton>
+            <BaseButton v-if="adjustingId !== child.childId" variant="accent" @click="startAdjustment(child)">
+              <svg class="btn-icon" viewBox="0 0 24 24"><path d="M7 9l5-5 5 5M7 15l5 5 5-5" /></svg>
+              {{ t('fills.manualAdjustment') }}
+            </BaseButton>
+            <BaseButton v-if="expensingId !== child.childId" variant="secondary" @click="startExpense(child)">
+              <svg class="btn-icon" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2.2" /><path d="M3 10.5h18M7 15.2h3.2" /></svg>
+              {{ t('fills.expenseButton') }}
+            </BaseButton>
             <BaseButton variant="ghost" :disabled="statusChangingId === child.childId" @click="deactivateChild(child.childId)">
+              <svg class="btn-icon" viewBox="0 0 24 24"><path d="M12 2.5v8" /><path d="M18.4 6.6a9 9 0 11-12.77 0" /></svg>
               {{ t('fills.deactivate') }}
             </BaseButton>
           </template>
           <template v-else>
             <BaseButton variant="accent" :disabled="statusChangingId === child.childId" @click="reactivateChild(child.childId)">
+              <svg class="btn-icon" viewBox="0 0 24 24"><path d="M12 2.5v8" /><path d="M18.4 6.6a9 9 0 11-12.77 0" /></svg>
               {{ t('fills.reactivate') }}
             </BaseButton>
             <BaseButton v-if="child.deletable" variant="danger" :disabled="statusChangingId === child.childId" @click="askDeleteConfirmation(child.childId)">
+              <svg class="btn-icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0l-1 13a1 1 0 01-1 1H8a1 1 0 01-1-1L6 7" /></svg>
               {{ t('fills.delete') }}
             </BaseButton>
           </template>
         </div>
-      </div>
 
-      <div v-if="confirmingDeleteId === child.childId" class="child-card__delete-confirm">
-        <p>{{ t('fills.deleteConfirm', { name: child.displayName }) }}</p>
-        <div class="child-card__form-actions">
-          <BaseButton variant="danger" :disabled="statusChangingId === child.childId" @click="deleteChild(child.childId)">
-            {{ t('fills.deleteConfirmYes') }}
-          </BaseButton>
-          <BaseButton variant="ghost" :disabled="statusChangingId === child.childId" @click="confirmingDeleteId = null">
-            {{ t('common.cancel') }}
-          </BaseButton>
+        <div v-if="child.active" class="child-card__switch-row">
+          <span>{{ t('fills.canLogExpensesLabel') }}</span>
+          <BaseSwitch :model-value="child.canLogExpenses" @update:model-value="toggleCanLogExpenses(child)" />
         </div>
-      </div>
 
-      <div v-if="editingId !== child.childId" class="child-card__info">
-        <span v-if="child.allowanceMonthlyAmount !== null">
-          {{ child.hasCustomAllowance ? t('fills.allowancePrefix') : t('fills.allowanceGeneralPrefix') }}
-          <AmountDisplay :value="child.allowanceMonthlyAmount" :unit="t('common.perMonthUnit')" />
-          {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
-        </span>
-        <span v-else>{{ t('fills.noAllowance') }}</span>
-        <span v-if="child.screenBaseMinutes !== null">{{ t('fills.screenTimeLabel', { minutes: child.screenBaseMinutes }) }}</span>
-        <span v-else>{{ t('fills.noScreenTime') }}</span>
-      </div>
-
-      <form v-else class="child-card__form" @submit.prevent="save(child.childId)">
-        <div class="child-card__switch-row">
-          <span>{{ t('fills.customAllowanceLabel') }}</span>
-          <BaseSwitch v-model="form.customAllowance" />
+        <div v-if="confirmingDeleteId === child.childId" class="child-card__delete-confirm">
+          <p>{{ t('fills.deleteConfirm', { name: child.displayName }) }}</p>
+          <div class="child-card__form-actions">
+            <BaseButton variant="danger" :disabled="statusChangingId === child.childId" @click="deleteChild(child.childId)">
+              {{ t('fills.deleteConfirmYes') }}
+            </BaseButton>
+            <BaseButton variant="ghost" :disabled="statusChangingId === child.childId" @click="confirmingDeleteId = null">
+              {{ t('common.cancel') }}
+            </BaseButton>
+          </div>
         </div>
-        <template v-if="form.customAllowance">
+
+        <form v-if="expensingId === child.childId" class="child-card__form" @submit.prevent="submitExpense(child.childId)">
+          <p class="child-card__form-title">{{ t('fills.expenseFormTitle', { name: child.displayName }) }}</p>
           <label>
-            {{ t('fills.monthlyAmountLabel') }}
-            <input v-model.number="form.monthlyAmount" type="number" min="0" step="0.5" required />
+            {{ t('fills.expenseAmountLabel') }}
+            <input v-model.number="expense.amount" type="number" min="0.01" step="0.01" required autofocus />
           </label>
           <label>
-            {{ t('fills.spendingPercentageLabel') }}
-            <input v-model.number="form.spendingPercentage" type="number" min="0" max="100" required />
+            {{ t('fills.expenseReasonLabel') }}
+            <input v-model="expense.reason" type="text" required />
           </label>
-        </template>
-        <p v-else class="child-card__readonly-hint">
-          <template v-if="child.allowanceMonthlyAmount !== null">
-            {{ t('fills.allowanceGeneralPrefix') }} <AmountDisplay :value="child.allowanceMonthlyAmount" :unit="t('common.perMonthUnit')" />
-            {{ t('fills.allowanceDetail', { spending: child.allowanceSpendingPercentage, savings: child.allowanceSavingsPercentage }) }}
-          </template>
-          <template v-else>{{ t('fills.noAllowance') }}</template>
-        </p>
-        <label>
-          {{ t('fills.screenMinutesLabel') }}
-          <MinutesInput v-model="form.baseMinutes" />
-        </label>
-        <div class="child-card__form-actions">
-          <BaseButton type="submit" variant="primary" :disabled="saving">{{ saving ? t('common.saving') : t('common.save') }}</BaseButton>
-          <BaseButton type="button" variant="ghost" :disabled="saving" @click="cancelEdit">{{ t('common.cancel') }}</BaseButton>
-        </div>
-      </form>
+          <p v-if="expenseError" class="fills__error">{{ expenseError }}</p>
+          <div class="child-card__form-actions">
+            <BaseButton type="submit" variant="primary" :disabled="savingExpense">
+              {{ savingExpense ? t('common.saving') : t('fills.expenseSubmit') }}
+            </BaseButton>
+            <BaseButton type="button" variant="ghost" :disabled="savingExpense" @click="expensingId = null">{{ t('common.cancel') }}</BaseButton>
+          </div>
+        </form>
 
-      <form v-if="adjustingId === child.childId" class="child-card__form" @submit.prevent="submitAdjustment(child.childId)">
-        <label>
-          {{ t('fills.adjustmentTypeLabel') }}
-          <select v-model="adjustment.type">
-            <option value="BONUS">{{ t('fills.adjustmentBonus') }}</option>
-            <option value="PENALTY">{{ t('fills.adjustmentPenalty') }}</option>
-            <option value="MANUAL">{{ t('fills.adjustmentManual') }}</option>
-          </select>
-        </label>
-        <label>
-          {{ t('fills.adjustmentCategoryLabel') }}
-          <select v-model="adjustment.category">
-            <option value="MONEY">{{ t('fills.adjustmentCategoryMoney') }}</option>
-            <option value="SCREEN_TIME">{{ t('fills.adjustmentCategoryScreenTime') }}</option>
-          </select>
-        </label>
-        <label v-if="adjustment.category === 'MONEY'">
-          {{ t('fills.adjustmentValueMoneyLabel') }}
-          <input v-model.number="adjustment.value" type="number" min="0" step="0.5" />
-        </label>
-        <label v-else>
-          {{ t('fills.adjustmentValueMinutesLabel') }}
-          <MinutesInput v-model="adjustment.value" />
-        </label>
-        <label>
-          {{ t('fills.adjustmentReasonLabel') }}
-          <input v-model="adjustment.reason" type="text" required />
-        </label>
-        <p v-if="adjustmentError" class="fills__error">{{ adjustmentError }}</p>
-        <div class="child-card__form-actions">
-          <BaseButton type="submit" variant="primary" :disabled="savingAdjustment">
-            {{ savingAdjustment ? t('common.saving') : t('common.save') }}
-          </BaseButton>
-          <BaseButton type="button" variant="ghost" :disabled="savingAdjustment" @click="adjustingId = null">{{ t('common.cancel') }}</BaseButton>
-        </div>
-      </form>
-    </BaseCard>
+        <form v-if="adjustingId === child.childId" class="child-card__form" @submit.prevent="submitAdjustment(child.childId)">
+          <label>
+            {{ t('fills.adjustmentTypeLabel') }}
+            <select v-model="adjustment.type">
+              <option value="BONUS">{{ t('fills.adjustmentBonus') }}</option>
+              <option value="PENALTY">{{ t('fills.adjustmentPenalty') }}</option>
+              <option value="MANUAL">{{ t('fills.adjustmentManual') }}</option>
+            </select>
+          </label>
+          <label>
+            {{ t('fills.adjustmentCategoryLabel') }}
+            <select v-model="adjustment.category">
+              <option value="MONEY">{{ t('fills.adjustmentCategoryMoney') }}</option>
+              <option value="SCREEN_TIME">{{ t('fills.adjustmentCategoryScreenTime') }}</option>
+            </select>
+          </label>
+          <label v-if="adjustment.category === 'MONEY'">
+            {{ t('fills.adjustmentValueMoneyLabel') }}
+            <input v-model.number="adjustment.value" type="number" min="0" step="0.5" />
+          </label>
+          <label v-else>
+            {{ t('fills.adjustmentValueMinutesLabel') }}
+            <MinutesInput v-model="adjustment.value" />
+          </label>
+          <label>
+            {{ t('fills.adjustmentReasonLabel') }}
+            <input v-model="adjustment.reason" type="text" required />
+          </label>
+          <p v-if="adjustmentError" class="fills__error">{{ adjustmentError }}</p>
+          <div class="child-card__form-actions">
+            <BaseButton type="submit" variant="primary" :disabled="savingAdjustment">
+              {{ savingAdjustment ? t('common.saving') : t('common.save') }}
+            </BaseButton>
+            <BaseButton type="button" variant="ghost" :disabled="savingAdjustment" @click="adjustingId = null">{{ t('common.cancel') }}</BaseButton>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -434,8 +518,17 @@ onMounted(load)
   border-color: var(--text);
 }
 
-.child-card {
+.add-child-card {
   margin-bottom: 0.9rem;
+}
+
+.child-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  box-shadow: 0 2px 12px -4px color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .child-card--inactive {
@@ -447,9 +540,9 @@ onMounted(load)
   margin-left: 0.4rem;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--muted) 20%, transparent);
-  color: var(--muted);
-  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.28);
+  color: white;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -470,43 +563,86 @@ onMounted(load)
   color: var(--text);
 }
 
-.child-card__head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.child-card__identity {
+.child-card__band {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  min-width: 0;
+  gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--child-color, var(--primary));
 }
 
-.child-card__head-actions {
+.child-card__avatar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  color: white;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.child-card__avatar svg {
+  width: 16px;
+  height: 16px;
 }
 
 .child-card__name {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .child-card__age {
-  font-size: 0.76rem;
-  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+}
+
+.child-card__body {
+  padding: 0.85rem 1rem;
+}
+
+.child-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.btn-icon {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.child-card__form-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin: 0;
 }
 
 .child-card__info {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  margin-top: 0.6rem;
   font-size: 0.85rem;
   color: var(--text);
 }

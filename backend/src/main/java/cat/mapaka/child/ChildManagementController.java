@@ -83,6 +83,15 @@ public class ChildManagementController {
         childManagementService.updateAvatar(child, request);
     }
 
+    @PatchMapping("/api/children/{childId}/can-log-expenses")
+    public void updateCanLogExpenses(
+            @PathVariable UUID childId,
+            @RequestBody UpdateCanLogExpensesRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = requireChildInFamily(childId, user);
+        childManagementService.setCanLogExpenses(child, request.canLogExpenses());
+    }
+
     @PostMapping("/api/children/{childId}/deactivate")
     public void deactivate(@PathVariable UUID childId, @AuthenticationPrincipal AuthenticatedUser user) {
         ChildProfile child = requireChildInFamily(childId, user);

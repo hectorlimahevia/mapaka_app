@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    variant?: 'primary' | 'accent' | 'danger' | 'ghost'
+    variant?: 'primary' | 'accent' | 'danger' | 'ghost' | 'secondary'
     disabled?: boolean
   }>(),
   { variant: 'primary', disabled: false },
@@ -60,6 +60,16 @@ withDefaults(
   box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--error) 60%, transparent);
 }
 
+.base-button--secondary {
+  background: var(--secondary);
+  box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--secondary) 60%, transparent);
+}
+
+.base-button--secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -4px color-mix(in srgb, var(--secondary) 65%, transparent);
+}
+
 .base-button--ghost {
   background: none;
   color: var(--muted);
@@ -101,7 +111,8 @@ withDefaults(
   .base-button:active:not(:disabled),
   .base-button--primary:hover:not(:disabled),
   .base-button--accent:hover:not(:disabled),
-  .base-button--danger:hover:not(:disabled) {
+  .base-button--danger:hover:not(:disabled),
+  .base-button--secondary:hover:not(:disabled) {
     transform: none;
   }
 }
