@@ -228,7 +228,7 @@
     "subtitle": "Vista general de saldo y actividad de cada hijo",
     "emptyChildren": "Todavía no hay ningún hijo dado de alta.",
     "screenTimeTitle": "Tiempo de pantalla",
-    "screenTimeIdleHint": "Inícala cuando un hijo quiera usar la pantalla compartida.",
+    "screenTimeIdleHint": "Inicia una sesión cuando un hijo quiera usar la pantalla compartida.",
     "screenTimeStart": "Iniciar sesión",
     "screenTimeStopHint": "Detenla cuando haya terminado",
     "screenTimeNfcLink": "¿Prefieres una tarjeta física?",

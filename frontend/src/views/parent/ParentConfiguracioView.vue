@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseSwitch from '@/components/base/BaseSwitch.vue'
-import LanguageSwitcher from '@/components/base/LanguageSwitcher.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 import { i18n } from '@/i18n'
 import type { AllowanceRuleResponse, FamilySettings } from '@/types/parent'
@@ -214,11 +213,6 @@ onMounted(load)
       {{ t('config.nfcLink') }}
     </RouterLink>
 
-    <div class="config__language">
-      <span>{{ t('common.language') }}</span>
-      <LanguageSwitcher />
-    </div>
-
     <h2 class="config__section-title">{{ t('config.allowanceRulesTitle') }}</h2>
 
     <BaseCard v-for="rule in allowanceRules" :key="rule.id" class="rule-card">
@@ -391,17 +385,6 @@ onMounted(load)
   font-size: 0.85rem;
   color: var(--primary);
   text-decoration: none;
-}
-
-.config__language {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 0.9rem 1rem;
-  border-radius: 12px;
-  margin-top: 0.6rem;
-  font-size: 0.87rem;
 }
 
 .config__section-title {
