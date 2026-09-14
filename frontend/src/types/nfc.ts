@@ -11,6 +11,7 @@ export interface ScreenSessionStatusResponse {
   status: ScreenSessionStatus
   elapsedSeconds: number | null
   familyChildren: ChildSummary[] | null
+  startedAt: string | null
 }
 
 export interface AssignSessionParticipantResult {

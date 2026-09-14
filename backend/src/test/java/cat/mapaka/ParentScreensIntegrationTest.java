@@ -302,7 +302,7 @@ class ParentScreensIntegrationTest {
 
         ScreenTag tag = screenTagRepository.save(ScreenTag.builder().family(f.family).token("t-" + UUID.randomUUID()).active(true).build());
         ScreenSession session = screenSessionRepository.save(ScreenSession.builder()
-                .screenTag(tag).startedAt(java.time.Instant.now().minusSeconds(60))
+                .screenTag(tag).family(f.family).startedAt(java.time.Instant.now().minusSeconds(60))
                 .endedAt(java.time.Instant.now()).elapsedSeconds(60).status(ScreenSessionStatus.CLOSED)
                 .build());
         screenSessionParticipantRepository.save(ScreenSessionParticipant.builder()

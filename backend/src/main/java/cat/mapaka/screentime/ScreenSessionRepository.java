@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface ScreenSessionRepository extends JpaRepository<ScreenSession, UUID> {
 
     Optional<ScreenSession> findByScreenTagIdAndStatus(UUID screenTagId, ScreenSessionStatus status);
+
+    Optional<ScreenSession> findByFamilyIdAndScreenTagIsNullAndStatus(UUID familyId, ScreenSessionStatus status);
 }

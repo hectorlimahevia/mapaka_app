@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -13,6 +13,7 @@ import { apiErrorMessage } from '@/utils/apiError'
 import type { AppLocale } from '@/i18n'
 import type { AllowanceStatusResponse, ChildFamilySummary, FamilyMoneyTransactionResponse, GoalAllocationSummary } from '@/types/parent'
 import type { MonthlyAllowanceResponse } from '@/types/parent'
+import type { AssignSessionResponse, ChildSummary, ScreenSessionStatusResponse } from '@/types/nfc'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
@@ -87,7 +88,7 @@ async function loadPendingAllowances() {
 }
 
 async function load() {
-  await Promise.all([loadSummary(), loadMovements(), loadAllowanceStatus(), loadPendingAllowances()])
+  await Promise.all([loadSummary(), loadMovements(), loadAllowanceStatus(), loadPendingAllowances(), loadScreenSession()])
   loading.value = false
 }
 
@@ -155,6 +156,125 @@ function footerText(child: ChildFamilySummary) {
       ? t('resum.pendingApprovals', { n: child.pendingApprovalsCount }, child.pendingApprovalsCount)
       : t('resum.noPendingApprovals')
   return child.goals.length === 0 ? `${t('resum.noActiveGoals')} · ${approvals}` : approvals
+}
+
+type ScreenState = 'idle' | 'active' | 'whoplayed' | 'result'
+const screenState = ref<ScreenState>('idle')
+const screenSessionId = ref<string | null>(null)
+const screenLoading = ref(false)
+const screenError = ref<string | null>(null)
+const screenElapsedSeconds = ref(0)
+const screenFamilyChildren = ref<ChildSummary[]>([])
+const screenSelectedIds = ref<Set<string>>(new Set())
+const screenResults = ref<AssignSessionResponse['participants']>([])
+
+let screenTickHandle: ReturnType<typeof setInterval> | null = null
+const screenTimerLabel = computed(() => {
+  const mm = Math.floor(screenElapsedSeconds.value / 60).toString().padStart(2, '0')
+  const ss = Math.floor(screenElapsedSeconds.value % 60).toString().padStart(2, '0')
+  return `${mm}:${ss}`
+})
+
+function screenChargedMinutes(seconds: number) {
+  return seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : 0
+}
+
+function startScreenTicking(fromSeconds: number) {
+  stopScreenTicking()
+  const startRef = Date.now() - fromSeconds * 1000
+  screenTickHandle = setInterval(() => {
+    screenElapsedSeconds.value = Math.floor((Date.now() - startRef) / 1000)
+  }, 1000)
+}
+
+function stopScreenTicking() {
+  if (screenTickHandle) clearInterval(screenTickHandle)
+  screenTickHandle = null
+}
+
+onUnmounted(stopScreenTicking)
+
+async function loadScreenSession() {
+  const familyId = auth.familyId
+  if (!familyId) return
+  const response = await api.get<ScreenSessionStatusResponse>(`/api/families/${familyId}/screen-sessions/active`)
+  if (response.status === 200 && response.data) {
+    screenSessionId.value = response.data.sessionId
+    const startedAtMs = response.data.startedAt ? new Date(response.data.startedAt).getTime() : Date.now()
+    const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000))
+    screenElapsedSeconds.value = elapsed
+    screenState.value = 'active'
+    startScreenTicking(elapsed)
+  }
+}
+
+async function startScreenSession() {
+  const familyId = auth.familyId
+  if (!familyId || screenLoading.value) return
+  screenLoading.value = true
+  screenError.value = null
+  try {
+    const { data } = await api.post<ScreenSessionStatusResponse>(`/api/families/${familyId}/screen-sessions/start`)
+    screenSessionId.value = data.sessionId
+    screenElapsedSeconds.value = 0
+    screenState.value = 'active'
+    startScreenTicking(0)
+  } catch (err) {
+    screenError.value = apiErrorMessage(err)
+  } finally {
+    screenLoading.value = false
+  }
+}
+
+async function stopScreenSession() {
+  if (!screenSessionId.value || screenLoading.value) return
+  screenLoading.value = true
+  screenError.value = null
+  try {
+    stopScreenTicking()
+    const { data } = await api.post<ScreenSessionStatusResponse>(`/api/screen-sessions/${screenSessionId.value}/stop`)
+    screenElapsedSeconds.value = data.elapsedSeconds ?? screenElapsedSeconds.value
+    screenFamilyChildren.value = data.familyChildren ?? []
+    screenSelectedIds.value = new Set()
+    screenState.value = 'whoplayed'
+  } catch (err) {
+    screenError.value = apiErrorMessage(err)
+  } finally {
+    screenLoading.value = false
+  }
+}
+
+function toggleScreenChild(childId: string) {
+  const next = new Set(screenSelectedIds.value)
+  if (next.has(childId)) next.delete(childId)
+  else next.add(childId)
+  screenSelectedIds.value = next
+}
+
+async function confirmScreenSplit() {
+  if (!screenSessionId.value || screenSelectedIds.value.size === 0 || screenLoading.value) return
+  screenLoading.value = true
+  screenError.value = null
+  try {
+    const { data } = await api.post<AssignSessionResponse>(`/api/screen-sessions/${screenSessionId.value}/assign`, {
+      childIds: [...screenSelectedIds.value],
+    })
+    screenResults.value = data.participants
+    screenState.value = 'result'
+  } catch (err) {
+    screenError.value = apiErrorMessage(err)
+  } finally {
+    screenLoading.value = false
+  }
+}
+
+function resetScreenWidget() {
+  screenSessionId.value = null
+  screenElapsedSeconds.value = 0
+  screenFamilyChildren.value = []
+  screenSelectedIds.value = new Set()
+  screenResults.value = []
+  screenState.value = 'idle'
 }
 
 const donatingGoal = ref<{ goalId: string; name: string } | null>(null)
@@ -231,6 +351,76 @@ onMounted(load)
     </div>
 
     <p v-if="!loading && children.length === 0" class="resum__empty">{{ t('resum.emptyChildren') }}</p>
+
+    <div v-if="!loading && children.length > 0" class="screen-card">
+      <div class="screen-card__head">
+        <span class="screen-card__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="13" rx="2" />
+            <path d="M8 21h8M12 17v4" />
+          </svg>
+        </span>
+        <span class="screen-card__title">{{ t('resum.screenTimeTitle') }}</span>
+        <span v-if="screenState === 'active'" class="screen-card__live-dot" />
+      </div>
+
+      <p v-if="screenError" class="screen-card__error">{{ screenError }}</p>
+
+      <div class="screen-card__body">
+        <template v-if="screenState === 'idle'">
+          <p class="screen-card__hint">{{ t('resum.screenTimeIdleHint') }}</p>
+          <BaseButton variant="primary" :disabled="screenLoading" @click="startScreenSession">
+            {{ t('resum.screenTimeStart') }}
+          </BaseButton>
+        </template>
+
+        <template v-else-if="screenState === 'active'">
+          <div class="screen-card__timer">{{ screenTimerLabel }}</div>
+          <p class="screen-card__hint">{{ t('resum.screenTimeStopHint') }}</p>
+          <BaseButton variant="danger" :disabled="screenLoading" @click="stopScreenSession">{{ t('nfc.stop') }}</BaseButton>
+        </template>
+
+        <template v-else-if="screenState === 'whoplayed'">
+          <h2 class="screen-card__subtitle">{{ t('nfc.whoPlayed') }}</h2>
+          <p class="screen-card__hint">{{ t('nfc.totalTime', { n: screenChargedMinutes(screenElapsedSeconds) }) }}</p>
+          <div class="kid-select-row">
+            <button
+              v-for="child in screenFamilyChildren"
+              :key="child.id"
+              type="button"
+              class="kid-chip"
+              :class="{ 'kid-chip--selected': screenSelectedIds.has(child.id) }"
+              @click="toggleScreenChild(child.id)"
+            >
+              {{ child.displayName }}
+            </button>
+          </div>
+          <BaseButton variant="primary" :disabled="screenLoading || screenSelectedIds.size === 0" @click="confirmScreenSplit">
+            {{ t('nfc.confirmSplit') }}
+          </BaseButton>
+        </template>
+
+        <template v-else>
+          <div class="result-list">
+            <div v-for="p in screenResults" :key="p.childId" class="result-row">
+              <div>
+                <div class="result-row__name">{{ p.displayName }}</div>
+                <div v-if="p.negativeBalance" class="result-row__warn">{{ t('nfc.negativeBalanceWarning') }}</div>
+              </div>
+              <div class="result-row__min" :class="{ 'result-row__min--negative': p.negativeBalance }">
+                -{{ screenChargedMinutes(p.assignedSeconds) }} {{ t('common.minutesAbbr') }}
+              </div>
+            </div>
+          </div>
+          <BaseButton variant="ghost" @click="resetScreenWidget">{{ t('nfc.done') }}</BaseButton>
+        </template>
+      </div>
+    </div>
+
+    <p v-if="!loading && children.length > 0" class="screen-card__nfc-link">
+      {{ t('resum.screenTimeNfcLink') }}
+      <RouterLink :to="{ name: 'parent-nfc-tags' }" class="text-link-underline">{{ t('resum.screenTimeNfcLinkCta') }}</RouterLink>
+    </p>
 
     <div class="kids-grid">
       <div
@@ -476,6 +666,182 @@ onMounted(load)
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.screen-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  box-shadow: 0 2px 12px -4px color-mix(in srgb, var(--text) 12%, transparent);
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.6rem;
+}
+
+.screen-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.screen-card__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.screen-card__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.screen-card__title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.screen-card__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--secondary);
+  margin-left: auto;
+  animation: screen-card-pulse 1.6s ease-out infinite;
+}
+
+@keyframes screen-card-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--secondary) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary) 0%, transparent);
+  }
+}
+
+.screen-card__error {
+  color: var(--error);
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+}
+
+.screen-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding-top: 0.6rem;
+}
+
+.screen-card__hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0 0 0.2rem;
+  max-width: 300px;
+}
+
+.screen-card__subtitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.screen-card__timer {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: 2.2rem;
+  color: var(--primary);
+}
+
+.screen-card__nfc-link {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: -0.2rem 0 1.1rem;
+}
+
+.kid-select-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.kid-chip {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 14px;
+  border: 2px solid color-mix(in srgb, var(--primary) 15%, transparent);
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kid-chip--selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, white);
+  color: var(--primary);
+}
+
+.result-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: color-mix(in srgb, var(--text) 4%, white);
+  border-radius: 12px;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+
+.result-row__name {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.result-row__warn {
+  font-size: 0.7rem;
+  color: var(--error);
+  margin-top: 0.1rem;
+  max-width: 220px;
+}
+
+.result-row__min {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  color: var(--secondary);
+}
+
+.result-row__min--negative {
+  color: var(--error);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-card__live-dot {
+    animation: none;
+  }
 }
 
 .kids-grid {

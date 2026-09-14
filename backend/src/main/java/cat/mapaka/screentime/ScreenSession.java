@@ -1,5 +1,7 @@
 package cat.mapaka.screentime;
 
+import cat.mapaka.family.Family;
+import cat.mapaka.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -22,9 +24,19 @@ public class ScreenSession {
     @Column(updatable = false, nullable = false)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "screen_tag_id", nullable = false)
+    /** Null per a una sessió manual (iniciada des de la sessió del pare/mare, sense objecte físic). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "screen_tag_id")
     private ScreenTag screenTag;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    /** Null per a una sessió NFC (l'objecte físic identifica la família, no cap usuari). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "started_by")
+    private User startedBy;
 
     @Column(name = "started_at", nullable = false)
     private Instant startedAt;

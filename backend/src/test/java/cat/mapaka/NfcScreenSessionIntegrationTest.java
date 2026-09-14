@@ -6,6 +6,7 @@ import cat.mapaka.common.DomainException;
 import cat.mapaka.family.Family;
 import cat.mapaka.family.FamilyRepository;
 import cat.mapaka.screentime.*;
+import cat.mapaka.security.AuthenticatedUser;
 import cat.mapaka.user.User;
 import cat.mapaka.user.UserRepository;
 import cat.mapaka.user.UserRole;
@@ -15,6 +16,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -69,14 +74,24 @@ class NfcScreenSessionIntegrationTest {
     @Autowired NfcScreenSessionController nfcScreenSessionController;
     @Autowired ScreenTimeTransactionRepository screenTimeTransactionRepository;
 
-    private record Fixture(Family family, ChildProfile marti, ChildProfile pau) {}
+    private record Fixture(Family family, User parentUser, ChildProfile marti, ChildProfile pau) {}
+
+    private void authenticateAs(AuthenticatedUser user) {
+        var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(user, null, authorities));
+    }
+
+    private AuthenticatedUser asParent(Fixture f) {
+        return new AuthenticatedUser(f.parentUser.getId(), f.family.getId(), UserRole.PARENT, null);
+    }
 
     private Fixture seed() {
         Family family = familyRepository.save(Family.builder()
                 .name("Sande-Lima" + UUID.randomUUID()).familyCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
                 .build());
-        userRepository.save(User.builder()
+        User parentUser = userRepository.save(User.builder()
                 .family(family).email("parent" + UUID.randomUUID() + "@mapaka.test")
                 .passwordHash(new BCryptPasswordEncoder().encode("secret"))
                 .role(UserRole.PARENT).active(true)
@@ -99,7 +114,7 @@ class NfcScreenSessionIntegrationTest {
                 .user(childUser2).displayName("Pau").birthDate(LocalDate.of(2018, 3, 1))
                 .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
                 .build());
-        return new Fixture(family, marti, pau);
+        return new Fixture(family, parentUser, marti, pau);
     }
 
     private ScreenTag seedTag(Family family) {
@@ -195,5 +210,60 @@ class NfcScreenSessionIntegrationTest {
         assertThat(result.negativeBalance()).isTrue();
         assertThat(result.resultingBalanceMinutes()).isLessThan(0);
         assertThat(screenTimeTransactionRepository.balanceFor(f.marti.getId())).isLessThan(0);
+    }
+
+    @Test
+    @Transactional
+    void startManual_thenStopAndAssign_worksLikeAnNfcSession() throws InterruptedException {
+        Fixture f = seed();
+        authenticateAs(asParent(f));
+
+        ResponseEntity<ScreenSessionStatusResponse> beforeStart = nfcScreenSessionController.activeManualSession(f.family.getId(), asParent(f));
+        assertThat(beforeStart.getStatusCode().value()).isEqualTo(204);
+
+        ScreenSessionStatusResponse started = nfcScreenSessionController.startManual(f.family.getId(), asParent(f));
+        assertThat(started.status()).isEqualTo(ScreenSessionStatus.ACTIVE);
+        assertThat(started.startedAt()).isNotNull();
+
+        ResponseEntity<ScreenSessionStatusResponse> whileActive = nfcScreenSessionController.activeManualSession(f.family.getId(), asParent(f));
+        assertThat(whileActive.getBody()).isNotNull();
+        assertThat(whileActive.getBody().sessionId()).isEqualTo(started.sessionId());
+
+        Thread.sleep(1100);
+        ScreenSessionStatusResponse stopped = nfcScreenSessionController.stop(started.sessionId());
+        assertThat(stopped.status()).isEqualTo(ScreenSessionStatus.CLOSED);
+        assertThat(stopped.familyChildren()).hasSize(2);
+
+        AssignSessionResponse assigned = nfcScreenSessionController.assign(
+                started.sessionId(), new AssignSessionRequest(List.of(f.marti.getId(), f.pau.getId())));
+        assertThat(assigned.participants()).hasSize(2);
+
+        ResponseEntity<ScreenSessionStatusResponse> afterAssign = nfcScreenSessionController.activeManualSession(f.family.getId(), asParent(f));
+        assertThat(afterAssign.getStatusCode().value()).isEqualTo(204);
+    }
+
+    @Test
+    @Transactional
+    void startManual_whenAlreadyActive_throwsConflict() {
+        Fixture f = seed();
+        authenticateAs(asParent(f));
+
+        nfcScreenSessionController.startManual(f.family.getId(), asParent(f));
+
+        assertThatThrownBy(() -> nfcScreenSessionController.startManual(f.family.getId(), asParent(f)))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "MANUAL_SESSION_ALREADY_ACTIVE");
+    }
+
+    @Test
+    @Transactional
+    void startManual_forAnotherFamily_isDenied() {
+        Fixture f = seed();
+        Fixture other = seed();
+        authenticateAs(asParent(f));
+
+        assertThatThrownBy(() -> nfcScreenSessionController.startManual(other.family.getId(), asParent(f)))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "ACCESS_DENIED");
     }
 }

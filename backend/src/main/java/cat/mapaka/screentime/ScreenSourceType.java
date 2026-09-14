@@ -9,5 +9,6 @@ public enum ScreenSourceType {
     USAGE,
     MANUAL_ADJUSTMENT,
     REVERSAL,
-    NFC_SESSION
+    NFC_SESSION,
+    PARENT_SESSION
 }

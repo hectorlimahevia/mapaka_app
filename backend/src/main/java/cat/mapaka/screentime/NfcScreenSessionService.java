@@ -5,6 +5,9 @@ import cat.mapaka.child.ChildProfileRepository;
 import cat.mapaka.child.ChildSummary;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
+import cat.mapaka.family.Family;
+import cat.mapaka.user.User;
+import cat.mapaka.user.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -29,18 +33,21 @@ public class NfcScreenSessionService {
     private final ScreenSessionParticipantRepository participantRepository;
     private final ChildProfileRepository childProfileRepository;
     private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
+    private final UserRepository userRepository;
 
     public NfcScreenSessionService(
             ScreenTagRepository screenTagRepository,
             ScreenSessionRepository screenSessionRepository,
             ScreenSessionParticipantRepository participantRepository,
             ChildProfileRepository childProfileRepository,
-            ScreenTimeTransactionRepository screenTimeTransactionRepository) {
+            ScreenTimeTransactionRepository screenTimeTransactionRepository,
+            UserRepository userRepository) {
         this.screenTagRepository = screenTagRepository;
         this.screenSessionRepository = screenSessionRepository;
         this.participantRepository = participantRepository;
         this.childProfileRepository = childProfileRepository;
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -52,6 +59,28 @@ public class NfcScreenSessionService {
         return screenSessionRepository.findByScreenTagIdAndStatus(tag.getId(), ScreenSessionStatus.ACTIVE)
                 .map(this::closeSession)
                 .orElseGet(() -> startSession(tag));
+    }
+
+    @Transactional
+    public ScreenSessionStatusResponse startManual(Family family, UUID startedByUserId) {
+        if (screenSessionRepository.findByFamilyIdAndScreenTagIsNullAndStatus(family.getId(), ScreenSessionStatus.ACTIVE).isPresent()) {
+            throw new DomainException("MANUAL_SESSION_ALREADY_ACTIVE", HttpStatus.CONFLICT, "Ja hi ha una sessió manual en marxa");
+        }
+        User startedBy = userRepository.getReferenceById(startedByUserId);
+        ScreenSession session = screenSessionRepository.save(ScreenSession.builder()
+                .family(family)
+                .startedBy(startedBy)
+                .startedAt(Instant.now())
+                .status(ScreenSessionStatus.ACTIVE)
+                .build());
+        return new ScreenSessionStatusResponse(session.getId(), ScreenSessionStatus.ACTIVE, null, null, session.getStartedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ScreenSessionStatusResponse> activeManualSession(UUID familyId) {
+        return screenSessionRepository.findByFamilyIdAndScreenTagIsNullAndStatus(familyId, ScreenSessionStatus.ACTIVE)
+                .map(session -> new ScreenSessionStatusResponse(
+                        session.getId(), ScreenSessionStatus.ACTIVE, null, null, session.getStartedAt()));
     }
 
     @Transactional
@@ -67,6 +96,10 @@ public class NfcScreenSessionService {
         if (session.getStatus() != ScreenSessionStatus.CLOSED || session.getElapsedSeconds() == null) {
             throw new DomainException("SESSION_STILL_ACTIVE", HttpStatus.CONFLICT, "La sessió encara no s'ha aturat");
         }
+
+        boolean manual = session.getScreenTag() == null;
+        ScreenSourceType sourceType = manual ? ScreenSourceType.PARENT_SESSION : ScreenSourceType.NFC_SESSION;
+        String description = manual ? "Sessió manual" : "Sessió NFC compartida";
 
         List<UUID> childIds = request.childIds();
         int totalSeconds = session.getElapsedSeconds();
@@ -87,8 +120,8 @@ public class NfcScreenSessionService {
                         .child(child)
                         .transactionType(TransactionType.DEBIT)
                         .minutes(minutes)
-                        .description("Sessió NFC compartida")
-                        .sourceType(ScreenSourceType.NFC_SESSION)
+                        .description(description)
+                        .sourceType(sourceType)
                         .sourceId(null)
                         .occurredOn(LocalDate.now())
                         .createdBy(null)
@@ -115,10 +148,11 @@ public class NfcScreenSessionService {
     private ScreenSessionStatusResponse startSession(ScreenTag tag) {
         ScreenSession session = screenSessionRepository.save(ScreenSession.builder()
                 .screenTag(tag)
+                .family(tag.getFamily())
                 .startedAt(Instant.now())
                 .status(ScreenSessionStatus.ACTIVE)
                 .build());
-        return new ScreenSessionStatusResponse(session.getId(), ScreenSessionStatus.ACTIVE, null, null);
+        return new ScreenSessionStatusResponse(session.getId(), ScreenSessionStatus.ACTIVE, null, null, session.getStartedAt());
     }
 
     private ScreenSessionStatusResponse closeSession(ScreenSession session) {
@@ -129,12 +163,12 @@ public class NfcScreenSessionService {
         session.setStatus(ScreenSessionStatus.CLOSED);
         screenSessionRepository.save(session);
 
-        UUID familyId = session.getScreenTag().getFamily().getId();
+        UUID familyId = session.getFamily().getId();
         List<ChildSummary> children = childProfileRepository.findAllActiveByFamilyIdFetchUser(familyId).stream()
                 .map(ChildSummary::from)
                 .toList();
 
-        return new ScreenSessionStatusResponse(session.getId(), ScreenSessionStatus.CLOSED, elapsedSeconds, children);
+        return new ScreenSessionStatusResponse(session.getId(), ScreenSessionStatus.CLOSED, elapsedSeconds, children, session.getStartedAt());
     }
 
     private ScreenSession getActiveSession(UUID sessionId) {
