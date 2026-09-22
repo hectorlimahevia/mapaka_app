@@ -9,8 +9,6 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    Optional<User> findByEmail(String email);
-
     Optional<User> findByFamilyIdAndUsername(UUID familyId, String username);
 
     List<User> findAllByFamilyIdAndUsernameStartingWith(UUID familyId, String usernamePrefix);

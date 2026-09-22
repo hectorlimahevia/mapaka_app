@@ -92,7 +92,7 @@ class NfcScreenSessionIntegrationTest {
                 .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
                 .build());
         User parentUser = userRepository.save(User.builder()
-                .family(family).email("parent" + UUID.randomUUID() + "@mapaka.test")
+                .family(family).username("parent" + UUID.randomUUID())
                 .passwordHash(new BCryptPasswordEncoder().encode("secret"))
                 .role(UserRole.PARENT).active(true)
                 .build());

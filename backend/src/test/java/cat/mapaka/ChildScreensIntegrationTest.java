@@ -91,7 +91,7 @@ class ChildScreensIntegrationTest {
                 .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
                 .build());
         User parentUser = userRepository.save(User.builder()
-                .family(family).email("p" + UUID.randomUUID() + "@test.com")
+                .family(family).username("p" + UUID.randomUUID())
                 .passwordHash(new BCryptPasswordEncoder().encode("x")).role(UserRole.PARENT).active(true)
                 .build());
         User childUser = userRepository.save(User.builder()

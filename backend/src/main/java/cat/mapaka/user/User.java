@@ -29,10 +29,7 @@ public class User {
     @JoinColumn(name = "family_id", nullable = false)
     private Family family;
 
-    @Column
-    private String email;
-
-    @Column
+    @Column(nullable = false)
     private String username;
 
     /** Nom per mostrar al selector "Qui ets?" del login — només rellevant per a PARENT

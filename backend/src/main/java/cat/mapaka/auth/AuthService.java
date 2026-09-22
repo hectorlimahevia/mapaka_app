@@ -78,16 +78,11 @@ public class AuthService {
     }
 
     private User resolveUser(LoginRequest request) {
-        if (request.email() != null && !request.email().isBlank()) {
-            return userRepository.findByEmail(request.email())
-                    .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED, "Credencials incorrectes"));
+        if (request.familyId() == null) {
+            throw new DomainException("INVALID_LOGIN_REQUEST", HttpStatus.BAD_REQUEST, "Cal indicar familyId + username + PIN");
         }
-        if (request.familyId() != null && request.username() != null) {
-            return userRepository.findByFamilyIdAndUsername(request.familyId(), request.username())
-                    .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED, "Credencials incorrectes"));
-        }
-        throw new DomainException("INVALID_LOGIN_REQUEST", HttpStatus.BAD_REQUEST,
-                "Cal indicar email+password (adult) o familyId+username+PIN (fill)");
+        return userRepository.findByFamilyIdAndUsername(request.familyId(), request.username())
+                .orElseThrow(() -> new DomainException("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED, "Credencials incorrectes"));
     }
 
     private AuthenticatedUser toAuthenticatedUser(User user) {
