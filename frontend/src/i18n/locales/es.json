@@ -1,5 +1,7 @@
 {
   "common": {
+    "yes": "Sí",
+    "no": "No",
     "language": "Idioma",
     "minutesAbbr": "min",
     "save": "Guardar",
@@ -48,7 +50,14 @@
     "registerCta": "¿Eres nuevo en Mapaka? Crea una familia →",
     "submit": "Entrar",
     "submitting": "Entrando…",
-    "recoverHint": "Si otro padre o madre de la familia todavía tiene acceso, es más fácil que te restablezca el PIN desde Configuración → Hijos y padres. Si no, introduce aquí el código de recuperación que se mostró al crear la familia.",
+    "recoverOtherAdultQuestion": "¿Hay otro adulto en la familia con acceso a Mapaka?",
+    "recoverBack": "Atrás",
+    "recoverOtherAdultTitle": "Pídele ayuda",
+    "recoverOtherAdultStep1": "Que abra la app Mapaka con su propio PIN",
+    "recoverOtherAdultStep2": "Configuración → Hijos y padres",
+    "recoverOtherAdultStep3": "\"Restablecer PIN\" junto a tu nombre",
+    "recoverOtherAdultStep4": "Te dará un PIN nuevo y ya podrás entrar",
+    "recoverCodeHint": "Introduce el código de recuperación que se mostró al crear la familia.",
     "recoverCodeLabel": "Código de recuperación",
     "recoverCodePlaceholder": "ABCD1234",
     "recoverContinue": "Continuar",

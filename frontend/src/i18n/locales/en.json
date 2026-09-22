@@ -1,5 +1,7 @@
 {
   "common": {
+    "yes": "Yes",
+    "no": "No",
     "language": "Language",
     "minutesAbbr": "min",
     "save": "Save",
@@ -48,7 +50,14 @@
     "registerCta": "New to Mapaka? Create a family →",
     "submit": "Log in",
     "submitting": "Logging in…",
-    "recoverHint": "If another parent in the family still has access, it's easier for them to reset your PIN from Settings → Children and parents. Otherwise, enter the recovery code shown when the family was created.",
+    "recoverOtherAdultQuestion": "Is there another adult in the family with access to Mapaka?",
+    "recoverBack": "Back",
+    "recoverOtherAdultTitle": "Ask them for help",
+    "recoverOtherAdultStep1": "Have them open Mapaka with their own PIN",
+    "recoverOtherAdultStep2": "Settings → Children and parents",
+    "recoverOtherAdultStep3": "\"Reset PIN\" next to your name",
+    "recoverOtherAdultStep4": "They'll give you a new PIN and you're back in",
+    "recoverCodeHint": "Enter the recovery code shown when the family was created.",
     "recoverCodeLabel": "Recovery code",
     "recoverCodePlaceholder": "ABCD1234",
     "recoverContinue": "Continue",

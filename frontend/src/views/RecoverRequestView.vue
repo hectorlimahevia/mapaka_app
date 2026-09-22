@@ -17,6 +17,8 @@ const recovery = useRecoveryStore()
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+const hasOtherAdult = ref<'unknown' | 'yes' | 'no'>('unknown')
+
 const familyQuery = ref('')
 const familyResults = ref<FamilySummary[]>([])
 const selectedFamily = ref<FamilySummary | null>(null)
@@ -65,31 +67,57 @@ async function submit() {
 
     <BaseCard class="recover__card">
       <p class="recover__prompt">{{ t('login.forgotPin') }}</p>
-      <p class="recover__hint">{{ t('login.recoverHint') }}</p>
 
-      <template v-if="!selectedFamily">
-        <label>
-          {{ t('login.familyNameLabel') }}
-          <input v-model="familyQuery" type="text" :placeholder="t('login.familyNamePlaceholder')" autocomplete="off" />
-        </label>
-        <ul v-if="familyResults.length" class="recover__list">
-          <li v-for="family in familyResults" :key="family.id">
-            <button type="button" @click="selectFamily(family)">{{ family.name }}</button>
-          </li>
-        </ul>
+      <template v-if="hasOtherAdult === 'unknown'">
+        <p class="recover__hint">{{ t('login.recoverOtherAdultQuestion') }}</p>
+        <div class="recover__choice-row">
+          <button type="button" class="recover__choice" @click="hasOtherAdult = 'yes'">{{ t('common.yes') }}</button>
+          <button type="button" class="recover__choice" @click="hasOtherAdult = 'no'">{{ t('common.no') }}</button>
+        </div>
       </template>
 
-      <form v-else class="recover__form" @submit.prevent="submit">
-        <button type="button" class="recover__back" @click="selectedFamily = null">← {{ t('login.changeFamily') }}</button>
-        <label>
-          {{ t('login.recoverCodeLabel') }}
-          <input v-model="code" type="text" :placeholder="t('login.recoverCodePlaceholder')" required autofocus />
-        </label>
-        <p v-if="error" class="recover__error">{{ error }}</p>
-        <BaseButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? t('login.recoverChecking') : t('login.recoverContinue') }}
+      <template v-else-if="hasOtherAdult === 'yes'">
+        <button type="button" class="recover__back" @click="hasOtherAdult = 'unknown'">← {{ t('login.recoverBack') }}</button>
+        <p class="recover__prompt recover__prompt--sub">{{ t('login.recoverOtherAdultTitle') }}</p>
+        <ol class="recover__steps">
+          <li>{{ t('login.recoverOtherAdultStep1') }}</li>
+          <li>{{ t('login.recoverOtherAdultStep2') }}</li>
+          <li>{{ t('login.recoverOtherAdultStep3') }}</li>
+          <li>{{ t('login.recoverOtherAdultStep4') }}</li>
+        </ol>
+        <BaseButton type="button" variant="ghost" @click="router.push({ name: 'login' })">
+          {{ t('login.backToLogin') }}
         </BaseButton>
-      </form>
+      </template>
+
+      <template v-else>
+        <button type="button" class="recover__back" @click="hasOtherAdult = 'unknown'">← {{ t('login.recoverBack') }}</button>
+
+        <template v-if="!selectedFamily">
+          <label>
+            {{ t('login.familyNameLabel') }}
+            <input v-model="familyQuery" type="text" :placeholder="t('login.familyNamePlaceholder')" autocomplete="off" />
+          </label>
+          <ul v-if="familyResults.length" class="recover__list">
+            <li v-for="family in familyResults" :key="family.id">
+              <button type="button" @click="selectFamily(family)">{{ family.name }}</button>
+            </li>
+          </ul>
+        </template>
+
+        <form v-else class="recover__form" @submit.prevent="submit">
+          <button type="button" class="recover__back" @click="selectedFamily = null">← {{ t('login.changeFamily') }}</button>
+          <p class="recover__hint">{{ t('login.recoverCodeHint') }}</p>
+          <label>
+            {{ t('login.recoverCodeLabel') }}
+            <input v-model="code" type="text" :placeholder="t('login.recoverCodePlaceholder')" required autofocus />
+          </label>
+          <p v-if="error" class="recover__error">{{ error }}</p>
+          <BaseButton type="submit" variant="primary" :disabled="loading">
+            {{ loading ? t('login.recoverChecking') : t('login.recoverContinue') }}
+          </BaseButton>
+        </form>
+      </template>
     </BaseCard>
 
     <RouterLink :to="{ name: 'login' }" class="recover__cancel text-link-underline">← {{ t('login.backToLogin') }}</RouterLink>
@@ -126,6 +154,49 @@ async function submit() {
   color: var(--muted);
   line-height: 1.5;
   margin: 0;
+}
+
+.recover__prompt--sub {
+  font-size: 0.92rem;
+}
+
+.recover__choice-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.recover__choice {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.5rem;
+  border-radius: 12px;
+  border: 2px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.recover__choice:hover {
+  border-color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recover__choice {
+    transition: none;
+  }
+}
+
+.recover__steps {
+  background: color-mix(in srgb, var(--text) 4%, white);
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem 0.85rem 1.6rem;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text);
 }
 
 .recover__card label {

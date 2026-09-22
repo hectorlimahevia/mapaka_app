@@ -1,5 +1,7 @@
 {
   "common": {
+    "yes": "Sí",
+    "no": "No",
     "language": "Idioma",
     "minutesAbbr": "min",
     "save": "Desar",
@@ -48,7 +50,14 @@
     "registerCta": "Ets nou a Mapaka? Crea una família →",
     "submit": "Entrar",
     "submitting": "Entrant…",
-    "recoverHint": "Si un altre pare o mare de la família encara té accés, és més fàcil que et reseteixi el PIN des de Configuració → Fills i pares. Si no, introdueix aquí el codi de recuperació que es va mostrar en crear la família.",
+    "recoverOtherAdultQuestion": "Hi ha un altre adult a la família amb accés a Mapaka?",
+    "recoverBack": "Enrere",
+    "recoverOtherAdultTitle": "Demana-li ajuda",
+    "recoverOtherAdultStep1": "Que obri l'app Mapaka amb el seu propi PIN",
+    "recoverOtherAdultStep2": "Configuració → Fills i pares",
+    "recoverOtherAdultStep3": "\"Restablir PIN\" al teu costat",
+    "recoverOtherAdultStep4": "Et donarà un PIN nou i ja podràs entrar",
+    "recoverCodeHint": "Introdueix el codi de recuperació que es va mostrar en crear la família.",
     "recoverCodeLabel": "Codi de recuperació",
     "recoverCodePlaceholder": "ABCD1234",
     "recoverContinue": "Continuar",
