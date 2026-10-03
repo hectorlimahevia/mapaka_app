@@ -750,6 +750,36 @@ class ParentScreensIntegrationTest {
 
     @Test
     @Transactional
+    void familySummary_showsScreenMinutesBalance_andNullWhenScreenTimeIsDisabled() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        User offUser = userRepository.save(User.builder()
+                .family(f.family).username("off" + UUID.randomUUID())
+                .passwordHash(new BCryptPasswordEncoder().encode("1234")).role(UserRole.CHILD).active(true)
+                .build());
+        ChildProfile screenTimeOff = childProfileRepository.save(ChildProfile.builder()
+                .user(offUser).displayName("SensePantalla").birthDate(LocalDate.of(2018, 1, 1))
+                .allowanceEnabled(true).screenTimeEnabled(false).canLogExpenses(true).active(true)
+                .build());
+
+        adjustmentController.screenTimeAdjustment(
+                f.child.getId(), new ScreenTimeAdjustmentRequest(AdjustmentType.BONUS, 90, "Premi"), parent);
+        adjustmentController.screenTimeAdjustment(
+                f.child.getId(), new ScreenTimeAdjustmentRequest(AdjustmentType.PENALTY, 120, "Càstig"), parent);
+
+        List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
+        ChildFamilySummary withScreenTime = summary.stream().filter(c -> c.childId().equals(f.child.getId())).findFirst().orElseThrow();
+        ChildFamilySummary withoutScreenTime = summary.stream().filter(c -> c.childId().equals(screenTimeOff.getId())).findFirst().orElseThrow();
+
+        // El saldo és la suma del ledger i pot ser negatiu: 90 - 120 = -30.
+        assertThat(withScreenTime.screenMinutes()).isEqualTo(-30);
+        assertThat(withoutScreenTime.screenMinutes()).isNull();
+    }
+
+    @Test
+    @Transactional
     void moneyPenalty_alwaysDebitsTheSpendingWalletOnly() {
         Fixture f = seed();
         AuthenticatedUser parent = asParent(f);

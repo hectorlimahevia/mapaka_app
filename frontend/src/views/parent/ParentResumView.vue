@@ -10,6 +10,7 @@ import BaseSwitch from '@/components/base/BaseSwitch.vue'
 import MovementRow from '@/components/base/MovementRow.vue'
 import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 import { groupMovements, type MovementGroup } from '@/utils/groupMovements'
+import { formatMinutes } from '@/utils/minutes'
 import { formatDate } from '@/utils/date'
 import { apiErrorMessage } from '@/utils/apiError'
 import type { AppLocale } from '@/i18n'
@@ -457,6 +458,12 @@ onMounted(load)
             <div class="kid-card__secondary-item">
               <span class="kid-card__secondary-label">{{ t('resum.statSavings') }}</span>
               <span class="kid-card__secondary-value"><AmountDisplay :value="child.savingsBalance" unit="€" /></span>
+            </div>
+            <div v-if="child.screenMinutes !== null" class="kid-card__secondary-item">
+              <span class="kid-card__secondary-label">{{ t('resum.statScreenTime') }}</span>
+              <span class="kid-card__secondary-value" :class="{ 'kid-card__secondary-value--negative': child.screenMinutes < 0 }">
+                {{ formatMinutes(child.screenMinutes, t('common.hoursAbbr'), t('common.minutesAbbr')) }}
+              </span>
             </div>
           </div>
 
@@ -939,6 +946,11 @@ onMounted(load)
   color: var(--text);
   margin-top: 0.1rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kid-card__secondary-value--negative {
+  color: var(--error);
 }
 
 .kid-card__toggle-row {

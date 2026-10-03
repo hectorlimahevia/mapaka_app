@@ -28,6 +28,7 @@ export interface ChildFamilySummary {
   totalBalance: number
   pendingApprovalsCount: number
   goals: GoalAllocationSummary[]
+  screenMinutes: number | null
 }
 
 export interface FamilyMoneyTransactionResponse {

@@ -10,6 +10,7 @@ import cat.mapaka.money.WalletType;
 import cat.mapaka.savings.SavingsGoal;
 import cat.mapaka.savings.SavingsGoalRepository;
 import cat.mapaka.savings.SavingsGoalStatus;
+import cat.mapaka.screentime.ScreenTimeTransactionRepository;
 import cat.mapaka.security.AuthenticatedUser;
 import cat.mapaka.task.TaskCompletionRepository;
 import cat.mapaka.task.TaskCompletionStatus;
@@ -40,18 +41,21 @@ public class FamilySummaryController {
     private final MoneyTransactionRepository moneyTransactionRepository;
     private final TaskCompletionRepository taskCompletionRepository;
     private final SavingsGoalRepository savingsGoalRepository;
+    private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
 
     public FamilySummaryController(
             FamilyAccessService familyAccessService,
             ChildProfileRepository childProfileRepository,
             MoneyTransactionRepository moneyTransactionRepository,
             TaskCompletionRepository taskCompletionRepository,
-            SavingsGoalRepository savingsGoalRepository) {
+            SavingsGoalRepository savingsGoalRepository,
+            ScreenTimeTransactionRepository screenTimeTransactionRepository) {
         this.familyAccessService = familyAccessService;
         this.childProfileRepository = childProfileRepository;
         this.moneyTransactionRepository = moneyTransactionRepository;
         this.taskCompletionRepository = taskCompletionRepository;
         this.savingsGoalRepository = savingsGoalRepository;
+        this.screenTimeTransactionRepository = screenTimeTransactionRepository;
     }
 
     @GetMapping("/api/families/{id}/summary")
@@ -109,8 +113,10 @@ public class FamilySummaryController {
         }
         BigDecimal total = spending.add(savings).add(goalsTotal);
 
+        Integer screenMinutes = child.isScreenTimeEnabled() ? screenTimeTransactionRepository.balanceFor(child.getId()) : null;
+
         return new ChildFamilySummary(
                 child.getId(), child.getDisplayName(), child.getAvatar(), child.getColorTheme(), child.getAvatarIcon(),
-                spending, savings, total, pending, goals);
+                spending, savings, total, pending, goals, screenMinutes);
     }
 }
