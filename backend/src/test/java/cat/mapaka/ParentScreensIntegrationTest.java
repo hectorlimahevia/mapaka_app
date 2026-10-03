@@ -373,6 +373,11 @@ class ParentScreensIntegrationTest {
         Fixture f = seed();
         AuthenticatedUser parent = asParent(f);
         authenticateAs(parent);
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("100.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
 
         Task task = taskRepository.save(Task.builder()
                 .family(f.family).name("Fer el llit").taskType(TaskType.RESPONSIBILITY)
@@ -390,8 +395,11 @@ class ParentScreensIntegrationTest {
         taskManagementController.applyPenalty(task.getId(), f.child.getId(), parent);
 
         List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
-        // -1.00€ repartit gastar/estalvi segons el percentatge per defecte (100% gastar, sense regla).
-        assertThat(summary.get(0).spendingBalance().add(summary.get(0).savingsBalance())).isEqualByComparingTo("-1.00");
+        // La penalització surt sencera de "per gastar", encara que el fill tingui regla 80/20 i
+        // un objectiu actiu: ni l'estalvi ni el progrés de l'objectiu es toquen.
+        assertThat(summary.get(0).spendingBalance()).isEqualByComparingTo("-1.00");
+        assertThat(summary.get(0).savingsBalance()).isEqualByComparingTo("0.00");
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("0.00");
     }
 
     @Test

@@ -1,10 +1,12 @@
 package cat.mapaka.task;
 
-import cat.mapaka.allowance.MoneySplitCalculator;
 import cat.mapaka.child.ChildProfile;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.common.TransactionType;
 import cat.mapaka.money.MoneySourceType;
+import cat.mapaka.money.MoneyTransaction;
+import cat.mapaka.money.MoneyTransactionRepository;
+import cat.mapaka.money.WalletType;
 import cat.mapaka.screentime.ScreenSourceType;
 import cat.mapaka.screentime.ScreenTimeTransaction;
 import cat.mapaka.screentime.ScreenTimeTransactionRepository;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -30,7 +33,7 @@ public class TaskPenaltyService {
     private final TaskRepository taskRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final TaskCompletionRepository taskCompletionRepository;
-    private final MoneySplitCalculator moneySplitCalculator;
+    private final MoneyTransactionRepository moneyTransactionRepository;
     private final ScreenTimeTransactionRepository screenTimeTransactionRepository;
     private final UserRepository userRepository;
 
@@ -38,13 +41,13 @@ public class TaskPenaltyService {
             TaskRepository taskRepository,
             TaskAssignmentRepository taskAssignmentRepository,
             TaskCompletionRepository taskCompletionRepository,
-            MoneySplitCalculator moneySplitCalculator,
+            MoneyTransactionRepository moneyTransactionRepository,
             ScreenTimeTransactionRepository screenTimeTransactionRepository,
             UserRepository userRepository) {
         this.taskRepository = taskRepository;
         this.taskAssignmentRepository = taskAssignmentRepository;
         this.taskCompletionRepository = taskCompletionRepository;
-        this.moneySplitCalculator = moneySplitCalculator;
+        this.moneyTransactionRepository = moneyTransactionRepository;
         this.screenTimeTransactionRepository = screenTimeTransactionRepository;
         this.userRepository = userRepository;
     }
@@ -92,9 +95,13 @@ public class TaskPenaltyService {
         }
         User parent = userRepository.getReferenceById(actingUserId);
 
-        if (task.getPenaltyMoneyAmount().compareTo(BigDecimal.ZERO) > 0) {
-            moneySplitCalculator.apply(child, task.getPenaltyMoneyAmount(), TransactionType.DEBIT,
-                    MoneySourceType.TASK_PENALTY, task.getId(), task.getName(), parent);
+        // La penalització en diners surt sempre de "per gastar": no toca l'estalvi ni els objectius.
+        BigDecimal moneyPenalty = task.getPenaltyMoneyAmount().setScale(2, RoundingMode.HALF_UP);
+        if (moneyPenalty.signum() > 0) {
+            moneyTransactionRepository.save(MoneyTransaction.builder()
+                    .child(child).walletType(WalletType.SPENDING).transactionType(TransactionType.DEBIT)
+                    .amount(moneyPenalty).description(task.getName())
+                    .sourceType(MoneySourceType.TASK_PENALTY).sourceId(task.getId()).createdBy(parent).build());
         }
         if (task.getPenaltyScreenMinutes() > 0) {
             ZoneId familyZone = ZoneId.of(child.getUser().getFamily().getTimezone());
