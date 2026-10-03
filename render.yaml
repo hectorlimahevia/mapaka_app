@@ -10,8 +10,10 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile.prod
     dockerContext: .
-    plan: free
-    healthCheckPath: /actuator/health
+    plan: starter
+    # Liveness no consulta la base de dades; /actuator/health sí, a cada comprovació, i això
+    # impedeix que Neon suspengui el compute i gasta les hores del pla gratuït.
+    healthCheckPath: /actuator/health/liveness
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
