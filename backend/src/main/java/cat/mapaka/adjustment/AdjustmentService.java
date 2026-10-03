@@ -54,7 +54,6 @@ public class AdjustmentService {
         MoneySourceType sourceType = switch (request.type()) {
             case BONUS -> MoneySourceType.BONUS;
             case PENALTY -> MoneySourceType.PENALTY;
-            case MANUAL -> MoneySourceType.MANUAL_ADJUSTMENT;
         };
 
         // El desglossament real (gastar/estalvi/objectius) viu als MoneyTransaction que
@@ -77,7 +76,6 @@ public class AdjustmentService {
         ScreenSourceType sourceType = switch (request.type()) {
             case BONUS -> ScreenSourceType.BONUS;
             case PENALTY -> ScreenSourceType.PENALTY;
-            case MANUAL -> ScreenSourceType.MANUAL_ADJUSTMENT;
         };
 
         Adjustment adjustment = adjustmentRepository.save(Adjustment.builder()

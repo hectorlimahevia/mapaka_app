@@ -185,7 +185,7 @@ export interface MonthlySettlementResponse {
   status: SettlementStatus
 }
 
-export type AdjustmentType = 'BONUS' | 'PENALTY' | 'MANUAL'
+export type AdjustmentType = 'BONUS' | 'PENALTY'
 
 export interface MoneyAdjustmentRequest {
   type: AdjustmentType

@@ -7,6 +7,7 @@ public enum MoneySourceType {
     PENALTY,
     PURCHASE,
     SAVINGS_TRANSFER,
+    /** Ja no s'escriu; es manté perquè hi pot haver moviments antics al ledger. */
     MANUAL_ADJUSTMENT,
     SETTLEMENT,
     REVERSAL,

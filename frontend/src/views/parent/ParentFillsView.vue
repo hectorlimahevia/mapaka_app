@@ -32,7 +32,7 @@ const adjustingId = ref<string | null>(null)
 const savingAdjustment = ref(false)
 const adjustmentError = ref<string | null>(null)
 const adjustment = reactive({
-  type: 'BONUS' as 'BONUS' | 'PENALTY' | 'MANUAL',
+  type: 'BONUS' as 'BONUS' | 'PENALTY',
   category: 'MONEY' as 'MONEY' | 'SCREEN_TIME',
   value: 0,
   reason: '',
@@ -437,7 +437,6 @@ onMounted(load)
             <select v-model="adjustment.type">
               <option value="BONUS">{{ t('fills.adjustmentBonus') }}</option>
               <option value="PENALTY">{{ t('fills.adjustmentPenalty') }}</option>
-              <option value="MANUAL">{{ t('fills.adjustmentManual') }}</option>
             </select>
           </label>
           <label>
