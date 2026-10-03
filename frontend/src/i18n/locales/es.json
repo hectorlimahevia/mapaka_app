@@ -344,7 +344,7 @@
     "destCustomSpending": "Para gastar {pct}%",
     "destCustomSavings": "Ahorro {pct}%",
     "adjustmentPreviewLabel": "{name} recibirá",
-    "adjustmentPenaltyNote": "La penalización se descuenta con el reparto habitual del hijo.",
+    "adjustmentPenaltyNote": "La penalización se descuenta siempre de lo que el hijo tiene para gastar.",
     "adjustmentScreenTimeNote": "El tiempo de pantalla se aplica directamente, sin reparto.",
     "adjustmentSaved": "Extra guardado",
     "adjustmentSavedBonus": "Bonificación guardada: {parts}",

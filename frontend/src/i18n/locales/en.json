@@ -344,7 +344,7 @@
     "destCustomSpending": "To spend {pct}%",
     "destCustomSavings": "Savings {pct}%",
     "adjustmentPreviewLabel": "{name} will get",
-    "adjustmentPenaltyNote": "A penalty is deducted using the child's usual split.",
+    "adjustmentPenaltyNote": "A penalty is always deducted from what the child has to spend.",
     "adjustmentScreenTimeNote": "Screen time is applied directly, with no split.",
     "adjustmentSaved": "Extra saved",
     "adjustmentSavedBonus": "Bonus saved: {parts}",

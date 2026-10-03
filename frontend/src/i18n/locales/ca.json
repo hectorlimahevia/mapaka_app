@@ -344,7 +344,7 @@
     "destCustomSpending": "Per gastar {pct}%",
     "destCustomSavings": "Estalvi {pct}%",
     "adjustmentPreviewLabel": "{name} rebrà",
-    "adjustmentPenaltyNote": "La penalització es descompta amb el repartiment habitual del fill.",
+    "adjustmentPenaltyNote": "La penalització es descompta sempre del que el fill té per gastar.",
     "adjustmentScreenTimeNote": "El temps de pantalla s'aplica directament, sense repartiment.",
     "adjustmentSaved": "Extra desat",
     "adjustmentSavedBonus": "Bonificació desada: {parts}",

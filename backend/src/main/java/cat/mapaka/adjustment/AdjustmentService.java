@@ -50,24 +50,25 @@ public class AdjustmentService {
         this.moneySplitCalculator = moneySplitCalculator;
     }
 
-    /** Per defecte (RULE) el PARENT només introdueix un Valor i el repartiment es calcula
-     * amb el percentatge vigent del fill, igual que a l'aprovació d'una tasca; en una
-     * bonificació pot triar enviar-la a gastar, a estalvi o dividir-la ell mateix (un regal
-     * d'un familiar no ha de seguir el repartiment de la paga). Una penalització sempre
-     * descompta amb el repartiment habitual. */
+    /** Una bonificació per defecte (RULE) es reparteix amb el percentatge vigent del fill,
+     * igual que a l'aprovació d'una tasca, però el PARENT pot enviar-la a gastar, a estalvi
+     * o dividir-la ell mateix (un regal d'un familiar no ha de seguir el repartiment de la
+     * paga). Una penalització en diners es descompta sempre de la cartera de gastar: no
+     * toca l'estalvi ni el progrés dels objectius. */
     @Transactional
     public void applyMoney(ChildProfile child, MoneyAdjustmentRequest request, UUID actingUserId) {
         if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new DomainException("INVALID_ADJUSTMENT", HttpStatus.BAD_REQUEST, "Cal un import superior a 0");
         }
         AdjustmentDestination destination = request.destination() == null ? AdjustmentDestination.RULE : request.destination();
-        if (request.type() == AdjustmentType.PENALTY && destination != AdjustmentDestination.RULE) {
+        boolean penalty = request.type() == AdjustmentType.PENALTY;
+        if (penalty && destination != AdjustmentDestination.RULE) {
             throw invalidDestination("El destí només s'aplica a les bonificacions");
         }
 
         BigDecimal amount = request.amount().setScale(2, RoundingMode.HALF_UP);
         BigDecimal spendingPart = BigDecimal.ZERO;
-        if (destination != AdjustmentDestination.RULE && amount.signum() <= 0) {
+        if ((penalty || destination != AdjustmentDestination.RULE) && amount.signum() <= 0) {
             throw new DomainException("INVALID_ADJUSTMENT", HttpStatus.BAD_REQUEST, "Cal un import superior a 0");
         }
         if (destination == AdjustmentDestination.CUSTOM) {
@@ -81,11 +82,7 @@ public class AdjustmentService {
         }
 
         User parent = userRepository.getReferenceById(actingUserId);
-        TransactionType txType = request.type() == AdjustmentType.PENALTY ? TransactionType.DEBIT : TransactionType.CREDIT;
-        MoneySourceType sourceType = switch (request.type()) {
-            case BONUS -> MoneySourceType.BONUS;
-            case PENALTY -> MoneySourceType.PENALTY;
-        };
+        MoneySourceType sourceType = penalty ? MoneySourceType.PENALTY : MoneySourceType.BONUS;
 
         // El desglossament real (gastar/estalvi/objectius) viu als MoneyTransaction — aquí
         // només queda l'import total com a auditoria.
@@ -94,14 +91,19 @@ public class AdjustmentService {
                 .moneyAmount(request.amount()).savingsAmount(BigDecimal.ZERO).screenMinutes(0)
                 .reason(request.reason()).createdBy(parent).build());
 
+        if (penalty) {
+            post(child, WalletType.SPENDING, TransactionType.DEBIT, amount, sourceType, adjustment.getId(), request.reason(), parent);
+            return;
+        }
+
         switch (destination) {
             case RULE -> moneySplitCalculator.apply(
-                    child, request.amount(), txType, sourceType, adjustment.getId(), request.reason(), parent);
-            case SPENDING -> credit(child, WalletType.SPENDING, amount, sourceType, adjustment.getId(), request.reason(), parent);
-            case SAVINGS -> credit(child, WalletType.SAVINGS, amount, sourceType, adjustment.getId(), request.reason(), parent);
+                    child, request.amount(), TransactionType.CREDIT, sourceType, adjustment.getId(), request.reason(), parent);
+            case SPENDING -> post(child, WalletType.SPENDING, TransactionType.CREDIT, amount, sourceType, adjustment.getId(), request.reason(), parent);
+            case SAVINGS -> post(child, WalletType.SAVINGS, TransactionType.CREDIT, amount, sourceType, adjustment.getId(), request.reason(), parent);
             case CUSTOM -> {
-                credit(child, WalletType.SPENDING, spendingPart, sourceType, adjustment.getId(), request.reason(), parent);
-                credit(child, WalletType.SAVINGS, amount.subtract(spendingPart), sourceType, adjustment.getId(), request.reason(), parent);
+                post(child, WalletType.SPENDING, TransactionType.CREDIT, spendingPart, sourceType, adjustment.getId(), request.reason(), parent);
+                post(child, WalletType.SAVINGS, TransactionType.CREDIT, amount.subtract(spendingPart), sourceType, adjustment.getId(), request.reason(), parent);
             }
         }
     }
@@ -126,14 +128,14 @@ public class AdjustmentService {
         return new MoneySplitPreviewResponse(parts);
     }
 
-    private void credit(
-            ChildProfile child, WalletType wallet, BigDecimal amount, MoneySourceType sourceType,
-            UUID sourceId, String reason, User actor) {
+    private void post(
+            ChildProfile child, WalletType wallet, TransactionType transactionType, BigDecimal amount,
+            MoneySourceType sourceType, UUID sourceId, String reason, User actor) {
         if (amount.signum() <= 0) {
             return;
         }
         moneyTransactionRepository.save(MoneyTransaction.builder()
-                .child(child).walletType(wallet).transactionType(TransactionType.CREDIT)
+                .child(child).walletType(wallet).transactionType(transactionType)
                 .amount(amount).description(reason)
                 .sourceType(sourceType).sourceId(sourceId).createdBy(actor).build());
     }

@@ -742,19 +742,34 @@ class ParentScreensIntegrationTest {
 
     @Test
     @Transactional
-    void moneyPenalty_withoutDestination_stillDebitsWithTheUsualSplit() {
+    void moneyPenalty_alwaysDebitsTheSpendingWalletOnly() {
         Fixture f = seed();
         AuthenticatedUser parent = asParent(f);
         authenticateAs(parent);
         childManagementController.updateAllowance(
                 f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("100.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
+        bonus(f, parent, "20.00", AdjustmentDestination.SPENDING, null);
+        bonus(f, parent, "6.00", AdjustmentDestination.SAVINGS, null);
 
         adjustmentController.moneyAdjustment(
                 f.child.getId(),
-                new MoneyAdjustmentRequest(AdjustmentType.PENALTY, new BigDecimal("10.00"), "Càstig", null, null),
+                new MoneyAdjustmentRequest(AdjustmentType.PENALTY, new BigDecimal("5.00"), "Càstig", null, null),
                 parent);
 
-        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("-8.00");
-        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("-2.00");
+        // La penalització surt només de "per gastar": ni estalvi ni objectius es toquen.
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("15.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("6.00");
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("0.00");
+
+        // Pot deixar "per gastar" en negatiu, com un gasto: el ledger ho permet.
+        adjustmentController.moneyAdjustment(
+                f.child.getId(),
+                new MoneyAdjustmentRequest(AdjustmentType.PENALTY, new BigDecimal("20.00"), "Un altre càstig", null, null),
+                parent);
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("-5.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("6.00");
     }
 }
