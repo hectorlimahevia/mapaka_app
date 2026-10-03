@@ -8,11 +8,14 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @RestController
@@ -32,6 +35,13 @@ public class AdjustmentController {
             @PathVariable UUID id, @Valid @RequestBody MoneyAdjustmentRequest request, @AuthenticationPrincipal AuthenticatedUser user) {
         ChildProfile child = requireChildInFamily(id, user);
         adjustmentService.applyMoney(child, request, user.userId());
+    }
+
+    @GetMapping("/api/children/{id}/money-adjustments/preview")
+    public MoneySplitPreviewResponse previewMoneyAdjustment(
+            @PathVariable UUID id, @RequestParam BigDecimal amount, @AuthenticationPrincipal AuthenticatedUser user) {
+        ChildProfile child = requireChildInFamily(id, user);
+        return adjustmentService.previewRule(child, amount);
     }
 
     @PostMapping("/api/children/{id}/screen-time/adjustments")

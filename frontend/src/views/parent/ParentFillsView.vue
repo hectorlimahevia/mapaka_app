@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -12,8 +12,15 @@ import MinutesInput from '@/components/base/MinutesInput.vue'
 import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
 import { CHILD_COLORS } from '@/utils/childColors'
 import { apiErrorMessage } from '@/utils/apiError'
+import { formatMoney } from '@/utils/money'
 import { i18n } from '@/i18n'
-import type { ChildDetailResponse } from '@/types/parent'
+import type {
+  AdjustmentDestination,
+  ChildDetailResponse,
+  MoneyAdjustmentRequest,
+  MoneySplitPreview,
+  MoneySplitPreviewPart,
+} from '@/types/parent'
 
 function avatarIconPath(child: ChildDetailResponse) {
   return child.avatarIcon ? AVATAR_ICON_PATHS[child.avatarIcon] : null
@@ -31,17 +38,96 @@ const form = reactive({ customAllowance: false, monthlyAmount: 0, spendingPercen
 const adjustingId = ref<string | null>(null)
 const savingAdjustment = ref(false)
 const adjustmentError = ref<string | null>(null)
+const adjustmentNotice = ref<{ childId: string; text: string } | null>(null)
+let adjustmentNoticeTimer: ReturnType<typeof setTimeout> | undefined
 const adjustment = reactive({
   type: 'BONUS' as 'BONUS' | 'PENALTY',
   category: 'MONEY' as 'MONEY' | 'SCREEN_TIME',
   value: 0,
   reason: '',
+  destination: 'RULE' as AdjustmentDestination,
+  spendingShare: 50,
 })
+
+const adjustmentTypeOptions = [
+  { value: 'BONUS', label: 'fills.adjustmentBonus' },
+  { value: 'PENALTY', label: 'fills.adjustmentPenalty' },
+] as const
+
+const adjustmentCategoryOptions = [
+  { value: 'MONEY', label: 'fills.adjustmentCategoryMoney' },
+  { value: 'SCREEN_TIME', label: 'fills.adjustmentCategoryScreenTime' },
+] as const
+
+const destinationOptions = [
+  { value: 'RULE', name: 'fills.destRule', hint: 'fills.destRuleHint' },
+  { value: 'SPENDING', name: 'fills.destSpending', hint: 'fills.destSpendingHint' },
+  { value: 'SAVINGS', name: 'fills.destSavings', hint: 'fills.destSavingsHint' },
+  { value: 'CUSTOM', name: 'fills.destCustom', hint: 'fills.destCustomHint' },
+] as const
+
+// Només una bonificació en diners tria destí: la penalització i el temps de pantalla
+// segueixen el seu camí de sempre.
+const isMoneyBonus = computed(() => adjustment.type === 'BONUS' && adjustment.category === 'MONEY')
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+// Repartiment "com sempre": el calcula el backend (mateix càlcul que en desar), perquè la
+// vista prèvia no es pugui desviar de la regla ni dels objectius vigents del fill.
+const rulePreview = ref<MoneySplitPreviewPart[]>([])
+
+const previewParts = computed<MoneySplitPreviewPart[]>(() => {
+  const amount = Number(adjustment.value)
+  if (!isMoneyBonus.value || !(amount > 0)) return []
+  const direct = (wallet: 'SPENDING' | 'SAVINGS', value: number): MoneySplitPreviewPart => ({ wallet, goalName: null, amount: value })
+  let parts: MoneySplitPreviewPart[]
+  if (adjustment.destination === 'SPENDING') {
+    parts = [direct('SPENDING', amount)]
+  } else if (adjustment.destination === 'SAVINGS') {
+    parts = [direct('SAVINGS', amount)]
+  } else if (adjustment.destination === 'CUSTOM') {
+    const spending = round2((amount * adjustment.spendingShare) / 100)
+    parts = [direct('SPENDING', spending), direct('SAVINGS', round2(amount - spending))]
+  } else {
+    parts = rulePreview.value
+  }
+  return parts.filter((part) => part.amount > 0)
+})
+
+function partLabel(part: MoneySplitPreviewPart) {
+  if (part.wallet === 'GOAL') return part.goalName ?? ''
+  return part.wallet === 'SPENDING' ? t('resum.statSpending') : t('resum.statSavings')
+}
+
+let previewTimer: ReturnType<typeof setTimeout> | undefined
+let previewRequest = 0
+watch(
+  () => [adjustingId.value, isMoneyBonus.value, adjustment.destination, Number(adjustment.value)] as const,
+  ([childId, moneyBonus, destination, amount]) => {
+    clearTimeout(previewTimer)
+    previewRequest++
+    if (!childId || !moneyBonus || destination !== 'RULE' || !(amount > 0)) {
+      rulePreview.value = []
+      return
+    }
+    const request = previewRequest
+    previewTimer = setTimeout(async () => {
+      try {
+        const { data } = await api.get<MoneySplitPreview>(`/api/children/${childId}/money-adjustments/preview`, { params: { amount } })
+        if (request === previewRequest) rulePreview.value = data.parts
+      } catch {
+        if (request === previewRequest) rulePreview.value = []
+      }
+    }, 250)
+  },
+)
 
 function startAdjustment(child: ChildDetailResponse) {
   adjustingId.value = child.childId
   adjustmentError.value = null
-  Object.assign(adjustment, { type: 'BONUS', category: 'MONEY', value: 0, reason: '' })
+  adjustmentNotice.value = null
+  rulePreview.value = []
+  Object.assign(adjustment, { type: 'BONUS', category: 'MONEY', value: 0, reason: '', destination: 'RULE', spendingShare: 50 })
 }
 
 async function submitAdjustment(childId: string) {
@@ -56,16 +142,31 @@ async function submitAdjustment(childId: string) {
   }
   savingAdjustment.value = true
   try {
+    let noticeText = t('fills.adjustmentSaved')
     if (adjustment.category === 'MONEY') {
-      await api.post(`/api/children/${childId}/money-adjustments`, {
-        type: adjustment.type, amount: adjustment.value, reason: adjustment.reason,
-      })
+      const payload: MoneyAdjustmentRequest = { type: adjustment.type, amount: adjustment.value, reason: adjustment.reason }
+      if (isMoneyBonus.value) {
+        payload.destination = adjustment.destination
+        if (adjustment.destination === 'CUSTOM') {
+          payload.spendingAmount = round2((adjustment.value * adjustment.spendingShare) / 100)
+        }
+        if (previewParts.value.length) {
+          const parts = previewParts.value.map((part) => `${partLabel(part)} +${formatMoney(part.amount)} €`).join(' · ')
+          noticeText = t('fills.adjustmentSavedBonus', { parts })
+        }
+      }
+      await api.post(`/api/children/${childId}/money-adjustments`, payload)
     } else {
       await api.post(`/api/children/${childId}/screen-time/adjustments`, {
         type: adjustment.type, minutes: adjustment.value, reason: adjustment.reason,
       })
     }
     adjustingId.value = null
+    adjustmentNotice.value = { childId, text: noticeText }
+    clearTimeout(adjustmentNoticeTimer)
+    adjustmentNoticeTimer = setTimeout(() => {
+      adjustmentNotice.value = null
+    }, 6000)
   } catch (err) {
     adjustmentError.value = apiErrorMessage(err)
   } finally {
@@ -431,21 +532,45 @@ onMounted(load)
           </div>
         </form>
 
+        <p v-if="adjustmentNotice?.childId === child.childId" class="adj-notice" role="status">{{ adjustmentNotice.text }}</p>
+
         <form v-if="adjustingId === child.childId" class="child-card__form" @submit.prevent="submitAdjustment(child.childId)">
-          <label>
-            {{ t('fills.adjustmentTypeLabel') }}
-            <select v-model="adjustment.type">
-              <option value="BONUS">{{ t('fills.adjustmentBonus') }}</option>
-              <option value="PENALTY">{{ t('fills.adjustmentPenalty') }}</option>
-            </select>
-          </label>
-          <label>
-            {{ t('fills.adjustmentCategoryLabel') }}
-            <select v-model="adjustment.category">
-              <option value="MONEY">{{ t('fills.adjustmentCategoryMoney') }}</option>
-              <option value="SCREEN_TIME">{{ t('fills.adjustmentCategoryScreenTime') }}</option>
-            </select>
-          </label>
+          <p class="child-card__form-title">{{ t('fills.adjustmentFormTitle', { name: child.displayName }) }}</p>
+
+          <div class="adj-field">
+            <span :id="`adj-type-${child.childId}`" class="adj-field__label">{{ t('fills.adjustmentTypeLabel') }}</span>
+            <div class="adj-seg" role="group" :aria-labelledby="`adj-type-${child.childId}`">
+              <button
+                v-for="option in adjustmentTypeOptions"
+                :key="option.value"
+                type="button"
+                class="adj-seg__option"
+                :class="{ 'adj-seg__option--on': adjustment.type === option.value }"
+                :aria-pressed="adjustment.type === option.value"
+                @click="adjustment.type = option.value"
+              >
+                {{ t(option.label) }}
+              </button>
+            </div>
+          </div>
+
+          <div class="adj-field">
+            <span :id="`adj-category-${child.childId}`" class="adj-field__label">{{ t('fills.adjustmentCategoryLabel') }}</span>
+            <div class="adj-seg" role="group" :aria-labelledby="`adj-category-${child.childId}`">
+              <button
+                v-for="option in adjustmentCategoryOptions"
+                :key="option.value"
+                type="button"
+                class="adj-seg__option"
+                :class="{ 'adj-seg__option--on': adjustment.category === option.value }"
+                :aria-pressed="adjustment.category === option.value"
+                @click="adjustment.category = option.value"
+              >
+                {{ t(option.label) }}
+              </button>
+            </div>
+          </div>
+
           <label v-if="adjustment.category === 'MONEY'">
             {{ t('fills.adjustmentValueMoneyLabel') }}
             <input v-model.number="adjustment.value" type="number" min="0" step="0.5" />
@@ -454,9 +579,49 @@ onMounted(load)
             {{ t('fills.adjustmentValueMinutesLabel') }}
             <MinutesInput v-model="adjustment.value" />
           </label>
+
+          <div v-if="isMoneyBonus" class="adj-field">
+            <span :id="`adj-dest-${child.childId}`" class="adj-field__label">{{ t('fills.adjustmentDestinationLabel') }}</span>
+            <div class="adj-dest" role="radiogroup" :aria-labelledby="`adj-dest-${child.childId}`">
+              <label
+                v-for="option in destinationOptions"
+                :key="option.value"
+                class="adj-dest__option"
+                :class="{ 'adj-dest__option--on': adjustment.destination === option.value }"
+              >
+                <input v-model="adjustment.destination" type="radio" :name="`adj-dest-${child.childId}`" :value="option.value" />
+                <span class="adj-dest__text">
+                  <span class="adj-dest__name">{{ t(option.name) }}</span>
+                  <span class="adj-dest__hint">{{ t(option.hint) }}</span>
+                </span>
+              </label>
+            </div>
+            <div v-if="adjustment.destination === 'CUSTOM'" class="adj-custom">
+              <input v-model.number="adjustment.spendingShare" type="range" min="0" max="100" step="5" :aria-label="t('fills.destCustomSliderLabel')" />
+              <div class="adj-custom__values">
+                <span>{{ t('fills.destCustomSpending', { pct: adjustment.spendingShare }) }}</span>
+                <span>{{ t('fills.destCustomSavings', { pct: 100 - adjustment.spendingShare }) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="adjustment.type === 'PENALTY' && adjustment.category === 'MONEY'" class="adj-note">{{ t('fills.adjustmentPenaltyNote') }}</p>
+          <p v-else-if="adjustment.category === 'SCREEN_TIME'" class="adj-note">{{ t('fills.adjustmentScreenTimeNote') }}</p>
+
+          <div v-if="previewParts.length" class="adj-preview">
+            <span class="adj-preview__label">{{ t('fills.adjustmentPreviewLabel', { name: child.displayName }) }}</span>
+            <div class="adj-preview__chips">
+              <span v-for="part in previewParts" :key="part.wallet + (part.goalName ?? '')" class="adj-chip">
+                <i class="adj-chip__dot" :class="`adj-chip__dot--${part.wallet.toLowerCase()}`" />
+                {{ partLabel(part) }}
+                <span class="adj-chip__amount">+{{ formatMoney(part.amount) }} €</span>
+              </span>
+            </div>
+          </div>
+
           <label>
             {{ t('fills.adjustmentReasonLabel') }}
-            <input v-model="adjustment.reason" type="text" required />
+            <input v-model="adjustment.reason" type="text" required :placeholder="t('fills.adjustmentReasonPlaceholder')" />
           </label>
           <p v-if="adjustmentError" class="fills__error">{{ adjustmentError }}</p>
           <div class="child-card__form-actions">
@@ -687,5 +852,208 @@ onMounted(load)
   font-size: 0.82rem;
   color: var(--muted);
   margin: 0;
+}
+
+.adj-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.adj-field__label {
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.adj-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.adj-seg__option {
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0.4rem;
+  border-radius: 9px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.adj-seg__option--on {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+.adj-dest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.child-card__form .adj-dest__option {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: 13px;
+  background: white;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.child-card__form .adj-dest__option--on {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, white);
+}
+
+.child-card__form .adj-dest__option input {
+  flex-shrink: 0;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  border: none;
+  accent-color: var(--primary);
+}
+
+.adj-dest__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.adj-dest__name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.adj-dest__hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.adj-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0 0.2rem;
+}
+
+.child-card__form .adj-custom input {
+  width: 100%;
+  padding: 0;
+  border: none;
+  accent-color: var(--primary);
+}
+
+.adj-custom__values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.adj-note {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.adj-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.adj-preview__label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.adj-preview__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.adj-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 12%, transparent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.adj-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.adj-chip__dot--spending {
+  background: var(--primary);
+}
+
+.adj-chip__dot--savings {
+  background: var(--accent);
+}
+
+.adj-chip__dot--goal {
+  background: var(--child-color, var(--primary));
+}
+
+.adj-chip__amount {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.adj-notice {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--success) 55%, black);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adj-seg__option,
+  .child-card__form .adj-dest__option {
+    transition: none;
+  }
 }
 </style>

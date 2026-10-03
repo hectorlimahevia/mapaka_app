@@ -1,5 +1,6 @@
 package cat.mapaka;
 
+import cat.mapaka.adjustment.*;
 import cat.mapaka.allowance.AllowanceGenerationController;
 import cat.mapaka.allowance.AllowanceRuleUpdateRequest;
 import cat.mapaka.allowance.MonthlyAllowanceResponse;
@@ -89,6 +90,7 @@ class ParentScreensIntegrationTest {
     @Autowired TaskController taskController;
     @Autowired TaskManagementController taskManagementController;
     @Autowired ExpenseController expenseController;
+    @Autowired AdjustmentController adjustmentController;
 
     private void authenticateAs(AuthenticatedUser user) {
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
@@ -611,5 +613,116 @@ class ParentScreensIntegrationTest {
         assertThat(expenseController.create(
                 f.child.getId(), new CreateExpenseRequest(new BigDecimal("1.00"), "Permès pel pare"), parent).getBody().status())
                 .isEqualTo(ExpenseStatus.APPROVED);
+    }
+
+    private ChildFamilySummary summaryOf(Fixture f, AuthenticatedUser parent) {
+        return familySummaryController.summary(f.family.getId(), parent).get(0);
+    }
+
+    private void bonus(Fixture f, AuthenticatedUser parent, String amount, AdjustmentDestination destination, String spendingAmount) {
+        adjustmentController.moneyAdjustment(
+                f.child.getId(),
+                new MoneyAdjustmentRequest(
+                        AdjustmentType.BONUS, new BigDecimal(amount), "Regal de l'àvia", destination,
+                        spendingAmount == null ? null : new BigDecimal(spendingAmount)),
+                parent);
+    }
+
+    @Test
+    @Transactional
+    void moneyBonus_destination_sendsTheAmountToTheChosenWalletAndSkipsGoals() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("100.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
+
+        bonus(f, parent, "10.00", AdjustmentDestination.SPENDING, null);
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("10.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("0.00");
+
+        bonus(f, parent, "4.00", AdjustmentDestination.SAVINGS, null);
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("10.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("4.00");
+
+        bonus(f, parent, "10.00", AdjustmentDestination.CUSTOM, "3.50");
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("13.50");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("10.50");
+
+        // Un destí explícit mai passa pels objectius, encara que n'hi hagi un d'actiu.
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @Transactional
+    void moneyBonus_defaultDestination_followsTheUsualSplit_andMatchesThePreview() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("100.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
+
+        MoneySplitPreviewResponse preview = adjustmentController.previewMoneyAdjustment(f.child.getId(), new BigDecimal("10.00"), parent);
+        assertThat(preview.parts()).extracting(MoneySplitPreviewResponse.Part::wallet)
+                .containsExactly(WalletType.SPENDING, WalletType.GOAL, WalletType.SAVINGS);
+        assertThat(preview.parts()).extracting(MoneySplitPreviewResponse.Part::amount)
+                .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .containsExactly(new BigDecimal("6.00"), new BigDecimal("2.00"), new BigDecimal("2.00"));
+        assertThat(preview.parts().get(1).goalName()).isEqualTo("Bici");
+
+        // Sense destí (o amb RULE) es desa exactament el que ha prometut la vista prèvia.
+        bonus(f, parent, "10.00", null, null);
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("6.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("2.00");
+        assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("2.00");
+    }
+
+    @Test
+    @Transactional
+    void moneyAdjustment_invalidDestination_isRejectedWithoutMovingMoney() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+
+        assertThatThrownBy(() -> bonus(f, parent, "10.00", AdjustmentDestination.CUSTOM, null))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_ADJUSTMENT_DESTINATION");
+        assertThatThrownBy(() -> bonus(f, parent, "10.00", AdjustmentDestination.CUSTOM, "11.00"))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_ADJUSTMENT_DESTINATION");
+        assertThatThrownBy(() -> bonus(f, parent, "10.00", AdjustmentDestination.CUSTOM, "-1.00"))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_ADJUSTMENT_DESTINATION");
+        assertThatThrownBy(() -> adjustmentController.moneyAdjustment(
+                f.child.getId(),
+                new MoneyAdjustmentRequest(AdjustmentType.PENALTY, new BigDecimal("5.00"), "Càstig", AdjustmentDestination.SAVINGS, null),
+                parent))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_ADJUSTMENT_DESTINATION");
+
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("0.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @Transactional
+    void moneyPenalty_withoutDestination_stillDebitsWithTheUsualSplit() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+
+        adjustmentController.moneyAdjustment(
+                f.child.getId(),
+                new MoneyAdjustmentRequest(AdjustmentType.PENALTY, new BigDecimal("10.00"), "Càstig", null, null),
+                parent);
+
+        assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("-8.00");
+        assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("-2.00");
     }
 }

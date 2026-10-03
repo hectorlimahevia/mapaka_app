@@ -187,10 +187,24 @@ export interface MonthlySettlementResponse {
 
 export type AdjustmentType = 'BONUS' | 'PENALTY'
 
+export type AdjustmentDestination = 'RULE' | 'SPENDING' | 'SAVINGS' | 'CUSTOM'
+
 export interface MoneyAdjustmentRequest {
   type: AdjustmentType
   amount: number
   reason: string
+  destination?: AdjustmentDestination
+  spendingAmount?: number
+}
+
+export interface MoneySplitPreviewPart {
+  wallet: 'SPENDING' | 'SAVINGS' | 'GOAL'
+  goalName: string | null
+  amount: number
+}
+
+export interface MoneySplitPreview {
+  parts: MoneySplitPreviewPart[]
 }
 
 export interface ScreenTimeAdjustmentRequest {

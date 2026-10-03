@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,20 +46,24 @@ public class MoneySplitCalculator {
     public record SplitResult(BigDecimal spendingAmount, BigDecimal savingsAmount) {
     }
 
-    /** Reparteix `totalAmount` per a `child` i crea els MoneyTransaction resultants
-     * (SPENDING, SAVINGS i un per cada objectiu ACTIVE amb allocation_percentage > 0).
-     * `sourceId` identifica l'origen (tasca, ajust, paga) per a les files SPENDING/SAVINGS;
-     * les files GOAL sempre queden vinculades al savings_goal_id, no a `sourceId`. */
-    @Transactional
-    public SplitResult apply(
-            ChildProfile child, BigDecimal totalAmount, TransactionType transactionType,
-            MoneySourceType sourceType, UUID sourceId, String description, User actor) {
+    /** Part d'un import que va a un objectiu concret. */
+    public record GoalPart(SavingsGoal goal, BigDecimal amount) {
+    }
+
+    /** Resultat de repartir un import segons la regla vigent del fill, sense desar res. */
+    public record SplitPlan(BigDecimal spendingAmount, BigDecimal savingsAmount, List<GoalPart> goalParts) {
+    }
+
+    /** Calcula el repartiment de `totalAmount` (gastar, estalvi i cada objectiu ACTIVE amb
+     * allocation_percentage > 0) sense crear cap moviment — el mateix càlcul que fa servir
+     * `apply`, i la vista prèvia de les Bonificacions, perquè no es puguin desviar. */
+    @Transactional(readOnly = true)
+    public SplitPlan plan(ChildProfile child, BigDecimal totalAmount) {
         if (totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return new SplitResult(BigDecimal.ZERO, BigDecimal.ZERO);
+            return new SplitPlan(BigDecimal.ZERO, BigDecimal.ZERO, List.of());
         }
 
         BigDecimal spendingPercentage = allowanceRuleService.resolveSpendingPercentage(child);
-        BigDecimal savingsPercentage = new BigDecimal("100").subtract(spendingPercentage);
         List<SavingsGoal> activeGoals = savingsGoalRepository.findByChildIdAndStatus(child.getId(), SavingsGoalStatus.ACTIVE);
 
         BigDecimal goalPercentageTotal = activeGoals.stream()
@@ -69,6 +74,7 @@ public class MoneySplitCalculator {
         BigDecimal spendingAmount = percentageOf(totalAmount, effectiveSpendingPercentage);
         BigDecimal remainingAfterSpending = totalAmount.subtract(spendingAmount);
 
+        List<GoalPart> goalParts = new ArrayList<>();
         BigDecimal goalAmountsSum = BigDecimal.ZERO;
         for (SavingsGoal goal : activeGoals) {
             if (goal.getAllocationPercentage().compareTo(BigDecimal.ZERO) <= 0) {
@@ -76,33 +82,49 @@ public class MoneySplitCalculator {
             }
             BigDecimal goalAmount = percentageOf(totalAmount, goal.getAllocationPercentage());
             goalAmountsSum = goalAmountsSum.add(goalAmount);
-            if (goalAmount.compareTo(BigDecimal.ZERO) > 0) {
-                moneyTransactionRepository.save(MoneyTransaction.builder()
-                        .child(child).walletType(WalletType.GOAL).transactionType(transactionType)
-                        .amount(goalAmount).description(description)
-                        .sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(goal.getId())
-                        .createdBy(actor).build());
-                checkCompletion(goal);
-            }
+            goalParts.add(new GoalPart(goal, goalAmount));
         }
 
         // L'estalvi absorbeix el residu d'arrodoniment, igual que ja feia el repartiment binari.
         BigDecimal savingsAmount = remainingAfterSpending.subtract(goalAmountsSum);
+        return new SplitPlan(spendingAmount, savingsAmount, goalParts);
+    }
 
-        if (spendingAmount.compareTo(BigDecimal.ZERO) > 0) {
+    /** Reparteix `totalAmount` per a `child` i crea els MoneyTransaction resultants
+     * (SPENDING, SAVINGS i un per cada objectiu ACTIVE amb allocation_percentage > 0).
+     * `sourceId` identifica l'origen (tasca, ajust, paga) per a les files SPENDING/SAVINGS;
+     * les files GOAL sempre queden vinculades al savings_goal_id, no a `sourceId`. */
+    @Transactional
+    public SplitResult apply(
+            ChildProfile child, BigDecimal totalAmount, TransactionType transactionType,
+            MoneySourceType sourceType, UUID sourceId, String description, User actor) {
+        SplitPlan plan = plan(child, totalAmount);
+
+        for (GoalPart part : plan.goalParts()) {
+            if (part.amount().compareTo(BigDecimal.ZERO) > 0) {
+                moneyTransactionRepository.save(MoneyTransaction.builder()
+                        .child(child).walletType(WalletType.GOAL).transactionType(transactionType)
+                        .amount(part.amount()).description(description)
+                        .sourceType(MoneySourceType.GOAL_CONTRIBUTION).sourceId(part.goal().getId())
+                        .createdBy(actor).build());
+                checkCompletion(part.goal());
+            }
+        }
+
+        if (plan.spendingAmount().compareTo(BigDecimal.ZERO) > 0) {
             moneyTransactionRepository.save(MoneyTransaction.builder()
                     .child(child).walletType(WalletType.SPENDING).transactionType(transactionType)
-                    .amount(spendingAmount).description(description)
+                    .amount(plan.spendingAmount()).description(description)
                     .sourceType(sourceType).sourceId(sourceId).createdBy(actor).build());
         }
-        if (savingsAmount.compareTo(BigDecimal.ZERO) > 0) {
+        if (plan.savingsAmount().compareTo(BigDecimal.ZERO) > 0) {
             moneyTransactionRepository.save(MoneyTransaction.builder()
                     .child(child).walletType(WalletType.SAVINGS).transactionType(transactionType)
-                    .amount(savingsAmount).description(description)
+                    .amount(plan.savingsAmount()).description(description)
                     .sourceType(sourceType).sourceId(sourceId).createdBy(actor).build());
         }
 
-        return new SplitResult(spendingAmount, savingsAmount);
+        return new SplitResult(plan.spendingAmount(), plan.savingsAmount());
     }
 
     private void checkCompletion(SavingsGoal goal) {
