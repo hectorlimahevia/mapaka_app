@@ -263,6 +263,7 @@
     "statTotal": "Total",
     "statSpending": "Per gastar",
     "statSavings": "Estalvi",
+    "movementGoalFallback": "Objectiu",
     "allowanceReminder": "Recorda generar la paga d'aquest mes",
     "viewAllMovements": "Veure tots els moviments →",
     "periodWeek": "Aquesta setmana",

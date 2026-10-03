@@ -48,6 +48,7 @@ export interface MoneyTransactionResponse {
   description: string | null
   sourceType: MoneySourceType
   createdAt: string
+  goalName: string | null
 }
 
 export type SavingsGoalStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED'

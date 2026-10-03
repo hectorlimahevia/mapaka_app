@@ -7,7 +7,9 @@ import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseSwitch from '@/components/base/BaseSwitch.vue'
+import MovementRow from '@/components/base/MovementRow.vue'
 import { AVATAR_ICON_PATHS, AVATAR_ICON_VIEWBOX } from '@/utils/avatarIcons'
+import { groupMovements, type MovementGroup } from '@/utils/groupMovements'
 import { formatDate } from '@/utils/date'
 import { apiErrorMessage } from '@/utils/apiError'
 import type { AppLocale } from '@/i18n'
@@ -319,20 +321,28 @@ async function submitDonation() {
   }
 }
 
+type MovementEvent = MovementGroup<FamilyMoneyTransactionResponse>
+
 const groupedMovements = computed(() => {
-  const shown = period.value === 'week' ? movements.value.slice(0, 10) : movements.value
-  const groups: { dateKey: string; label: string; items: FamilyMoneyTransactionResponse[] }[] = []
-  for (const m of shown) {
-    const dateKey = m.createdAt.slice(0, 10)
+  const events = groupMovements(movements.value)
+  const shown = period.value === 'week' ? events.slice(0, 10) : events
+  const groups: { dateKey: string; label: string; items: MovementEvent[] }[] = []
+  for (const event of shown) {
+    const dateKey = event.createdAt.slice(0, 10)
     let group = groups.find((g) => g.dateKey === dateKey)
     if (!group) {
-      group = { dateKey, label: formatDate(m.createdAt, locale.value as AppLocale), items: [] }
+      group = { dateKey, label: formatDate(event.createdAt, locale.value as AppLocale), items: [] }
       groups.push(group)
     }
-    group.items.push(m)
+    group.items.push(event)
   }
   return groups
 })
+
+function movementTitle(event: MovementEvent) {
+  const main = event.items.find((m) => m.walletType !== 'GOAL') ?? event.items[0]!
+  return `${main.childDisplayName} — ${main.description || main.sourceType}`
+}
 
 onMounted(load)
 </script>
@@ -582,12 +592,7 @@ onMounted(load)
     <p v-if="!loading && movements.length === 0" class="resum__empty">{{ t('resum.noMovements') }}</p>
     <template v-for="group in groupedMovements" :key="group.dateKey">
       <div class="date-label">{{ group.label }}</div>
-      <div v-for="m in group.items" :key="m.id" class="mrow">
-        <span>{{ m.childDisplayName }} — {{ m.description || m.sourceType }}</span>
-        <span class="mrow__amt" :class="m.transactionType === 'CREDIT' ? 'mrow__amt--pos' : 'mrow__amt--neg'">
-          {{ m.transactionType === 'CREDIT' ? '+' : '-' }}<AmountDisplay :value="m.amount" unit="€" />
-        </span>
-      </div>
+      <MovementRow v-for="event in group.items" :key="event.items[0]!.id" :group="event" :title="movementTitle(event)" />
     </template>
 
     <div v-if="donatingGoal" class="donate-overlay" @click.self="closeDonate">
@@ -1161,32 +1166,6 @@ onMounted(load)
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin: 0.9rem 0 0.4rem;
-}
-
-.mrow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.55rem 0;
-  border-bottom: 1px dashed color-mix(in srgb, var(--primary) 15%, transparent);
-  font-size: 0.9rem;
-}
-
-.mrow:last-child {
-  border-bottom: none;
-}
-
-.mrow__amt {
-  display: inline-flex;
-  gap: 0.1rem;
-}
-
-.mrow__amt--pos {
-  color: var(--success);
-}
-
-.mrow__amt--neg {
-  color: var(--error);
 }
 
 .resum__actions {

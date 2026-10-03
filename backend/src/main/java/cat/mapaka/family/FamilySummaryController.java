@@ -3,6 +3,8 @@ package cat.mapaka.family;
 import cat.mapaka.child.ChildProfile;
 import cat.mapaka.child.ChildProfileRepository;
 import cat.mapaka.money.FamilyMoneyTransactionResponse;
+import cat.mapaka.money.GoalNames;
+import cat.mapaka.money.MoneyTransaction;
 import cat.mapaka.money.MoneyTransactionRepository;
 import cat.mapaka.money.WalletType;
 import cat.mapaka.savings.SavingsGoal;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -74,10 +77,13 @@ public class FamilySummaryController {
         familyAccessService.requireParentAccess(id, user);
         Instant effectiveFrom = from != null ? from : Instant.EPOCH;
         Instant effectiveTo = to != null ? to : FAR_FUTURE;
-        return moneyTransactionRepository
+        List<MoneyTransaction> transactions = moneyTransactionRepository
                 .findByFamilyIdFiltered(id, childId, effectiveFrom, effectiveTo, PageRequest.of(page, size))
                 .stream()
-                .map(FamilyMoneyTransactionResponse::from)
+                .toList();
+        Map<UUID, String> goalNames = GoalNames.of(transactions, savingsGoalRepository);
+        return transactions.stream()
+                .map(t -> FamilyMoneyTransactionResponse.from(t, goalNames))
                 .toList();
     }
 

@@ -263,6 +263,7 @@
     "statTotal": "Total",
     "statSpending": "Spending",
     "statSavings": "Savings",
+    "movementGoalFallback": "Goal",
     "allowanceReminder": "Remember to generate this month's allowance",
     "viewAllMovements": "View all movements →",
     "periodWeek": "This week",

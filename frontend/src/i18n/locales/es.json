@@ -263,6 +263,7 @@
     "statTotal": "Total",
     "statSpending": "Para gastar",
     "statSavings": "Ahorro",
+    "movementGoalFallback": "Objetivo",
     "allowanceReminder": "Recuerda generar la paga de este mes",
     "viewAllMovements": "Ver todos los movimientos →",
     "periodWeek": "Esta semana",

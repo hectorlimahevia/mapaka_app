@@ -9,7 +9,9 @@ import cat.mapaka.common.DomainException;
 import cat.mapaka.expense.*;
 import cat.mapaka.family.*;
 import cat.mapaka.money.FamilyMoneyTransactionResponse;
+import cat.mapaka.money.MoneyController;
 import cat.mapaka.money.MoneyTransactionRepository;
+import cat.mapaka.money.MoneyTransactionResponse;
 import cat.mapaka.money.WalletType;
 import cat.mapaka.savings.SavingsGoal;
 import cat.mapaka.savings.SavingsGoalRepository;
@@ -91,6 +93,7 @@ class ParentScreensIntegrationTest {
     @Autowired TaskManagementController taskManagementController;
     @Autowired ExpenseController expenseController;
     @Autowired AdjustmentController adjustmentController;
+    @Autowired MoneyController moneyController;
 
     private void authenticateAs(AuthenticatedUser user) {
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
@@ -706,6 +709,35 @@ class ParentScreensIntegrationTest {
 
         assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("0.00");
         assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    @Transactional
+    void movements_nameTheGoalOnlyOnGoalRows_inFamilyAndChildLists() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("100.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
+        bonus(f, parent, "10.00", null, null);
+
+        List<FamilyMoneyTransactionResponse> family =
+                familySummaryController.movements(f.family.getId(), null, null, null, 0, 50, parent);
+        assertThat(family).hasSize(3);
+        assertThat(family).filteredOn(m -> m.walletType() == WalletType.GOAL)
+                .extracting(FamilyMoneyTransactionResponse::goalName).containsExactly("Bici");
+        assertThat(family).filteredOn(m -> m.walletType() != WalletType.GOAL)
+                .extracting(FamilyMoneyTransactionResponse::goalName).containsOnlyNulls();
+
+        List<MoneyTransactionResponse> own = moneyController.transactions(f.child.getId(), parent);
+        assertThat(own).hasSize(3);
+        assertThat(own).filteredOn(m -> m.walletType() == WalletType.GOAL)
+                .extracting(MoneyTransactionResponse::goalName).containsExactly("Bici");
+        assertThat(own).filteredOn(m -> m.walletType() != WalletType.GOAL)
+                .extracting(MoneyTransactionResponse::goalName).containsOnlyNulls();
     }
 
     @Test

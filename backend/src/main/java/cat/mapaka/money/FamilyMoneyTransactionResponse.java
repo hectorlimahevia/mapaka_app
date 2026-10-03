@@ -4,8 +4,10 @@ import cat.mapaka.common.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
+/** goalName només s'omple a les files de la cartera GOAL (nom de l'objectiu). */
 public record FamilyMoneyTransactionResponse(
         UUID id,
         UUID childId,
@@ -15,11 +17,12 @@ public record FamilyMoneyTransactionResponse(
         BigDecimal amount,
         String description,
         MoneySourceType sourceType,
-        Instant createdAt) {
+        Instant createdAt,
+        String goalName) {
 
-    public static FamilyMoneyTransactionResponse from(MoneyTransaction t) {
+    public static FamilyMoneyTransactionResponse from(MoneyTransaction t, Map<UUID, String> goalNames) {
         return new FamilyMoneyTransactionResponse(
                 t.getId(), t.getChild().getId(), t.getChild().getDisplayName(), t.getWalletType(), t.getTransactionType(),
-                t.getAmount(), t.getDescription(), t.getSourceType(), t.getCreatedAt());
+                t.getAmount(), t.getDescription(), t.getSourceType(), t.getCreatedAt(), GoalNames.forTransaction(t, goalNames));
     }
 }

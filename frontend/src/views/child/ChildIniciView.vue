@@ -7,7 +7,9 @@ import { useCountUp } from '@/composables/useCountUp'
 import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ChildAvatar from '@/components/base/ChildAvatar.vue'
+import MovementRow from '@/components/base/MovementRow.vue'
 import { apiErrorMessage } from '@/utils/apiError'
+import { groupMovements, type MovementGroup } from '@/utils/groupMovements'
 import type { ChildTaskResponse, ExpenseResponse, MoneyTransactionResponse, WalletResponse } from '@/types/child'
 
 const { t } = useI18n()
@@ -22,27 +24,30 @@ const pendingExpenses = ref<ExpenseResponse[]>([])
 const pendingTaskCount = ref(0)
 const loading = ref(true)
 
-interface MovementRow {
-  key: string
-  label: string
-  amount: number
-  createdAt: string
-  isCredit: boolean
-  pending: boolean
-}
+type MovementEvent = MovementGroup<MoneyTransactionResponse>
 
-const movementRows = computed<MovementRow[]>(() => {
-  const fromPending: MovementRow[] = pendingExpenses.value.map((e) => ({
-    key: e.id, label: e.reason, amount: e.amount, createdAt: e.createdAt, isCredit: false, pending: true,
+type MovementEntry =
+  | { kind: 'pending'; key: string; label: string; amount: number; createdAt: string }
+  | { kind: 'event'; key: string; createdAt: string; event: MovementEvent }
+
+// Un ingrés repartit en diverses carteres (p. ex. una paga amb objectiu) compta com una
+// sola entrada dins dels 5 últims moviments, no com tres.
+const movementRows = computed<MovementEntry[]>(() => {
+  const fromPending: MovementEntry[] = pendingExpenses.value.map((e) => ({
+    kind: 'pending', key: e.id, label: e.reason, amount: e.amount, createdAt: e.createdAt,
   }))
-  const fromTransactions: MovementRow[] = transactions.value.map((tr) => ({
-    key: tr.id, label: tr.description || tr.sourceType, amount: tr.amount,
-    createdAt: tr.createdAt, isCredit: tr.transactionType === 'CREDIT', pending: false,
+  const fromTransactions: MovementEntry[] = groupMovements(transactions.value).map((event) => ({
+    kind: 'event', key: event.items[0]!.id, createdAt: event.createdAt, event,
   }))
   return [...fromPending, ...fromTransactions]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
 })
+
+function eventTitle(event: MovementEvent) {
+  const main = event.items.find((m) => m.walletType !== 'GOAL') ?? event.items[0]!
+  return main.description || main.sourceType
+}
 
 async function load() {
   const childId = auth.childId
@@ -152,15 +157,16 @@ onMounted(load)
 
     <div class="section-label">{{ t('inici.recentMovements') }}</div>
     <div v-if="!loading && movementRows.length === 0" class="inici__empty">{{ t('inici.noMovements') }}</div>
-    <div v-for="row in movementRows" :key="row.key" class="mrow">
-      <span>
-        {{ row.label }}
-        <span v-if="row.pending" class="mrow__pending-pill">{{ t('inici.pendingPill') }}</span>
-      </span>
-      <span class="mrow__amt" :class="row.isCredit ? 'mrow__amt--pos' : 'mrow__amt--neg'">
-        {{ row.isCredit ? '+' : '-' }}<AmountDisplay :value="row.amount" unit="€" />
-      </span>
-    </div>
+    <template v-for="row in movementRows" :key="row.key">
+      <div v-if="row.kind === 'pending'" class="mrow">
+        <span>
+          {{ row.label }}
+          <span class="mrow__pending-pill">{{ t('inici.pendingPill') }}</span>
+        </span>
+        <span class="mrow__amt mrow__amt--neg">-<AmountDisplay :value="row.amount" unit="€" /></span>
+      </div>
+      <MovementRow v-else :group="row.event" :title="eventTitle(row.event)" />
+    </template>
   </div>
 </template>
 
@@ -335,10 +341,6 @@ onMounted(load)
 .mrow__amt {
   display: inline-flex;
   gap: 0.1rem;
-}
-
-.mrow__amt--pos {
-  color: var(--success);
 }
 
 .mrow__amt--neg {

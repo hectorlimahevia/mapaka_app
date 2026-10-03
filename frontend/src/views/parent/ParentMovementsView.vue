@@ -3,9 +3,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import AmountDisplay from '@/components/base/AmountDisplay.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import MovementRow from '@/components/base/MovementRow.vue'
 import { formatDate } from '@/utils/date'
+import { groupMovements, type MovementGroup } from '@/utils/groupMovements'
 import type { AppLocale } from '@/i18n'
 import type { ChildFamilySummary, FamilyMoneyTransactionResponse } from '@/types/parent'
 
@@ -45,19 +46,26 @@ function setChildFilter(childId: string | null) {
 
 watch(page, () => loadMovements())
 
+type MovementEvent = MovementGroup<FamilyMoneyTransactionResponse>
+
 const groupedMovements = computed(() => {
-  const groups: { dateKey: string; label: string; items: FamilyMoneyTransactionResponse[] }[] = []
-  for (const m of movements.value) {
-    const dateKey = m.createdAt.slice(0, 10)
+  const groups: { dateKey: string; label: string; items: MovementEvent[] }[] = []
+  for (const event of groupMovements(movements.value)) {
+    const dateKey = event.createdAt.slice(0, 10)
     let group = groups.find((g) => g.dateKey === dateKey)
     if (!group) {
-      group = { dateKey, label: formatDate(m.createdAt, locale.value as AppLocale), items: [] }
+      group = { dateKey, label: formatDate(event.createdAt, locale.value as AppLocale), items: [] }
       groups.push(group)
     }
-    group.items.push(m)
+    group.items.push(event)
   }
   return groups
 })
+
+function movementTitle(event: MovementEvent) {
+  const main = event.items.find((m) => m.walletType !== 'GOAL') ?? event.items[0]!
+  return `${main.childDisplayName} — ${main.description || main.sourceType}`
+}
 
 onMounted(async () => {
   await loadChildren()
@@ -90,12 +98,7 @@ onMounted(async () => {
     <p v-if="!loading && movements.length === 0" class="movements__empty">{{ t('resum.noMovements') }}</p>
     <template v-for="group in groupedMovements" :key="group.dateKey">
       <div class="date-label">{{ group.label }}</div>
-      <div v-for="m in group.items" :key="m.id" class="mrow">
-        <span>{{ m.childDisplayName }} — {{ m.description || m.sourceType }}</span>
-        <span class="mrow__amt" :class="m.transactionType === 'CREDIT' ? 'mrow__amt--pos' : 'mrow__amt--neg'">
-          {{ m.transactionType === 'CREDIT' ? '+' : '-' }}<AmountDisplay :value="m.amount" unit="€" />
-        </span>
-      </div>
+      <MovementRow v-for="event in group.items" :key="event.items[0]!.id" :group="event" :title="movementTitle(event)" />
     </template>
 
     <div class="pagination">
@@ -176,32 +179,6 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin: 0.9rem 0 0.4rem;
-}
-
-.mrow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.55rem 0;
-  border-bottom: 1px dashed color-mix(in srgb, var(--primary) 15%, transparent);
-  font-size: 0.9rem;
-}
-
-.mrow:last-child {
-  border-bottom: none;
-}
-
-.mrow__amt {
-  display: inline-flex;
-  gap: 0.1rem;
-}
-
-.mrow__amt--pos {
-  color: var(--success);
-}
-
-.mrow__amt--neg {
-  color: var(--error);
 }
 
 .pagination {

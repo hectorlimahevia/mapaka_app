@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -58,8 +59,10 @@ public class MoneyController {
     @GetMapping("/api/children/{id}/money-transactions")
     public List<MoneyTransactionResponse> transactions(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
         childAccessService.requireAccess(id, user);
-        return moneyTransactionRepository.findByChildIdOrderByCreatedAtDesc(id).stream()
-                .map(MoneyTransactionResponse::from)
+        List<MoneyTransaction> transactions = moneyTransactionRepository.findByChildIdOrderByCreatedAtDesc(id);
+        Map<UUID, String> goalNames = GoalNames.of(transactions, savingsGoalRepository);
+        return transactions.stream()
+                .map(t -> MoneyTransactionResponse.from(t, goalNames))
                 .toList();
     }
 }

@@ -40,6 +40,7 @@ export interface FamilyMoneyTransactionResponse {
   description: string | null
   sourceType: MoneySourceType
   createdAt: string
+  goalName: string | null
 }
 
 export interface PendingApprovalResponse {
