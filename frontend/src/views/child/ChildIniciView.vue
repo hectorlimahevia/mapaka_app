@@ -64,7 +64,9 @@ async function load() {
   savingsBalance.value = walletRes.data.savingsBalance
   totalBalance.value = walletRes.data.total
   canLogExpenses.value = walletRes.data.canLogExpenses
-  transactions.value = transactionsRes.data.slice(0, 5)
+  // Es retalla per files abans d'agrupar només per limitar la feina: els 5 moviments visibles
+  // es compten per esdeveniments (després d'agrupar), i 5 esdeveniments caben de sobra en 50 files.
+  transactions.value = transactionsRes.data.slice(0, 50)
   pendingTaskCount.value = tasksRes.data.filter((t) => t.status === 'PENDING').length
   pendingExpenses.value = pendingExpensesRes.data
   loading.value = false
