@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,7 +62,10 @@ public class FamilySummaryController {
     @GetMapping("/api/families/{id}/summary")
     public List<ChildFamilySummary> summary(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
         familyAccessService.requireParentAccess(id, user);
+        // El gran primer: així el Resum té un ordre estable (la consulta no en garanteix cap).
         return childProfileRepository.findAllActiveByFamilyIdFetchUser(id).stream()
+                .sorted(Comparator.comparing(ChildProfile::getBirthDate)
+                        .thenComparing(ChildProfile::getDisplayName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toSummary)
                 .toList();
     }

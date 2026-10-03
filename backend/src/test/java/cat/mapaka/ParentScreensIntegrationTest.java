@@ -780,6 +780,28 @@ class ParentScreensIntegrationTest {
 
     @Test
     @Transactional
+    void familySummary_listsTheEldestChildFirst() {
+        Fixture f = seed();                                   // Kid, 2016
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        ChildProfile eldest = seedSibling(f.family, "Gran");  // 2015
+        User youngestUser = userRepository.save(User.builder()
+                .family(f.family).username("young" + UUID.randomUUID())
+                .passwordHash(new BCryptPasswordEncoder().encode("1234")).role(UserRole.CHILD).active(true)
+                .build());
+        ChildProfile youngest = childProfileRepository.save(ChildProfile.builder()
+                .user(youngestUser).displayName("Petit").birthDate(LocalDate.of(2019, 6, 1))
+                .allowanceEnabled(true).screenTimeEnabled(true).canLogExpenses(true).active(true)
+                .build());
+
+        List<ChildFamilySummary> summary = familySummaryController.summary(f.family.getId(), parent);
+
+        assertThat(summary).extracting(ChildFamilySummary::childId)
+                .containsExactly(eldest.getId(), f.child.getId(), youngest.getId());
+    }
+
+    @Test
+    @Transactional
     void moneyPenalty_alwaysDebitsTheSpendingWalletOnly() {
         Fixture f = seed();
         AuthenticatedUser parent = asParent(f);
