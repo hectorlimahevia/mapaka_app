@@ -524,7 +524,7 @@ onMounted(load)
     <template v-if="pendingAllowances.length > 0">
       <div class="section-label">{{ t('resum.pendingAllowancesTitle') }}</div>
       <BaseCard v-for="allowance in pendingAllowances" :key="allowance.id" class="allowance-row">
-        <div>
+        <div class="allowance-row__info">
           <div class="allowance-row__name">{{ allowance.childDisplayName }}</div>
           <div class="allowance-row__amount">
             <AmountDisplay :value="allowance.grossAmount" unit="€" />
@@ -1185,10 +1185,17 @@ onMounted(load)
 
 .allowance-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem 0.75rem;
   margin-bottom: 0.6rem;
+}
+
+/* En pantalles estretes els botons baixen a una segona línia en lloc de sortir de la card. */
+.allowance-row__info {
+  flex: 1 1 11rem;
+  min-width: 0;
 }
 
 .allowance-row__name {
@@ -1205,8 +1212,8 @@ onMounted(load)
 
 .allowance-row__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  flex-shrink: 0;
 }
 
 .donate-overlay {
