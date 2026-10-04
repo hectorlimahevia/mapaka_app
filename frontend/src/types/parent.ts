@@ -169,21 +169,25 @@ export interface MonthlyAllowanceResponse {
   status: AllowanceStatus
 }
 
-export type SettlementStatus = 'OPEN' | 'CLOSED' | 'PAID' | 'REOPENED'
-
-export interface MonthlySettlementResponse {
-  id: string
+/** Lo que ha entrado a un hijo en un mes (no el saldo acumulado): total = paga base +
+ * tareas + bonificaciones − penalizaciones = spending + savings + goals. */
+export interface MonthlySummary {
   childId: string
   childDisplayName: string
+  avatarColor: string | null
+  avatarIcon: string | null
   year: number
   month: number
+  current: boolean
+  allowancePending: boolean
+  total: number
   baseAllowance: number
   extraEarnings: number
   bonuses: number
   penalties: number
+  spending: number
   savings: number
-  payableAmount: number
-  status: SettlementStatus
+  goals: number
 }
 
 export type AdjustmentType = 'BONUS' | 'PENALTY'

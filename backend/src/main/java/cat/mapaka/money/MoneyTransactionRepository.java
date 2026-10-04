@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,6 +62,15 @@ public interface MoneyTransactionRepository extends JpaRepository<MoneyTransacti
     default BigDecimal goalProgress(UUID goalId) {
         return goalProgress(goalId, WalletType.GOAL, TransactionType.CREDIT);
     }
+
+    /** Moviments d'un tipus d'origen concret de tots els fills de la família, en ordre
+     * cronològic — fa servir el resum mensual. */
+    @Query("""
+        SELECT t FROM MoneyTransaction t JOIN FETCH t.child c
+        WHERE c.user.family.id = :familyId AND t.sourceType IN :sourceTypes
+        ORDER BY t.createdAt
+        """)
+    List<MoneyTransaction> findByFamilyIdAndSourceTypes(UUID familyId, Collection<MoneySourceType> sourceTypes);
 
     /** Suma d'un tipus d'origen concret dins d'una finestra de temps — fa servir el tancament
      * mensual (settlement) per desglossar d'on ve el que s'ha pagat aquell mes. */

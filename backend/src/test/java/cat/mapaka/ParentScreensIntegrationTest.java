@@ -8,6 +8,8 @@ import cat.mapaka.child.*;
 import cat.mapaka.common.DomainException;
 import cat.mapaka.expense.*;
 import cat.mapaka.family.*;
+import cat.mapaka.settlement.MonthlySummaryController;
+import cat.mapaka.settlement.MonthlySummaryResponse;
 import cat.mapaka.money.FamilyMoneyTransactionResponse;
 import cat.mapaka.money.MoneyController;
 import cat.mapaka.money.MoneyTransactionRepository;
@@ -94,6 +96,7 @@ class ParentScreensIntegrationTest {
     @Autowired ExpenseController expenseController;
     @Autowired AdjustmentController adjustmentController;
     @Autowired MoneyController moneyController;
+    @Autowired MonthlySummaryController monthlySummaryController;
 
     private void authenticateAs(AuthenticatedUser user) {
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()));
@@ -689,6 +692,51 @@ class ParentScreensIntegrationTest {
         assertThat(summaryOf(f, parent).spendingBalance()).isEqualByComparingTo("6.00");
         assertThat(summaryOf(f, parent).savingsBalance()).isEqualByComparingTo("2.00");
         assertThat(moneyTransactionRepository.balanceFor(f.child.getId(), WalletType.GOAL)).isEqualByComparingTo("2.00");
+    }
+
+    @Test
+    @Transactional
+    void monthlySummary_showsWhatCameInThisMonth_withGoalPartsInsideEachConcept() {
+        Fixture f = seed();
+        AuthenticatedUser parent = asParent(f);
+        authenticateAs(parent);
+        childManagementController.updateAllowance(
+                f.child.getId(), new AllowanceRuleUpdateRequest(new BigDecimal("10.00"), new BigDecimal("80"), new BigDecimal("20")), parent);
+        savingsGoalRepository.save(SavingsGoal.builder()
+                .child(f.child).name("Bici").targetAmount(new BigDecimal("100.00"))
+                .allocationPercentage(new BigDecimal("20")).status(SavingsGoalStatus.ACTIVE).build());
+
+        List<MonthlyAllowanceResponse> drafts = allowanceGenerationController.generate(parent);
+
+        // El mes en curs surt sempre; amb la paga per confirmar encara no hi ha res d'ingressat.
+        MonthlySummaryResponse beforeConfirm = monthlySummaryController.list(parent).get(0);
+        assertThat(beforeConfirm.current()).isTrue();
+        assertThat(beforeConfirm.allowancePending()).isTrue();
+        assertThat(beforeConfirm.total()).isEqualByComparingTo("0.00");
+
+        allowanceGenerationController.confirm(drafts.get(0).id(), parent);
+        bonus(f, parent, "2.00", AdjustmentDestination.SAVINGS, null);
+        bonus(f, parent, "5.00", AdjustmentDestination.RULE, null);
+        adjustmentController.moneyAdjustment(
+                f.child.getId(),
+                new MoneyAdjustmentRequest(AdjustmentType.PENALTY, new BigDecimal("1.50"), "Càstig", null, null),
+                parent);
+
+        List<MonthlySummaryResponse> summaries = monthlySummaryController.list(parent);
+        assertThat(summaries).hasSize(1);
+        MonthlySummaryResponse s = summaries.get(0);
+        assertThat(s.allowancePending()).isFalse();
+        // Paga base = la paga sencera (10), també la part que ha anat a l'objectiu.
+        assertThat(s.baseAllowance()).isEqualByComparingTo("10.00");
+        assertThat(s.extraEarnings()).isEqualByComparingTo("0.00");
+        // 2 (a estalvi) + 5 (repartiment habitual: 3 gastar, 1 objectiu, 1 estalvi).
+        assertThat(s.bonuses()).isEqualByComparingTo("7.00");
+        assertThat(s.penalties()).isEqualByComparingTo("1.50");
+        assertThat(s.total()).isEqualByComparingTo("15.50");
+        // Les tres parts sumen el total: la penalització surt sempre de gastar.
+        assertThat(s.spending()).isEqualByComparingTo("7.50");
+        assertThat(s.savings()).isEqualByComparingTo("5.00");
+        assertThat(s.goals()).isEqualByComparingTo("3.00");
     }
 
     @Test
