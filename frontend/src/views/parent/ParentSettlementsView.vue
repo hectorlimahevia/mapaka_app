@@ -50,7 +50,7 @@ onMounted(load)
 
     <section v-for="group in months" :key="group.key" class="month">
       <h2 class="month__title">
-        {{ monthLabel(group.year, group.month) }}
+        <span class="month__name">{{ monthLabel(group.year, group.month) }}</span>
         <span v-if="group.current" class="month__chip">{{ t('resum.monthInProgress') }}</span>
       </h2>
 
@@ -126,7 +126,15 @@ onMounted(load)
   gap: 0.6rem;
   margin: 0;
   font-size: 1rem;
-  text-transform: capitalize;
+}
+
+/* Només la inicial en majúscula: `capitalize` posaria "Del" a "Octubre Del 2026". */
+.month__name {
+  display: inline-block;
+}
+
+.month__name::first-letter {
+  text-transform: uppercase;
 }
 
 .month__chip {
