@@ -64,7 +64,6 @@ export interface NegativeBalanceSessionResponse {
 
 export interface FamilySettings {
   taskApprovalRequired: boolean
-  notifyPendingApprovalsEnabled: boolean
   allowSavingsTransfer: boolean
   familyCode: string
 }

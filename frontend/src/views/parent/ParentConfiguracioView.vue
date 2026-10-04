@@ -16,7 +16,6 @@ const auth = useAuthStore()
 const loading = ref(true)
 const settings = reactive<FamilySettings>({
   taskApprovalRequired: true,
-  notifyPendingApprovalsEnabled: false,
   allowSavingsTransfer: true,
   familyCode: '',
 })
@@ -106,7 +105,7 @@ async function removeRule(rule: AllowanceRuleResponse) {
   await load()
 }
 
-async function toggle(key: 'taskApprovalRequired' | 'notifyPendingApprovalsEnabled' | 'allowSavingsTransfer') {
+async function toggle(key: 'taskApprovalRequired' | 'allowSavingsTransfer') {
   if (loading.value) return
   settings[key] = !settings[key]
   const familyId = auth.familyId
@@ -199,10 +198,6 @@ onMounted(load)
     <div class="settings-row">
       <span>{{ t('config.taskApprovalRequired') }}</span>
       <BaseSwitch :model-value="settings.taskApprovalRequired" @update:model-value="toggle('taskApprovalRequired')" />
-    </div>
-    <div class="settings-row">
-      <span>{{ t('config.notifyPendingApprovals') }}</span>
-      <BaseSwitch :model-value="settings.notifyPendingApprovalsEnabled" @update:model-value="toggle('notifyPendingApprovalsEnabled')" />
     </div>
     <div class="settings-row">
       <span>{{ t('config.allowSavingsTransfer') }}</span>

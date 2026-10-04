@@ -107,7 +107,7 @@ class ParentScreensIntegrationTest {
         Family family = familyRepository.save(Family.builder()
                 .name("Test Family").familyCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
-                .taskApprovalRequired(true).notifyPendingApprovalsEnabled(false).allowSavingsTransfer(true)
+                .taskApprovalRequired(true).allowSavingsTransfer(true)
                 .build());
         User parentUser = userRepository.save(User.builder()
                 .family(family).username("p" + UUID.randomUUID())
@@ -265,10 +265,9 @@ class ParentScreensIntegrationTest {
         authenticateAs(parent);
 
         var updated = familySettingsController.updateSettings(
-                f.family.getId(), new FamilySettingsUpdateRequest(false, true, false), parent);
+                f.family.getId(), new FamilySettingsUpdateRequest(false, false), parent);
 
         assertThat(updated.taskApprovalRequired()).isFalse();
-        assertThat(updated.notifyPendingApprovalsEnabled()).isTrue();
         assertThat(updated.allowSavingsTransfer()).isFalse();
 
         var fetched = familySettingsController.settings(f.family.getId(), parent);

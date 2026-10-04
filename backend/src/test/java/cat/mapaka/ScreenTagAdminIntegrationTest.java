@@ -63,7 +63,7 @@ class ScreenTagAdminIntegrationTest {
         Family family = familyRepository.save(Family.builder()
                 .name("Test Family").familyCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .currency("EUR").timezone("Europe/Madrid").language("ca").active(true)
-                .taskApprovalRequired(true).notifyPendingApprovalsEnabled(false).allowSavingsTransfer(true)
+                .taskApprovalRequired(true).allowSavingsTransfer(true)
                 .build());
         User parentUser = userRepository.save(User.builder()
                 .family(family).username("p" + UUID.randomUUID())

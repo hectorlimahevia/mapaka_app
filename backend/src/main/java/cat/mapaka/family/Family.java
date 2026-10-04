@@ -45,9 +45,6 @@ public class Family {
     @Column(name = "task_approval_required", nullable = false)
     private boolean taskApprovalRequired;
 
-    @Column(name = "notify_pending_approvals_enabled", nullable = false)
-    private boolean notifyPendingApprovalsEnabled;
-
     @Column(name = "allow_savings_transfer", nullable = false)
     private boolean allowSavingsTransfer;
 

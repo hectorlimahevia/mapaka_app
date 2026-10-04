@@ -373,7 +373,6 @@
     "familyCodeHint": "Useful to find your family at login if another one shares the same name.",
     "copyFamilyCode": "Copy",
     "taskApprovalRequired": "Approval required for all rewards",
-    "notifyPendingApprovals": "Notify by email about pending approvals",
     "allowSavingsTransfer": "Allow transfer from available → savings",
     "nfcLink": "NFC tags for the shared screen session →",
     "familyMembersTitle": "Children and parents",

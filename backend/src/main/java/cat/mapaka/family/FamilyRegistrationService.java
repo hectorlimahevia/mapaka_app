@@ -63,7 +63,6 @@ public class FamilyRegistrationService {
                 .language("ca")
                 .active(true)
                 .taskApprovalRequired(true)
-                .notifyPendingApprovalsEnabled(false)
                 .allowSavingsTransfer(true)
                 .build());
 

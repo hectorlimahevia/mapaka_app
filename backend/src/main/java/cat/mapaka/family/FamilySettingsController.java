@@ -33,7 +33,6 @@ public class FamilySettingsController {
             @AuthenticationPrincipal AuthenticatedUser user) {
         Family family = familyAccessService.requireParentAccess(id, user);
         family.setTaskApprovalRequired(request.taskApprovalRequired());
-        family.setNotifyPendingApprovalsEnabled(request.notifyPendingApprovalsEnabled());
         family.setAllowSavingsTransfer(request.allowSavingsTransfer());
         familyRepository.save(family);
         return FamilySettingsResponse.from(family);
